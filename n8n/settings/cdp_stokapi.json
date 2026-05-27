@@ -1,0 +1,17 @@
+{
+  "id": "t160mzGPYYlJcrjZ",
+  "local_file": "n8n/workflows/cdp_stokapi.json",
+  "sdk_file": "n8n/sdk/cdp_stokapi.workflow.ts",
+  "workflow_name": "cdp_stokapi",
+  "live_name": "cdp_stokapi",
+  "live_status": "active",
+  "production_role": "StokAPI receiver: POST /webhook/muvstok-result → cdp_resultados + cdp_skus + notify.",
+  "webhook": {
+    "path": "muvstok-result",
+    "production_url": "https://automacao.tktechnologies.com.br/webhook/muvstok-result"
+  },
+  "deprecated_workflows": {
+    "cdp_muvstok-api_starter": "PXLHDzRbBVgs8Xl2 — manual only; dispatch is inline in cdp_router"
+  },
+  "last_verified_at_iso": "2026-05-25T00:00:00Z"
+}

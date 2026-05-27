@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "StokapiJobRequest",
+  "description": "POST /api/v1/muvstok/jobs body. Source: muvstok-api/app/schemas/requests.py",
+  "type": "object",
+  "required": ["skus", "callback_url"],
+  "properties": {
+    "skus": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "maxLength": 128 }
+    },
+    "callback_url": { "type": "string", "format": "uri" },
+    "metadata": { "type": "object", "additionalProperties": true, "default": {} },
+    "idempotency_key": { "type": "string", "maxLength": 128 }
+  }
+}

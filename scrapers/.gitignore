@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+.env.local
+.env.production
+docs/validation/*.local.json
+infra/*.local.json
+.venv/
+venv/
+
+# Browser state (SENSITIVE — contains auth cookies)
+browser_states/
+*.state.json
+
+# Screenshots from error captures
+screenshots/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Docker
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbbs.db
+
+# Logs
+*.log
+logs/
+
+# Alembic
+alembic/versions/*.pyc
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Antigravity local state
+.antigravity/.state/
+scripts/reset_db.py

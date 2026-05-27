@@ -1,0 +1,75 @@
+name: CI — Scraper
+
+on:
+  pull_request:
+    paths:
+      - "scrapers/**"
+      - ".github/workflows/ci-scraper.yml"
+      - "docker-compose.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scrapers/**"
+      - ".github/workflows/ci-scraper.yml"
+
+concurrency:
+  group: ci-scraper-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: scrapers
+
+env:
+  PYTHON_VERSION: "3.12"
+  MOCK_SCRAPERS: "true"
+  API_KEY: "test-key"
+  DATABASE_URL: "postgresql+asyncpg://cdp:cdp_pass@localhost:5432/cdp_test"
+  DATABASE_URL_SYNC: "postgresql://cdp:cdp_pass@localhost:5432/cdp_test"
+  REDIS_URL: "redis://localhost:6379/0"
+  LOG_LEVEL: "WARNING"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --dev
+      - run: uv run ruff check src/ tests/
+      - run: uv run ruff format --check src/ tests/
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: cdp_test
+          POSTGRES_USER: cdp
+          POSTGRES_PASSWORD: cdp_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --dev
+      - run: uv run pytest tests/ --cov=src --cov-report=term -v

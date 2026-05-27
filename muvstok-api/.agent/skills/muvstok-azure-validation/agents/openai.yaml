@@ -1,0 +1,4 @@
+interface:
+  display_name: "Muvstok Azure Validation"
+  short_description: "Plan and run Azure-hosted validation."
+  default_prompt: "Use this skill when defining, running, or interpreting Azure-hosted validation for Muvstok API changes."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Muvstok Redis Queue"
+  short_description: "Work with Redis Streams queue behavior."
+  default_prompt: "Use this skill when changing Redis Streams publishing, consuming, ack, retry, pending, or dead-letter behavior."

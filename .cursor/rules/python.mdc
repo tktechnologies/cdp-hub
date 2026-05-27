@@ -1,0 +1,27 @@
+---
+description: Python conventions for CDP services
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python (CDP)
+
+Applies to `scrapers/` and `muvstok-api/`. Platform standards: [.agent/standards/coding-standards.md](../.agent/standards/coding-standards.md).
+
+## Stack
+
+- Python 3.12+
+- FastAPI, Pydantic v2, async I/O where the service already uses it
+- `uv` + `ruff` (line length 100) + `mypy` strict in muvstok-api
+
+## Structure
+
+- Routes thin → services → repositories/clients → DB / Redis / external APIs
+- Validate at API boundaries with Pydantic models
+- No shared Python packages between `scrapers/` and `muvstok-api/`
+
+## Safety
+
+- Never log or commit secrets, tokens, connection strings, or callback HMAC values
+- Preserve `correlation_id` / `job_id` through logs and callbacks
+- Run service gates before marking work done: `make -C scrapers test lint`, `make check-muvstok`

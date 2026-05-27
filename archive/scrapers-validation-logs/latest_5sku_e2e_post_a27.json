@@ -1,0 +1,160 @@
+{
+  "job_id": "86f8b3a4-b661-4183-b4ab-558f79dfa0de",
+  "status": "partial",
+  "duration_seconds": 51.96507138607558,
+  "items_succeeded": 4,
+  "items_failed": 1,
+  "results": [
+    {
+      "sku": "868857LR8A",
+      "brand": "",
+      "cache_hits": 3,
+      "live_scrapes": 0,
+      "best_price": {},
+      "sites": [
+        {
+          "site": "gm",
+          "status": "not_found",
+          "from_cache": true,
+          "results_count": 0
+        },
+        {
+          "site": "pecadireta",
+          "status": "not_found",
+          "from_cache": true,
+          "results_count": 0
+        },
+        {
+          "site": "melibox",
+          "status": "blocked",
+          "from_cache": true,
+          "results_count": 0
+        }
+      ]
+    },
+    {
+      "sku": "06K907811B",
+      "brand": "",
+      "cache_hits": 3,
+      "live_scrapes": 0,
+      "best_price": {
+        "price": 4523.441,
+        "currency": "BRL",
+        "exact_match": true
+      },
+      "sites": [
+        {
+          "site": "gm",
+          "status": "not_found",
+          "from_cache": true,
+          "results_count": 0
+        },
+        {
+          "site": "pecadireta",
+          "status": "success",
+          "from_cache": true,
+          "results_count": 1
+        },
+        {
+          "site": "melibox",
+          "status": "blocked",
+          "from_cache": true,
+          "results_count": 0
+        }
+      ]
+    },
+    {
+      "sku": "22781768",
+      "brand": "GM",
+      "cache_hits": 3,
+      "live_scrapes": 0,
+      "best_price": {
+        "price": 1268.78,
+        "currency": "BRL",
+        "exact_match": true
+      },
+      "sites": [
+        {
+          "site": "gm",
+          "status": "success",
+          "from_cache": true,
+          "results_count": 2
+        },
+        {
+          "site": "pecadireta",
+          "status": "not_found",
+          "from_cache": true,
+          "results_count": 0
+        },
+        {
+          "site": "melibox",
+          "status": "blocked",
+          "from_cache": true,
+          "results_count": 0
+        }
+      ]
+    },
+    {
+      "sku": "C1BB/ 15A222/DA/5YZ",
+      "brand": "",
+      "cache_hits": 3,
+      "live_scrapes": 0,
+      "best_price": {
+        "price": 154.6,
+        "currency": "BRL",
+        "exact_match": true
+      },
+      "sites": [
+        {
+          "site": "gm",
+          "status": "not_found",
+          "from_cache": true,
+          "results_count": 0
+        },
+        {
+          "site": "pecadireta",
+          "status": "no_price",
+          "from_cache": true,
+          "results_count": 1
+        },
+        {
+          "site": "melibox",
+          "status": "blocked",
+          "from_cache": true,
+          "results_count": 0
+        }
+      ]
+    },
+    {
+      "sku": "767203M6M01",
+      "brand": "",
+      "cache_hits": 3,
+      "live_scrapes": 0,
+      "best_price": {
+        "price": 266.73,
+        "currency": "BRL",
+        "exact_match": true
+      },
+      "sites": [
+        {
+          "site": "gm",
+          "status": "not_found",
+          "from_cache": true,
+          "results_count": 0
+        },
+        {
+          "site": "pecadireta",
+          "status": "no_price",
+          "from_cache": true,
+          "results_count": 1
+        },
+        {
+          "site": "melibox",
+          "status": "blocked",
+          "from_cache": true,
+          "results_count": 0
+        }
+      ]
+    }
+  ]
+}

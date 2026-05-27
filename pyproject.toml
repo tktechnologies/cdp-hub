@@ -1,0 +1,44 @@
+# Shared tooling config for the CDP monorepo.
+# Service packages keep their own pyproject.toml; extend these defaults locally or via:
+#   extends = "../pyproject.toml"  (when supported) or copy [tool.ruff] / [tool.mypy] sections.
+
+[project]
+name = "cdp-platform"
+version = "0.1.0"
+description = "CDP monorepo workspace tooling (lint orchestration only)"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["scrapers/src", "scrapers/tests", "muvstok-api/app", "muvstok-api/tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src", "app"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+plugins = ["pydantic.mypy"]
+exclude = ["scrapers/infra/", "infra/"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*", "scripts.*"]
+disallow_untyped_defs = false

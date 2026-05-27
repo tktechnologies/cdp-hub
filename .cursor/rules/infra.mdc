@@ -1,0 +1,12 @@
+---
+description: Azure Bicep and platform infrastructure conventions
+globs: infra/**
+alwaysApply: false
+---
+
+# Infrastructure
+
+- Platform Bicep: `infra/main.bicep` — validate with `make bicep-validate` (no deploy from agents without user approval).
+- Service stacks: `scrapers/infra/`, `muvstok-api/infra/` when present.
+- Secrets: Azure Key Vault → Container App env; never commit real values in `*.parameters.json` or Bicep outputs in docs.
+- Resource group default for what-if: `automation` (override with `AZURE_RESOURCE_GROUP`).

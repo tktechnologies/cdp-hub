@@ -1,0 +1,2551 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "subject:\"CDP Webscraper\""
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -16,
+        2624
+      ],
+      "id": "1141e3d7-acbb-44a3-b82e-e953ac55cf8c",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rQesNRyarukVs0N4",
+          "name": "gmail lucas@tktech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "f30ebe85-41c1-4c89-95f6-be31338e7ce7",
+      "name": "📱 Trigger Telegram",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -240,
+        1920
+      ],
+      "webhookId": "telegram-sku-trigger",
+      "credentials": {
+        "telegramApi": {
+          "id": "UmDqGKD8k0bA10j2",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "v0.6.0: Recebe SKUs via Telegram (texto ou arquivo .xlsx/.csv). Necessita configurar credenciais do bot (@BotFather)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "robust-check",
+              "leftValue": "={{ !$json.error && $json.valid_skus > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "22d612e4-b501-45b6-9ea0-67acd12c2cd4",
+      "name": "📧 Email entrada OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        3200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "robust-check",
+              "leftValue": "={{ !$json.error && $json.valid_skus > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b56b187b-aedb-4316-ac84-90bce238562f",
+      "name": "📱 Telegram entrada OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        2768
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII",
+          "mode": "list",
+          "cachedResultName": "cdp_skus",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "SKUs",
+          "mode": "name",
+          "cachedResultName": "SKUs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "CODIGO": "={{ $json.sku }}",
+            "PROCESSADO": "⏳ Processando...",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "CODIGO"
+          ],
+          "schema": [
+            {
+              "id": "CODIGO",
+              "displayName": "CODIGO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ITEM",
+              "displayName": "ITEM",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CONTATO",
+              "displayName": "CONTATO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "E-MAIL",
+              "displayName": "E-MAIL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PROCESSADO",
+              "displayName": "PROCESSADO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ENCONTRADO",
+              "displayName": "ENCONTRADO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "NOTIFICADO",
+              "displayName": "NOTIFICADO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "1fdb8d2b-e29c-4bad-b483-291399bdf1d4",
+      "name": "✅ Marcar PROCESSADO → CDP_SKUs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2448,
+        2336
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      },
+      "notes": "v0.7.1: Updates PROCESSADO=⏳ Processando... for each dispatched SKU (sheet jobs only; ad_hoc skipped by Emparelhar)."
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_router — pair scraper HTTP responses to SKUs for sheet PROCESSADO updates.\n\nconst httpItems = $input.all();\nconst batches = $('⚙️ Formatar Payload Scraper').all();\nconst out = [];\nfor (let i = 0; i < httpItems.length; i++) {\n  const resp = httpItems[i].json;\n  const hasJob = Boolean(resp.job_id);\n  const sc = resp.statusCode != null ? Number(resp.statusCode) : hasJob ? 200 : 0;\n  if (!hasJob && (sc < 200 || sc >= 300)) continue;\n  const batch = batches[i]?.json;\n  if (!batch) continue;\n  for (const it of batch.items || []) {\n    if (it && it.sku) out.push({ json: { sku: String(it.sku).trim() } });\n  }\n}\nreturn out;\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "c738d1b2-1afd-4163-ba21-6b9800541563",
+      "name": "🔗 Emparelhar SKUs → PROCESSADO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        2336
+      ],
+      "notes": "Pairs each HTTP response with Formatar batch by index; emits one item per SKU for all channels. Skips non-2xx responses."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo",
+          "mode": "list",
+          "cachedResultName": "cdp_resultados",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Historico",
+          "mode": "name",
+          "cachedResultName": "Historico",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "job_id": "={{ $json.job_id }}",
+            "origem": "={{ $json.origem }}",
+            "solicitante": "={{ $json.solicitante }}",
+            "disparado_em": "={{ $json.disparado_em }}",
+            "concluido_em": "={{ $json.concluido_em }}",
+            "tempo_segundos": "={{ $json.tempo_segundos }}",
+            "status": "={{ $json.status }}",
+            "skus_lidos": "={{ $json.skus_lidos }}",
+            "skus_validos": "={{ $json.skus_validos }}",
+            "skus_encontrados": "={{ $json.skus_encontrados }}",
+            "skus_falhos": "={{ $json.skus_falhos }}",
+            "taxa_sucesso_sku": "={{ $json.taxa_sucesso_sku }}",
+            "taxa_sucesso_sites": "={{ $json.taxa_sucesso_sites }}",
+            "sites_pesquisados": "={{ $json.sites_pesquisados }}",
+            "resumo_sites": "={{ $json.resumo_sites }}",
+            "lista_skus_csv": "={{ $json.lista_skus_csv }}",
+            "skus_repetidos": "={{ $json.skus_repetidos || '—' }}",
+            "job_error": "={{ $json.job_error }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "job_id",
+              "displayName": "job_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "origem",
+              "displayName": "origem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "solicitante",
+              "displayName": "solicitante",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "disparado_em",
+              "displayName": "disparado_em",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "concluido_em",
+              "displayName": "concluido_em",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tempo_segundos",
+              "displayName": "tempo_segundos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "skus_lidos",
+              "displayName": "skus_lidos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "skus_validos",
+              "displayName": "skus_validos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "skus_encontrados",
+              "displayName": "skus_encontrados",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "skus_falhos",
+              "displayName": "skus_falhos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "taxa_sucesso_sku",
+              "displayName": "taxa_sucesso_sku",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "taxa_sucesso_sites",
+              "displayName": "taxa_sucesso_sites",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sites_pesquisados",
+              "displayName": "sites_pesquisados",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "resumo_sites",
+              "displayName": "resumo_sites",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lista_skus_csv",
+              "displayName": "lista_skus_csv",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "skus_repetidos",
+              "displayName": "skus_repetidos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "job_error",
+              "displayName": "job_error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "8f40d678-48f1-446b-9ef1-4199ef0a5695",
+      "name": "📝 Erro → CDP_Resultados (Histórico)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2448,
+        2720
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst batchIndex = item.batch_index || 'unknown';\nconst totalBatches = item.total_batches || 'unknown';\nconst errorMsg = item.error || item.message || item.detail || JSON.stringify(item).substring(0, 500);\nconst statusCode = item.status_code ?? item.statusCode ?? 'N/A';\nfunction env(name) { try { if (typeof process !== 'undefined' && process.env && process.env[name]) return String(process.env[name]).trim(); } catch (e) {} return ''; }\nconst emailTo = String(item.reply_email || item.email_from || env('NOTIFICATION_EMAIL_TO') || '').trim();\nconst nowIso = new Date().toISOString();\n\nconst historico = {\n  job_id: String(item.job_id || `dispatch-batch-${batchIndex}`),\n  origem: String(item.origem || 'dispatcher_error'),\n  solicitante: String(item.reply_email || item.email_from || item.chat_id || ''),\n  disparado_em: String(item.dispatched_at || nowIso),\n  concluido_em: nowIso,\n  tempo_segundos: '0',\n  status: '❌ ERRO_DISPATCH',\n  skus_lidos: String(item.batch_size || 0),\n  skus_validos: String(item.batch_size || 0),\n  skus_encontrados: '0',\n  skus_falhos: String(item.batch_size || 0),\n  taxa_sucesso_sku: '0%',\n  taxa_sucesso_sites: '0%',\n  sites_pesquisados: '0',\n  resumo_sites: '{}',\n  lista_skus_csv: String((item.items || []).map(i => i.sku).filter(Boolean).join(', ')),\n  job_error: `[HTTP ${statusCode}] ${String(errorMsg).substring(0, 1000)}`\n};\n\nlet html = '<h2>❌ CDP Job Dispatcher — API Error</h2>';\nhtml += '<p><strong>Time:</strong> ' + nowIso + '</p>';\nhtml += '<p><strong>Batch:</strong> ' + batchIndex + ' / ' + totalBatches + '</p>';\nhtml += '<p><strong>HTTP Status:</strong> ' + statusCode + '</p>';\nhtml += '<p><strong>Error:</strong></p>';\nhtml += '<pre style=\"background:#fee2e2;padding:12px;border-radius:8px\">' + errorMsg + '</pre>';\nhtml += '<p style=\"color:#718096;font-size:12px\">Automated alert from CDP Job Dispatcher.</p>';\n\nreturn [{ json: { ...historico, email_from: emailTo, email_subject: '❌ Dispatcher Error — Batch ' + batchIndex, email_html: html } }];"
+      },
+      "id": "dd0fcac0-5213-41f7-81ec-702dc4be33b7",
+      "name": "❌ Formatar Erro de Despacho",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "check-job-id",
+              "leftValue": "={{ $json.job_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "a5f7cb38-e051-42aa-9030-b442c1971b42",
+      "name": "✅ API OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        2720
+      ],
+      "notes": "Routes to success or error path based on API response status."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ (String($env.CDP_SCRAPER_API_BASE || $env.MUVSTOK_SCRAPER_API_BASE || '').trim().replace(/\\/+$/, '')) + '/api/v1/jobs' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.CDP_API_KEY || $env.MUVSTOK_API_KEY || $env.API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ items: $json.items, sites: $json.sites, callback_url: $json.callback_url, priority: $json.priority || 5, batch_group_id: $json.batch_group_id, chat_id: $json.chat_id, command_route: $json.command_route }) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 3000
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "e919ee2c-1f5e-47ca-879d-ce9b23fed935",
+      "name": "🚀 POST → Scraper API (/jobs)",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1776,
+        2720
+      ],
+      "notes": "Requires CDP_SCRAPER_API_BASE and CDP_API_KEY. Batches POSTs (1 per 3s) to avoid API 500 under parallel load. Retries 3× on transient errors."
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_router — pass SKUs through; optional random sample via CDP_DISPATCH_SAMPLE_SIZE (0 = all).\n\nfunction env(name) {\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\nfunction envInt(name, defaultVal) {\n  const raw = env(name);\n  if (!raw) return defaultVal;\n  const n = parseInt(raw, 10);\n  return Number.isFinite(n) && n >= 0 ? n : defaultVal;\n}\n\nconst data = $input.first().json;\nconst all = Array.isArray(data.skus) ? data.skus : [];\nconst maxSkus = envInt('CDP_DISPATCH_SAMPLE_SIZE', 0);\nlet skus = all;\nlet sampled = false;\nif (maxSkus > 0 && all.length > maxSkus) {\n  const copy = [...all];\n  for (let i = copy.length - 1; i > 0; i--) {\n    const j = Math.floor(Math.random() * (i + 1));\n    const tmp = copy[i];\n    copy[i] = copy[j];\n    copy[j] = tmp;\n  }\n  skus = copy.slice(0, maxSkus);\n  sampled = true;\n}\n\nconst batchGroupId = 'bg-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);\ntry {\n  if (typeof $getWorkflowStaticData === 'function') {\n    const sd = $getWorkflowStaticData('global');\n    sd.cdp_last_batch_group_id = batchGroupId;\n  }\n} catch (e) {}\n\nlet commandRoute = 'analisar';\ntry {\n  const tg = $('🔀 Switch Comando (Telegram)').first().json;\n  if (tg && tg.route) commandRoute = String(tg.route);\n} catch (e) {}\nif (commandRoute === 'analisar') {\n  try {\n    const em = $('🔀 Switch Comando (Email)').first().json;\n    if (em && em.route) commandRoute = String(em.route);\n  } catch (e) {}\n}\n\nreturn [\n  {\n    json: {\n      ...data,\n      skus,\n      valid_skus: skus.length,\n      dispatch_sampled: sampled,\n      dispatch_sample_limit: maxSkus,\n      dispatch_total_before_sample: all.length,\n      batch_group_id: batchGroupId,\n      command_route: commandRoute,\n    },\n  },\n];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "🎲 Limitar SKUs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        2480
+      ],
+      "notes": "All valid SKUs. Parallel router: [0] Scraper POST [1] confirm [2] API Diversos POST. batch_group_id shared."
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_router — Scraper POST /api/v1/jobs (force_refresh=false → Redis/PostgreSQL 24h cache).\n\nconst DEFAULT_BATCH_SIZE = 100;\nconst MAX_BATCH_SIZE = 100;\nconst DEFAULT_SITES = ['gm', 'ml', 'vw', 'eu', 'pecadireta'];\nconst data = $input.first().json;\nconst skus = Array.isArray(data.skus) ? data.skus : [];\n\nfunction env(name) {\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\nfunction envList(name) {\n  const raw = env(name);\n  return raw ? raw.split(',').map((s) => s.trim()).filter(Boolean) : [];\n}\nfunction trimTrailingSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\nfunction trimSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.startsWith('/')) out = out.slice(1);\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\nfunction readStaticRequester() {\n  try {\n    if (typeof $getWorkflowStaticData === 'function') {\n      const sd = $getWorkflowStaticData('global');\n      if (sd && sd.cdp_sheet_requester) return sd.cdp_sheet_requester;\n    }\n  } catch (e) {}\n  return null;\n}\n\nconst configuredSites = envList('CDP_SCRAPER_SITES');\nconst sites = configuredSites.length ? configuredSites : DEFAULT_SITES;\nconst commandRoute = String(data.command_route || 'analisar');\nconst batchSizeRaw = Number(env('CDP_SCRAPER_BATCH_SIZE') || DEFAULT_BATCH_SIZE);\nconst BATCH_SIZE = Math.max(\n  1,\n  Math.min(MAX_BATCH_SIZE, Number.isFinite(batchSizeRaw) ? batchSizeRaw : DEFAULT_BATCH_SIZE)\n);\n\nconst ctx = readStaticRequester();\nlet chatId = String(data.telegram_chat_id || data.chat_id || '').trim();\nlet emailFrom = String(data.email_from || '').trim();\nif (ctx) {\n  if (!chatId && ctx.chat_id) chatId = String(ctx.chat_id).trim();\n  if (!emailFrom && ctx.email_from) emailFrom = String(ctx.email_from).trim();\n}\nconst adHoc = !!(chatId || emailFrom);\nlet notify = 'none';\nif (chatId) notify = 'telegram';\nelse if (emailFrom) notify = 'email';\n\nconst batchGroupId =\n  String(data.batch_group_id || '').trim() ||\n  'bg-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);\n\nlet callbackUrl = env('CDP_N8N_WEBHOOK_URL');\nif (!callbackUrl) {\n  const base = trimTrailingSlashes(env('WEBHOOK_URL'));\n  const rel = trimSlashes(env('CDP_N8N_WEBHOOK_PATH') || 'webhook/scraper-result');\n  if (base) callbackUrl = base + '/' + rel;\n}\nif (!callbackUrl) callbackUrl = 'https://automacao.tktechnologies.com.br/webhook/scraper-result';\n\nfunction encodeQueryParam(key, value) {\n  return encodeURIComponent(key) + '=' + encodeURIComponent(String(value));\n}\nfunction buildQueryString(parts) {\n  return parts.map(([k, v]) => encodeQueryParam(k, v)).join('&');\n}\nconst queryParts = [\n  ['notify', notify],\n  ['batch_group_id', batchGroupId],\n  ['dual_run', 'scraper'],\n  ['command_route', commandRoute],\n];\nif (chatId) queryParts.push(['chat_id', chatId]);\nif (emailFrom) queryParts.push(['reply_email', emailFrom]);\nif (adHoc) queryParts.push(['ad_hoc', 'true']);\ncallbackUrl += (callbackUrl.includes('?') ? '&' : '?') + buildQueryString(queryParts);\n\nconst batches = [];\nfor (let i = 0; i < skus.length; i += BATCH_SIZE) {\n  batches.push(skus.slice(i, i + BATCH_SIZE));\n}\nconst totalBatches = batches.length;\n\nreturn batches.map((batch, index) => ({\n  json: {\n    callback_url: callbackUrl,\n    items: batch.map((it) => ({\n      sku: it.sku,\n      brand: it.brand || '',\n      description: it.description || '',\n    })),\n    sites,\n    priority: 5,\n    force_refresh: false,\n    batch_group_id: batchGroupId,\n    batch_index: index + 1,\n    total_batches: totalBatches,\n    batch_size: batch.length,\n    ad_hoc: adHoc,\n    notify,\n    chat_id: chatId || undefined,\n    reply_email: emailFrom,\n    command_route: commandRoute,\n    metadata: {\n      source: 'cdp_router',\n      pipeline: 'scraper',\n      command_route: commandRoute,\n      batch_group_id: batchGroupId,\n      batch_index: index + 1,\n      total_batches: totalBatches,\n      cache_policy: 'redis_24h',\n    },\n  },\n}));\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "99162794-4160-4334-bdd3-885473fe4524",
+      "name": "⚙️ Formatar Payload Scraper",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        2720
+      ],
+      "notes": "CDP v1.0: active default sites gm,ml,vw,eu,pecadireta; optional CDP_SCRAPER_SITES env can include melibox. Sends only supported API body fields and carries requester context in callback_url query params."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─── DQ v0.7.0: Validate, Deduplicate, Filter PROCESSADO ─────────────\n// Routing via ad_hoc/notify based only on chat_id and email_from presence.\n// ORIGEM removed from per-SKU data. notify_channel derived from trigger context.\nconst raw = $input.all();\nconst seen = new Set();\nconst valid = [];\nconst dqIssues = [];\nlet skippedProcessado = 0;\n\nfor (const item of raw) {\n  const row = item.json;\n  const rawSku = row.CODIGO ?? row.SKU ?? row.sku ?? row.codigo;\n  const sku = rawSku ? String(rawSku).trim().toUpperCase() : '';\n\n  const processado = String(row.PROCESSADO || '').trim();\n  if (processado === '✅ Processado' || processado.toLowerCase() === 'sim' || processado.toLowerCase() === 'true') {\n    skippedProcessado++;\n    continue;\n  }\n\n  if (!sku) { dqIssues.push({ issue: 'EMPTY_SKU', row: JSON.stringify(row) }); continue; }\n  if (seen.has(sku)) { dqIssues.push({ issue: 'DUPLICATE_SKU', sku }); continue; }\n  if (sku.length < 3) { dqIssues.push({ issue: 'SHORT_SKU', sku }); continue; }\n\n  seen.add(sku);\n  // notify_email and notify_phone from sheet columns E-MAIL and CONTATO\n  valid.push({\n    sku,\n    brand: row.UNIDADE ? String(row.UNIDADE).trim() : '',\n    description: row.ITEM ? String(row.ITEM).trim() : '',\n    row_number: row.row_number ?? null,\n    notify_email: row['E-MAIL'] ? String(row['E-MAIL']).trim() : '',\n    notify_phone: row['CONTATO'] ? String(row['CONTATO']).trim() : ''\n  });\n}\n\nreturn [{ json: {\n  total_read: raw.length,\n  valid_skus: valid.length,\n  skipped_processado: skippedProcessado,\n  duplicates: dqIssues.filter(i => i.issue === 'DUPLICATE_SKU').length,\n  empty_skus: dqIssues.filter(i => i.issue === 'EMPTY_SKU').length,\n  short_skus: dqIssues.filter(i => i.issue === 'SHORT_SKU').length,\n  dq_issues: dqIssues,\n  skus: valid,\n  dispatched_at: new Date().toISOString()\n} }];"
+      },
+      "id": "d5e14e42-868a-4b20-8743-6de4fd18ee8c",
+      "name": "🔍 DQ: Validar & Deduplicar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        2240
+      ],
+      "notes": "v0.7.0: ORIGEM removed from per-SKU. notify_email/notify_phone read from E-MAIL/CONTATO columns. Routing via ad_hoc presence of chat_id/email_from only."
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII",
+          "mode": "list",
+          "cachedResultName": "cdp_skus",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 843035952,
+          "mode": "list",
+          "cachedResultName": "SKUs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII/edit#gid=843035952"
+        },
+        "options": {}
+      },
+      "id": "51a927fa-a416-4e47-9962-5ad6da0a520d",
+      "name": "📊 Ler CDP_SKUs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1104,
+        2240
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "2d59bd66-7a09-4741-8416-97842e8854e4",
+      "name": "⏰ Trigger Agendado (Seg 8h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        3216
+      ],
+      "notes": "Runs every Monday at 8am. Adjust cron as needed."
+    },
+    {
+      "parameters": {},
+      "id": "a0cbb6d2-629d-4043-bdc1-a8fca392c3e2",
+      "name": "▶️ Trigger Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        880,
+        3024
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─── Telegram Command Router v4 — adds .status / .andamento ─────────────────\n\nfunction env(name) {\n  try {\n    const raw = (typeof process !== 'undefined' && process.env && process.env[name]) || '';\n    return raw.split(',').map((s) => s.trim()).filter(Boolean);\n  } catch (e) {\n    return [];\n  }\n}\n\nfunction envList(name) {\n  return env(name);\n}\n\nfunction statusCommands() {\n  const raw = env('CDP_STATUS_COMMANDS');\n  if (raw.length) return raw;\n  return ['.status', '.andamento', '.progresso'];\n}\n\nconst msg = $input.first().json;\nconst chatId = String(msg.message?.chat?.id || '');\nconst username = String(msg.message?.from?.username || msg.message?.from?.first_name || '');\nconst text = String(msg.message?.text || msg.message?.caption || '').trim();\nconst doc = msg.message?.document || null;\nconst hasFile = !!doc;\n\nconst allowed = envList('TELEGRAM_ALLOWED_CHAT_IDS');\nif (allowed.length && !allowed.includes(chatId)) {\n  return [{ json: { route: 'unauthorized', chat_id: chatId } }];\n}\n\nconst lower = text.toLowerCase();\nconst isAnalisar = lower.startsWith('.analisar');\nconst isSku = lower.startsWith('.sku');\nconst isStatus = statusCommands().some((cmd) => lower.startsWith(cmd.toLowerCase()));\n\nif (isStatus) {\n  return [\n    {\n      json: {\n        route: 'status',\n        chat_id: chatId,\n        username,\n        origem: 'telegram',\n        notify: chatId,\n      },\n    },\n  ];\n}\n\nif (isSku || hasFile) {\n  const afterCmd = isSku ? text.slice(4).trim() : '';\n  const textSkus = afterCmd\n    .split(/[\\n,;\\s]+/)\n    .map((s) => s.trim().toUpperCase())\n    .filter((s) => /^[A-Z0-9]{5,}$/.test(s))\n    .slice(0, 200);\n\n  if (hasFile && textSkus.length > 0) {\n    return [\n      {\n        json: {\n          route: 'sku_both',\n          chat_id: chatId,\n          username,\n          text_skus: textSkus,\n          file_id: doc.file_id,\n          file_name: doc.file_name || 'attachment',\n          origem: 'telegram',\n          notify: chatId,\n        },\n      },\n    ];\n  }\n  if (hasFile && textSkus.length === 0) {\n    return [\n      {\n        json: {\n          route: 'sku_file',\n          chat_id: chatId,\n          username,\n          text_skus: [],\n          file_id: doc.file_id,\n          file_name: doc.file_name || 'attachment',\n          origem: 'telegram',\n          notify: chatId,\n        },\n      },\n    ];\n  }\n  if (!hasFile && textSkus.length > 0) {\n    return [\n      {\n        json: {\n          route: 'sku_text',\n          chat_id: chatId,\n          username,\n          text_skus: textSkus,\n          origem: 'telegram',\n          notify: chatId,\n        },\n      },\n    ];\n  }\n  return [\n    {\n      json: {\n        route: 'sku_empty',\n        chat_id: chatId,\n        username,\n        origem: 'telegram',\n        notify: chatId,\n      },\n    },\n  ];\n}\n\nif (isAnalisar) {\n  return [\n    {\n      json: {\n        route: 'analisar',\n        chat_id: chatId,\n        username,\n        is_full_sheet_trigger: true,\n        origem: 'telegram',\n        notify: chatId,\n      },\n    },\n  ];\n}\n\nreturn [{ json: { route: 'ignore', chat_id: chatId } }];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "2e1cfa31-4577-41a0-b942-ff2760cfb611",
+      "name": "📱 Roteador de Comando",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        1920
+      ],
+      "notes": "v4: routes .analisar, .sku text, .sku file, .sku both, .sku empty, .status/.andamento, ignore"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "5d6e44e4-3ab7-42b8-874b-54b0c5ddf06b",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "analisar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "analisar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "b51ccc60-5c17-41e8-a06e-170e7f879fe9",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "sku_text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sku_text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "3a84bad3-4c62-4abf-aa5f-5d219781e651",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "sku_file",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sku_file"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "8d7a625e-8215-436c-99e2-360b5b9827fb",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "sku_both",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sku_both"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "f26fec1f-3e90-477b-8a1e-c7777c1b0a49",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "sku_empty",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sku_empty"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "775da2ca-b72f-4f4f-8ff3-f02ecdb7269c",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "ignore",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ignore"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "130b9b9e-f4cd-4dc6-9954-ed20ef1d6d6f",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "unauthorized",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "unauthorized"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "7cdc65c2-5860-44e1-a03e-4e1553168a61",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "status"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "76aec9fb-5192-40e1-9229-62aa7f3874b8",
+      "name": "🔀 Switch Comando (Telegram)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        208,
+        1840
+      ],
+      "notes": "Routes: [0]analisar [1]sku_text [2]sku_file [3]sku_both [4]sku_empty [5]ignore [6]unauthorized [7]status"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// ─── Email Command Router v4 ─────────────────────────────────────────────\n// v4: Detects attachments in both simple mode (msg.attachments) and raw mode\n//     (msg.payload.parts[]) from Gmail Trigger with simple=false.\n//     Passes messageId for downstream attachment download.\nfunction envList(name) {\n  try {\n    const raw = (typeof process !== 'undefined' && process.env && process.env[name]) || '';\n    return raw.split(',').map(s => s.trim()).filter(Boolean);\n  } catch(e) { return []; }\n}\n\nconst msg = $input.first().json;\nlet fromEmail = '';\nif (msg.from?.value?.[0]?.address) fromEmail = String(msg.from.value[0].address).trim().toLowerCase();\nelse if (typeof msg.from === 'string') fromEmail = msg.from.trim().toLowerCase();\n\n// ── Auth check ──\nconst allowed = envList('EMAIL_ALLOWED_SENDERS').map(s => s.toLowerCase());\nif (allowed.length && !allowed.some(a => fromEmail.includes(a))) {\n  return [{ json: { route: 'unauthorized', email_from: fromEmail } }];\n}\n\n// ── Read subject + body ──\nconst subject = String(msg.subject || '').trim();\nconst bodyRaw = String(msg.textPlain || msg.text || msg.html || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\n\nconst subjectL = subject.toLowerCase();\nconst bodyLines = bodyRaw.split(/\\r?\\n/).map(l => l.trim()).filter(Boolean);\nconst bodyFirstL = (bodyLines[0] || '').toLowerCase();\nlet cmdSource;\nif (subjectL.startsWith('.analisar') || subjectL.startsWith('.sku')) {\n  cmdSource = subject;\n} else if (bodyFirstL.startsWith('.analisar') || bodyFirstL.startsWith('.sku')) {\n  cmdSource = bodyRaw;\n} else {\n  cmdSource = subject || bodyRaw;\n}\nconst lower = cmdSource.toLowerCase();\n\n// ── Attachment check: simple mode (msg.attachments) ──\nconst attachments = msg.attachments || [];\nlet xlsAttachment = attachments.find(a =>\n  /\\.(xlsx?|csv)$/i.test(a.name || a.filename || '')\n);\nlet messageId = String(msg.id || msg.messageId || '').trim();\n\n// ── Attachment check: raw mode (msg.payload.parts[]) ──\n// Gmail Trigger with simple=false returns raw Gmail API structure\nif (!xlsAttachment && msg.payload && msg.payload.parts) {\n  const parts = msg.payload.parts;\n  // Flatten: some emails nest parts inside parts (multipart/mixed > multipart/alternative + attachment)\n  const allParts = [];\n  function collectParts(partsList) {\n    for (const p of partsList) {\n      allParts.push(p);\n      if (p.parts) collectParts(p.parts);\n    }\n  }\n  collectParts(parts);\n\n  for (const part of allParts) {\n    const fn = String(part.filename || '').trim();\n    if (/\\.(xlsx?|csv)$/i.test(fn) && part.body && part.body.attachmentId) {\n      xlsAttachment = {\n        id: part.body.attachmentId,\n        name: fn,\n        mimeType: part.mimeType || '',\n        size: part.body.size || 0\n      };\n      break;\n    }\n  }\n  // Also try to get messageId from raw payload\n  if (!messageId && msg.payload.headers) {\n    const msgIdHeader = msg.payload.headers.find(h => h.name?.toLowerCase() === 'message-id');\n    if (msgIdHeader) messageId = String(msgIdHeader.value || '').trim();\n  }\n}\n\n// Fallback messageId from threadId or any id on the message root\nif (!messageId) messageId = String(msg.threadId || '').trim();\n\nconst hasFile = !!xlsAttachment;\n\nconst isAnalisar = lower.startsWith('.analisar');\nconst isSku      = lower.startsWith('.sku');\n\nif (isSku || hasFile) {\n  const afterCmd = isSku ? cmdSource.slice(4).trim() : '';\n  const textSkus = afterCmd\n    .split(/[\\n,;\\s]+/)\n    .map(s => s.trim().toUpperCase())\n    .filter(s => /^[A-Z0-9]{5,}$/.test(s))\n    .slice(0, 200);\n\n  const baseOut = {\n    email_from: fromEmail,\n    notify: fromEmail,\n    origem: 'email',\n    message_id: messageId\n  };\n\n  if (hasFile && textSkus.length > 0) {\n    return [{ json: { route: 'sku_both', ...baseOut, text_skus: textSkus,\n      attachment_id: xlsAttachment.id || '', attachment_name: xlsAttachment.name || xlsAttachment.filename || '' }}];\n  }\n  if (hasFile && textSkus.length === 0) {\n    return [{ json: { route: 'sku_file', ...baseOut,\n      attachment_id: xlsAttachment.id || '', attachment_name: xlsAttachment.name || xlsAttachment.filename || '' }}];\n  }\n  if (!hasFile && textSkus.length > 0) {\n    return [{ json: { route: 'sku_text', ...baseOut, text_skus: textSkus }}];\n  }\n  return [{ json: { route: 'sku_empty', ...baseOut }}];\n}\n\nif (isAnalisar) {\n  return [{ json: { route: 'analisar', email_from: fromEmail, notify: fromEmail,\n    is_full_sheet_trigger: true, origem: 'email', message_id: messageId }}];\n}\n\nreturn [{ json: { route: 'ignore', email_from: fromEmail } }];\n"
+      },
+      "id": "0454cd9c-f0ff-462d-9d40-40eb9716f6db",
+      "name": "📧 Roteador de Comando",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        2624
+      ],
+      "notes": "v4: Detects attachments in both simple mode (msg.attachments) and raw mode (msg.payload.parts[]) from Gmail Trigger. Passes message_id for downstream attachment download."
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "407e15a9-b8e5-46f4-acc1-26a772803ad2",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "analisar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "analisar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "c9fe90f8-5067-47a3-b914-8ce7de00596e",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "sku_text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sku_text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "5aebdb2d-220f-4e0e-8508-905ad3da95d3",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "sku_file",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sku_file"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "9faff61b-8ca6-430e-b5ec-c1e4c719bf19",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "sku_both",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sku_both"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "97fdbe8b-03c6-47bf-b95b-44c2fc4145f0",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "sku_empty",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sku_empty"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "6fe15eb7-c299-44bb-a028-f66cb636de7a",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "ignore",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ignore"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "5fdb95f4-acd8-4f0e-b366-ff544e4a3759",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "unauthorized",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "unauthorized"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "3e5775e9-f30d-4046-ab5d-953e9c1f72fc",
+      "name": "🔀 Switch Comando (Email)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        432,
+        2544
+      ],
+      "notes": "Routes: [0]analisar [1]sku_text [2]sku_file [3]sku_both [4]sku_empty [5]ignore [6]unauthorized"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d = $input.first().json;\nconst skus = (d.text_skus || []).map(s => ({ sku: s, brand: '', description: '' }));\nreturn [{ json: {\n  total_read: skus.length, valid_skus: skus.length,\n  skipped_processado: 0, duplicates: 0, empty_skus: 0, short_skus: 0,\n  skus, dispatched_at: new Date().toISOString(),\n  origem: d.origem || 'telegram',\n  telegram_chat_id: d.chat_id || '',\n  notify: d.notify || d.chat_id || ''\n}}];\n"
+      },
+      "id": "6cfbda3a-57b9-4057-aca3-0ce05766bc85",
+      "name": "📱 Parsear SKUs do Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        2576
+      ],
+      "notes": "v3: receives pre-parsed text_skus from router"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN || $env.TELEGRAM_TOKEN || $env.TELEGRAM_API_TOKEN }}/getFile",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "file_id",
+              "value": "={{ $json.file_id }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "c64c6879-39b6-4f36-9e0f-22deec414fde",
+      "name": "📥 Obter Path do Arquivo (Telegram)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        432,
+        2160
+      ],
+      "continueOnFail": true,
+      "notes": "v3: gets file path from Telegram API using file_id. Token fallback: TELEGRAM_BOT_TOKEN || TELEGRAM_TOKEN || TELEGRAM_API_TOKEN"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/file/bot{{ $env.TELEGRAM_BOT_TOKEN || $env.TELEGRAM_TOKEN || $env.TELEGRAM_API_TOKEN }}/{{ $json.result.file_path }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "50a29d5c-c215-4d47-8d79-9e26fb0786b5",
+      "name": "📥 Baixar Arquivo (Telegram)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        656,
+        2160
+      ],
+      "continueOnFail": true,
+      "notes": "v3: downloads file bytes from Telegram CDN. continueOnFail keeps sku_both text path alive if download fails."
+    },
+    {
+      "parameters": {
+        "options": {
+          "headerRow": true,
+          "includeEmptyCells": false
+        }
+      },
+      "id": "79ab60cd-db25-4901-8884-e503dce33202",
+      "name": "📊 Parsear Planilha (Telegram)",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [
+        880,
+        2160
+      ],
+      "continueOnFail": true,
+      "notes": "v3: parses XLSX/CSV binary from Telegram download into rows. continueOnFail avoids full route crash."
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Receives rows from SpreadsheetFile — find SKU-like column\nconst rows = $input.all();\nconst routerData = $('🔀 Switch Comando (Telegram)').first().json;\nconst chatId = String(routerData.chat_id || routerData.notify || '');\nconst textSkus = routerData.text_skus || []; // for sku_both merging\n\n// Find SKU column: prefer CODIGO, SKU, COD, CODE, first alphanumeric col\nconst sampleRow = rows[0]?.json || {};\nconst cols = Object.keys(sampleRow);\nconst skuCol = cols.find(c => /^(codigo|sku|cod|code|part|partnumber|part_number)$/i.test(c))\n  || cols.find(c => Object.values(sampleRow).some(v => /^[A-Z0-9]{5,}$/.test(String(v).trim())));\n\nconst seen = new Set(textSkus.map(s => s.toUpperCase()));\nconst fromFile = [];\nfor (const item of rows) {\n  const raw = skuCol ? String(item.json[skuCol] || '').trim().toUpperCase() : '';\n  if (/^[A-Z0-9]{5,}$/.test(raw) && !seen.has(raw)) {\n    seen.add(raw);\n    const brand = String(item.json['MARCA'] || item.json['BRAND'] || item.json['UNIDADE'] || '').trim();\n    const desc  = String(item.json['DESCRICAO'] || item.json['DESCRIPTION'] || item.json['ITEM'] || '').trim();\n    fromFile.push({ sku: raw, brand, description: desc, source: 'file' });\n  }\n}\n\n// Merge: text SKUs first, then file SKUs (deduped)\nconst textFormatted = textSkus.map(s => ({ sku: s, brand: '', description: '', source: 'text' }));\nconst allSkus = [...textFormatted, ...fromFile].slice(0, 500);\n\nreturn [{ json: {\n  total_read: allSkus.length, valid_skus: allSkus.length,\n  skipped_processado: 0, duplicates: seen.size - allSkus.length, empty_skus: 0, short_skus: 0,\n  skus: allSkus,\n  dispatched_at: new Date().toISOString(),\n  origem: 'telegram',\n  telegram_chat_id: chatId,\n  notify: chatId,\n  source_detail: `file:${fromFile.length} text:${textFormatted.length}`\n}}];\n"
+      },
+      "id": "15eb64a4-d461-4fdf-884e-ed984cc02904",
+      "name": "📋 Formatar SKUs da Planilha (Telegram)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        2768
+      ],
+      "notes": "v3: merges text_skus + file rows, deduped. handles sku_file and sku_both"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d = $input.first().json;\nconst skus = (d.text_skus || []).map(s => ({ sku: s, brand: '', description: '' }));\nreturn [{ json: {\n  total_read: skus.length, valid_skus: skus.length,\n  skipped_processado: 0, duplicates: 0, empty_skus: 0, short_skus: 0,\n  skus, dispatched_at: new Date().toISOString(),\n  origem: d.origem || 'email',\n  email_from: d.email_from || '',\n  notify: d.notify || d.email_from || ''\n}}];\n"
+      },
+      "id": "77628e57-2796-4938-89be-1cb2dee7d6cd",
+      "name": "📧 Parsear SKUs do Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        2960
+      ],
+      "notes": "v3: receives pre-parsed text_skus from email router"
+    },
+    {
+      "parameters": {
+        "operation": "getAttachment"
+      },
+      "id": "7b804279-73ff-4227-a0cb-0b313d5733b7",
+      "name": "📥 Baixar Anexo (Email)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        656,
+        2832
+      ],
+      "webhookId": "84bde2a6-210d-44cf-bcc7-ad804b5abf91",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rQesNRyarukVs0N4",
+          "name": "gmail lucas@tktech"
+        }
+      },
+      "notes": "v4: Uses message_id from router or Gmail Trigger id. Downloads all attachments as binary data for spreadsheet parser."
+    },
+    {
+      "parameters": {
+        "options": {
+          "headerRow": true,
+          "includeEmptyCells": false
+        }
+      },
+      "id": "dfed6cd1-5eae-4476-8a57-db76ba6cf58a",
+      "name": "📊 Parsear Planilha (Email)",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [
+        880,
+        2832
+      ],
+      "notes": "v3: parses XLSX/CSV binary from email attachment"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst rows = $input.all();\nconst routerData = $('🔀 Switch Comando (Email)').first().json;\nconst emailFrom  = String(routerData.email_from || routerData.notify || '');\nconst textSkus   = routerData.text_skus || [];\n\nconst sampleRow = rows[0]?.json || {};\nconst cols = Object.keys(sampleRow);\nconst skuCol = cols.find(c => /^(codigo|sku|cod|code|part|partnumber|part_number)$/i.test(c))\n  || cols.find(c => Object.values(sampleRow).some(v => /^[A-Z0-9]{5,}$/.test(String(v).trim())));\n\nconst seen = new Set(textSkus.map(s => s.toUpperCase()));\nconst fromFile = [];\nfor (const item of rows) {\n  const raw = skuCol ? String(item.json[skuCol] || '').trim().toUpperCase() : '';\n  if (/^[A-Z0-9]{5,}$/.test(raw) && !seen.has(raw)) {\n    seen.add(raw);\n    const brand = String(item.json['MARCA'] || item.json['BRAND'] || item.json['UNIDADE'] || '').trim();\n    const desc  = String(item.json['DESCRICAO'] || item.json['DESCRIPTION'] || item.json['ITEM'] || '').trim();\n    fromFile.push({ sku: raw, brand, description: desc, source: 'file' });\n  }\n}\n\nconst textFormatted = textSkus.map(s => ({ sku: s, brand: '', description: '', source: 'text' }));\nconst allSkus = [...textFormatted, ...fromFile].slice(0, 500);\n\nreturn [{ json: {\n  total_read: allSkus.length, valid_skus: allSkus.length,\n  skipped_processado: 0, duplicates: seen.size - allSkus.length, empty_skus: 0, short_skus: 0,\n  skus: allSkus,\n  dispatched_at: new Date().toISOString(),\n  origem: 'email',\n  email_from: emailFrom,\n  notify: emailFrom,\n  source_detail: `file:${fromFile.length} text:${textFormatted.length}`\n}}];\n"
+      },
+      "id": "ee3eeab5-84f1-4be2-a725-9b8475083e9b",
+      "name": "📋 Formatar SKUs da Planilha (Email)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        3200
+      ],
+      "notes": "v3: merges text_skus + attachment rows, deduped"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "⚠️ Depois de digitar o comando *.sku* coloque os códigos ou me envie uma planilha em anexo.\n\nExemplo:\n`.sku ABC123 DEF456`\nou envie um arquivo *.xlsx* ou *.csv*",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "appendAttribution": false
+        }
+      },
+      "id": "1b5130f4-57b1-45f4-9c98-fd752fd77deb",
+      "name": "📱 Resposta .sku Vazio (Telegram)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        432,
+        2352
+      ],
+      "webhookId": "3e9cca0a-34e6-4da1-8665-cc4a717b55ce",
+      "credentials": {
+        "telegramApi": {
+          "id": "UmDqGKD8k0bA10j2",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "v3: replies when .sku is sent without codes or file"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email_from }}",
+        "subject": "⚠️ CDP: Comando .sku sem dados",
+        "message": "<p>Após o comando <strong>.sku</strong> coloque os códigos separados por espaço ou vírgula, ou envie um arquivo <strong>.xlsx</strong> ou <strong>.csv</strong> em anexo.</p><p>Exemplo: <code>.sku ABC123 DEF456 GHI789</code></p>",
+        "options": {}
+      },
+      "id": "1d4849cd-8d06-4a2e-898c-b71986a8b819",
+      "name": "📧 Resposta .sku Vazio (Email)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        656,
+        3024
+      ],
+      "webhookId": "60f5edac-0153-47b3-b7a7-40e59b3ced9a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rQesNRyarukVs0N4",
+          "name": "gmail lucas@tktech"
+        }
+      },
+      "notes": "v3: replies when .sku is sent without codes or attachment"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Runs after 🎲 Limitar SKUs — Assistente CDP (PT-BR). Single confirmation message.\nconst dq = $input.first().json;\nconst total = dq.valid_skus || 0;\nconst sheetTotal = Number(dq.dispatch_total_before_sample || dq.total_read || 0);\nconst sampled = Boolean(dq.dispatch_sampled);\nconst skippedProcessado = Number(dq.skipped_processado || 0);\nconst skuCodes = (Array.isArray(dq.skus) ? dq.skus : [])\n  .map((s) => String((s && s.sku) || s || '').trim().toUpperCase())\n  .filter(Boolean);\nconst skuPreview = skuCodes.slice(0, 8).join(', ');\nconst skuExtra = skuCodes.length > 8 ? '\\n_…e mais ' + (skuCodes.length - 8) + ' peças_' : '';\n\nfunction env(name) {\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\nfunction envList(name) {\n  const raw = env(name);\n  return raw ? raw.split(',').map((s) => s.trim()).filter(Boolean) : [];\n}\nfunction estimateMins(skuCount) {\n  const siteCount = envList('CDP_SCRAPER_SITES').length || 5;\n  const parallel = Math.max(1, parseInt(env('CDP_SCRAPER_PARALLEL_SITES') || '3', 10) || 3);\n  const waves = Math.ceil(siteCount / parallel);\n  const secPerWave = Number(env('CDP_ESTIMATE_SEC_PER_WAVE') || '18') || 18;\n  const interSku = Number(env('CDP_ESTIMATE_INTER_SKU_SEC') || '2.75') || 2.75;\n  const totalSec = Math.max(30, Math.ceil(Math.max(1, skuCount) * (waves * secPerWave + interSku)));\n  return Math.max(1, Math.ceil(totalSec / 60));\n}\nconst mins = estimateMins(total);\n\nfunction peca(n) {\n  const x = Number(n) || 0;\n  return x === 1 ? '1 peça' : x + ' peças';\n}\n\nlet skuLine = '📦 *' + peca(total) + '* nesta rodada';\nlet skuEmail = String(total);\nif (sampled && sheetTotal > total) {\n  skuLine =\n    '📦 *' +\n    peca(total) +\n    '* nesta rodada _(amostra aleatória de ' +\n    sheetTotal.toLocaleString('pt-BR') +\n    ' na fila)_';\n  skuEmail = total + ' (amostra de ' + sheetTotal + ' na fila)';\n}\nif (skippedProcessado > 0) {\n  skuLine += '\\n_(+' + skippedProcessado + ' já processadas na fila, ignoradas)_';\n  skuEmail += ' (+' + skippedProcessado + ' já processadas)';\n}\nif (skuPreview) {\n  skuLine += '\\n🔢 ' + skuPreview + skuExtra;\n}\n\nlet origem = 'auto';\nlet chatId = String(dq.telegram_chat_id || dq.chat_id || dq.notify || '').trim();\nlet emailFrom = String(dq.email_from || '').trim();\n\ntry {\n  if (typeof $getWorkflowStaticData === 'function') {\n    const sd = $getWorkflowStaticData('global');\n    const ctx = sd.cdp_sheet_requester;\n    if (ctx) {\n      if (!chatId) chatId = String(ctx.chat_id || '').trim();\n      if (!emailFrom) emailFrom = String(ctx.email_from || '').trim();\n      if (chatId) origem = 'telegram';\n      else if (emailFrom) origem = 'email';\n    }\n  }\n} catch (e) {}\n\ntry {\n  const r = $('📧 Roteador de Comando').first().json;\n  if (r && r.route === 'analisar') {\n    origem = 'email';\n    emailFrom = String(r.email_from || r.notify || '').trim();\n  }\n} catch (e) {}\n\nif (origem !== 'email') {\n  try {\n    const em = $('🔀 Switch Comando (Email)').first().json;\n    if (em && em.route === 'analisar') {\n      origem = 'email';\n      emailFrom = String(em.email_from || '').trim();\n    }\n  } catch (e) {}\n}\n\nif (!emailFrom) {\n  try {\n    const gm = $('Gmail Trigger').first().json;\n    if (gm?.from?.value?.[0]?.address) {\n      emailFrom = String(gm.from.value[0].address).trim();\n      origem = 'email';\n    }\n  } catch (e) {}\n}\n\nif (origem !== 'email') {\n  try {\n    const tg = $('🔀 Switch Comando (Telegram)').first().json;\n    const route = String(tg?.route || '');\n    const cid = String(tg?.chat_id || tg?.notify || '').trim();\n    if (cid) {\n      chatId = chatId || cid;\n      origem = 'telegram';\n    }\n    if (route === 'analisar') origem = 'telegram';\n  } catch (e) {}\n}\n\nif (origem === 'telegram' && !chatId && emailFrom) origem = 'email';\n\nconst triggered = !!(chatId || emailFrom);\nconst tempo = mins === 1 ? '~1 minuto' : '~' + mins + ' minutos';\n\nlet commandLabel = '.analisar';\ntry {\n  const route = String(dq.command_route || dq.route || '').trim();\n  if (route.startsWith('sku')) commandLabel = '.sku';\n} catch (e) {}\nif (commandLabel === '.analisar') {\n  try {\n    const tg = $('🔀 Switch Comando (Telegram)').first().json;\n    const r = String(tg?.route || '');\n    if (r.startsWith('sku')) commandLabel = '.sku';\n  } catch (e) {}\n}\n\nconst msgTelegram = [\n  '🤖 *Assistente CDP*',\n  '',\n  'Recebi sua consulta (*' + commandLabel + '*). Estamos buscando preços nos sites e no estoque.',\n  '',\n  skuLine,\n  '⏱️ Previsão: *' + tempo + '* (sites e estoque em paralelo)',\n  '',\n  'Você receberá dois avisos quando terminar (sites e estoque). ✨',\n].join('\\n');\n\nconst msgEmailHtml =\n  '<h2>Assistente CDP</h2><p>Recebemos seu <strong>' +\n  commandLabel +\n  '</strong> — busca em <strong>sites e estoque</strong> iniciada.</p>' +\n  '<p><strong>Peças na fila:</strong> ' +\n  skuEmail +\n  '</p>' +\n  (skuPreview ? '<p><strong>Códigos:</strong> ' + skuPreview + '</p>' : '') +\n  '<p><strong>Previsão:</strong> ' +\n  tempo +\n  ' (sites e estoque em paralelo)</p>' +\n  '<p>Você receberá dois e-mails de conclusão (sites + estoque).</p>' +\n  '<p style=\"color:#718096;font-size:12px\">— Assistente CDP (TKTech)</p>';\n\nreturn [\n  {\n    json: {\n      total,\n      mins,\n      origem,\n      triggered,\n      chat_id: chatId,\n      email_from: emailFrom,\n      notify: chatId || emailFrom,\n      msg_telegram: msgTelegram,\n      msg_email_html: msgEmailHtml,\n      msg_email_subject: 'Assistente CDP — consulta iniciada (' + total + ' peças)',\n    },\n  },\n];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "d5ec2f31-5502-4b98-b9b7-dd9037150bc1",
+      "name": "📋 Formatar Confirmação (Planilha)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        2144
+      ],
+      "notes": "Assistente CDP — única confirmação (após Limitar SKUs)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "is-triggered",
+              "leftValue": "={{ $json.triggered }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d8e67430-53d0-4469-aed3-d0439c3e7077",
+      "name": "✅ Foi Disparado por Comando?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1776,
+        2144
+      ],
+      "notes": "v3: skips notification when triggered by cron or manual"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "rota-planilha-tg",
+                    "leftValue": "={{ $json.origem === 'telegram' && String($json.chat_id || '').trim() !== '' }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "telegram"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "rota-planilha-em",
+                    "leftValue": "={{ $json.origem === 'email' || (String($json.email_from || '').trim() !== '' && String($json.chat_id || '').trim() === '') }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "email"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "79911856-c631-46c6-a961-28f00f8cec62",
+      "name": "🔀 Rota Confirmação Planilha",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        2000,
+        2144
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.msg_telegram }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "appendAttribution": false
+        }
+      },
+      "id": "00e06e44-2394-4598-bd20-fc141f7cf898",
+      "name": "📱 Confirmar Planilha (Telegram)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        2224,
+        1952
+      ],
+      "webhookId": "5da9c4ae-0cc4-4ac5-bf28-463a00499d83",
+      "credentials": {
+        "telegramApi": {
+          "id": "UmDqGKD8k0bA10j2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email_from }}",
+        "subject": "={{ $json.msg_email_subject }}",
+        "message": "={{ $json.msg_email_html }}",
+        "options": {}
+      },
+      "id": "cca4d804-620d-4304-8a6b-9f67078a03d6",
+      "name": "📧 Confirmar Planilha (Email)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2224,
+        2144
+      ],
+      "webhookId": "1cd89914-d4f3-4adb-8cce-71a7d7f5d196",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rQesNRyarukVs0N4",
+          "name": "gmail lucas@tktech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email_from || $env.NOTIFICATION_EMAIL_TO || '' }}",
+        "subject": "={{ $json.email_subject }}",
+        "message": "={{ $json.email_html }}",
+        "options": {}
+      },
+      "id": "dcba7649-e43c-46fa-8749-9b637c05a6cb",
+      "name": "📧 Enviar Alerta de Erro",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2448,
+        2528
+      ],
+      "webhookId": "1cd89914-d4f3-4adb-8cce-71a7d7f5d196",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rQesNRyarukVs0N4",
+          "name": "gmail lucas@tktech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_router — API Diversos arm (inline POST to StokAPI). Runs for .analisar and .sku.\n\nfunction readEnv(name) {\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\nfunction trimTrailingSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\nfunction trimSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.startsWith('/')) out = out.slice(1);\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\nfunction encodeQueryParam(name, value) {\n  return encodeURIComponent(name) + '=' + encodeURIComponent(String(value));\n}\n\nconst dq = $input.first().json;\nlet chatId = '';\nlet emailFrom = '';\nlet notify = 'none';\nlet commandRoute = String(dq.command_route || dq.route || 'analisar');\ntry {\n  const sd = $getWorkflowStaticData('global');\n  const ctx = sd.cdp_sheet_requester || {};\n  chatId = String(ctx.chat_id || dq.telegram_chat_id || dq.chat_id || '').trim();\n  emailFrom = String(ctx.email_from || dq.email_from || '').trim();\n  notify = String(ctx.notify || (chatId ? 'telegram' : emailFrom ? 'email' : 'none'));\n  if (ctx.command_route) commandRoute = String(ctx.command_route);\n} catch (e) {}\n\nconst rawSkus = Array.isArray(dq.skus) ? dq.skus : [];\nif (!dq.valid_skus || dq.valid_skus < 1 || !rawSkus.length) {\n  return [\n    {\n      json: {\n        skip_stokapi: true,\n        skip_muvstok: true,\n        reason: 'no_skus',\n        chat_id: chatId,\n        command_route: commandRoute,\n      },\n    },\n  ];\n}\n\nconst skuRows = rawSkus\n  .map((row) => {\n    const sku = String(row.sku || row.SKU || row).trim().toUpperCase();\n    return {\n      sku,\n      row_number: row.row_number ?? null,\n      description: String(row.description || row.ITEM || '').trim(),\n    };\n  })\n  .filter((r) => r.sku.length >= 3);\n\nconst batchGroupId =\n  String(dq.batch_group_id || '').trim() ||\n  'bg-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);\n\nlet callbackUrl = readEnv('CDP_MUVSTOK_N8N_WEBHOOK_URL');\nif (!callbackUrl) {\n  const base = trimTrailingSlashes(readEnv('WEBHOOK_URL'));\n  const rel = trimSlashes(readEnv('CDP_MUVSTOK_WEBHOOK_PATH') || 'webhook/muvstok-result');\n  if (base) callbackUrl = base + '/' + rel;\n}\nif (!callbackUrl) callbackUrl = 'https://automacao.tktechnologies.com.br/webhook/muvstok-result';\n\nconst queryParts = [\n  encodeQueryParam('notify', notify),\n  encodeQueryParam('batch_group_id', batchGroupId),\n  encodeQueryParam('dual_run', 'stokapi'),\n  encodeQueryParam('command_route', commandRoute),\n];\nif (chatId) queryParts.push(encodeQueryParam('chat_id', chatId));\nif (emailFrom) queryParts.push(encodeQueryParam('reply_email', emailFrom));\ncallbackUrl += (callbackUrl.includes('?') ? '&' : '?') + queryParts.join('&');\n\nconst apiBase = trimTrailingSlashes(\n  readEnv('CDP_MUVSTOK_API_BASE') ||\n    'https://cdp-muv-api.bravecoast-b14d791e.eastus2.azurecontainerapps.io'\n);\n\nconst metadata = {\n  source: 'cdp_router',\n  pipeline: 'stokapi',\n  command_route: commandRoute,\n  batch_index: 1,\n  total_batches: 1,\n  batch_group_id: batchGroupId,\n  dispatched_at: dq.dispatched_at || new Date().toISOString(),\n};\n\nreturn [\n  {\n    json: {\n      skus: skuRows.map((r) => r.sku),\n      sku_rows: skuRows,\n      callback_url: callbackUrl,\n      api_jobs_url: apiBase + '/api/v1/muvstok/jobs',\n      metadata,\n      idempotency_key: batchGroupId + '-stokapi-1',\n      chat_id: chatId,\n      email_from: emailFrom,\n      notify,\n      batch_group_id: batchGroupId,\n      command_route: commandRoute,\n    },\n  },\n];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "b2c3d4e5-f6a7-4890-b123-4567890abcde",
+      "name": "📤 Router: API Diversos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        2720
+      ],
+      "notes": "Router arm B: builds API Diversos POST body + callback with requester chat_id."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "can-dispatch-muv",
+              "leftValue": "={{ !$json.skip_stokapi && !$json.skip_muvstok && !!$json.api_jobs_url && ($json.skus || []).length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b7c8d9e0-f1a2-4345-b678-9012345abcde",
+      "name": "❓ Disparar API Diversos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.api_jobs_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.CDP_MUVSTOK_API_KEY || $env.CDP_API_KEY || $env.API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ skus: $json.skus, callback_url: $json.callback_url, metadata: $json.metadata, idempotency_key: $json.idempotency_key }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 90000
+        }
+      },
+      "id": "c3d4e5f6-a7b8-4901-c234-5678901bcdef",
+      "name": "🚀 POST API Diversos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        2720
+      ],
+      "continueOnFail": true,
+      "notes": "Inline POST to cdp-muv-api (avoids broken sub-workflow URL expressions on live)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "muv-job-ok",
+              "leftValue": "={{ !!($json.job_id || $json.body?.job_id) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e4f5a6b7-c8d9-4012-e345-6789012cdef3",
+      "name": "📦 API Diversos job aceito?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prep = $('📤 Router: API Diversos').first().json;\nconst resp = $input.first().json;\nconst chatId = String(prep.chat_id || '').trim();\nif (!chatId || prep.skip_stokapi || prep.skip_muvstok) return [{ json: { skip: true } }];\nconst msg = [\n  '🤖 *Assistente CDP*',\n  '',\n  '⚠️ A consulta de estoque não iniciou nesta rodada.',\n  'A busca em sites continua — você receberá o aviso de sites normalmente.',\n  '',\n  'Se o problema persistir, tente novamente em alguns minutos.',\n].join('\\n');\nreturn [{ json: { chat_id: chatId, msg } }];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "f5a6b7c8-d9e0-4123-f456-7890123def45",
+      "name": "📋 Formatar erro API Diversos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2384,
+        2800
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.msg }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "appendAttribution": false
+        }
+      },
+      "id": "a6b7c8d9-e0f1-4234-a567-8901234ef56a",
+      "name": "📱 Telegram: erro API Diversos",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        2608,
+        2800
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "UmDqGKD8k0bA10j2",
+          "name": "Telegram account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst chatId = String(d.chat_id || '').trim();\nlet emailFrom = String(d.email_from || '').trim();\nif (!emailFrom && d.notify && String(d.notify).includes('@')) {\n  emailFrom = String(d.notify).trim();\n}\nlet notify = 'none';\nif (chatId) notify = 'telegram';\nelse if (emailFrom) notify = 'email';\ntry {\n  if (typeof $getWorkflowStaticData === 'function') {\n    const sd = $getWorkflowStaticData('global');\n    sd.cdp_sheet_requester = { chat_id: chatId, email_from: emailFrom, notify: notify };\n  }\n} catch (e) {}\nreturn $input.all();"
+      },
+      "id": "a94b70bc-e5ec-4851-8cbe-702d3db497c4",
+      "name": "💾 Salvar Contexto do Solicitante",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        1952
+      ],
+      "notes": "v0.8.4: Persists chat_id/email_from in workflow staticData before 📊 Ler CDP_SKUs so ⚙️ Formatar Payload and 📋 Formatar Confirmação can recover routing after the sheet read."
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_router — persist active dual-pipeline run (staticData + dispatch_runs API).\n\nfunction env(name) {\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction trimTrailingSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\n\nconst scraperResponses = $('🚀 POST → Scraper API (/jobs)').all();\nconst scraperJobIds = scraperResponses\n  .map((item) => String(item.json.job_id || '').trim())\n  .filter(Boolean);\n\nlet stokapiJobId = '';\ntry {\n  const stokResp = $('🚀 POST API Diversos').first().json;\n  stokapiJobId = String(stokResp.job_id || stokResp.id || '').trim();\n} catch (e) {}\n\nlet dispatch = {};\ntry {\n  dispatch = $('🎲 Limitar SKUs').first().json;\n} catch (e) {}\n\nlet confirmacao = {};\ntry {\n  confirmacao = $('📋 Formatar Confirmação (Planilha)').first().json;\n} catch (e) {}\n\nconst batchGroupId = String(dispatch.batch_group_id || '').trim();\nconst chatId = String(confirmacao.chat_id || dispatch.chat_id || dispatch.telegram_chat_id || '').trim();\nconst commandRoute = String(dispatch.command_route || 'analisar');\nconst totalSkus = Number(dispatch.valid_skus || 0);\nconst estimatedSeconds = Number(confirmacao.mins || 0) * 60;\n\nconst activeRun = {\n  batch_group_id: batchGroupId,\n  scraper_job_ids: scraperJobIds,\n  stokapi_job_id: stokapiJobId,\n  total_skus: totalSkus,\n  dispatched_at: new Date().toISOString(),\n  estimated_seconds: estimatedSeconds,\n  chat_id: chatId,\n  command_route: commandRoute,\n  scraper_completed: false,\n  stokapi_completed: false,\n  last_progress_notified_pct: 0,\n  progress_message_count: 0,\n};\n\ntry {\n  if (typeof $getWorkflowStaticData === 'function') {\n    const sd = $getWorkflowStaticData('global');\n    sd.cdp_active_run = activeRun;\n  }\n} catch (e) {}\n\nconst apiBase = trimTrailingSlashes(\n  env('CDP_SCRAPER_API_BASE') || env('MUVSTOK_SCRAPER_API_BASE') || ''\n);\nconst apiKey = env('CDP_API_KEY') || env('MUVSTOK_API_KEY') || env('API_KEY');\n\nreturn [\n  {\n    json: {\n      registered: true,\n      ...activeRun,\n      dispatch_runs_url: apiBase ? apiBase + '/api/v1/dispatch-runs' : '',\n      dispatch_runs_api_key: apiKey,\n    },\n  },\n];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "15c1075b-12f2-475f-806b-f8aee258ba37",
+      "name": "📊 Registrar Execução",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        2528
+      ],
+      "notes": "Phase 2: stores active run (job IDs, metadata) in workflow staticData after both API POSTs."
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_router — .status / .andamento: resolve active run and API poll targets.\n\nfunction env(name) {\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction trimTrailingSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\n\nconst router = $input.first().json;\nconst chatId = String(router.chat_id || router.notify || '').trim();\n\nlet run = null;\ntry {\n  if (typeof $getWorkflowStaticData === 'function') {\n    run = $getWorkflowStaticData('global').cdp_active_run || null;\n  }\n} catch (e) {}\n\nif (!run || !run.batch_group_id) {\n  try {\n    const apiRun = $('📊 GET dispatch run (chat)').first().json;\n    if (apiRun && apiRun.batch_group_id) {\n      run = {\n        batch_group_id: apiRun.batch_group_id,\n        scraper_job_ids: apiRun.scraper_job_ids || [],\n        stokapi_job_id: apiRun.stokapi_job_id || '',\n        total_skus: Number(apiRun.total_skus || 0),\n        dispatched_at: apiRun.dispatched_at,\n        estimated_seconds: Number(apiRun.estimated_seconds || 0),\n        chat_id: apiRun.chat_id,\n      };\n    }\n  } catch (e) {}\n}\n\nconst TTL_HOURS = 24;\nif (run && run.dispatched_at) {\n  const ageMs = Date.now() - new Date(run.dispatched_at).getTime();\n  if (ageMs > TTL_HOURS * 60 * 60 * 1000) {\n    run = null;\n  }\n}\n\nif (!run || !run.batch_group_id) {\n  return [\n    {\n      json: {\n        skip_poll: true,\n        chat_id: chatId,\n        msg_telegram:\n          '🤖 *Assistente CDP*\\n\\nNenhuma consulta em andamento.\\nUse `.analisar` ou `.sku` para iniciar.',\n      },\n    },\n  ];\n}\n\nif (chatId && run.chat_id && chatId !== String(run.chat_id).trim()) {\n  return [\n    {\n      json: {\n        skip_poll: true,\n        chat_id: chatId,\n        msg_telegram:\n          '🤖 *Assistente CDP*\\n\\nNão há consulta ativa para este chat.\\nUse `.analisar` ou `.sku` para iniciar.',\n      },\n    },\n  ];\n}\n\nconst scraperBase = trimTrailingSlashes(\n  env('CDP_SCRAPER_API_BASE') || env('MUVSTOK_SCRAPER_API_BASE') || ''\n);\nconst stokapiBase = trimTrailingSlashes(\n  env('CDP_MUVSTOK_API_BASE') ||\n    'https://cdp-muv-api.bravecoast-b14d791e.eastus2.azurecontainerapps.io'\n);\nconst apiKey = env('CDP_API_KEY') || env('MUVSTOK_API_KEY') || env('API_KEY');\nconst stokapiKey = env('CDP_MUVSTOK_API_KEY') || apiKey;\n\nconst scraperJobIds = Array.isArray(run.scraper_job_ids) ? run.scraper_job_ids : [];\nconst primaryScraperJobId = scraperJobIds[0] || '';\n\nreturn [\n  {\n    json: {\n      skip_poll: false,\n      chat_id: chatId || run.chat_id,\n      batch_group_id: run.batch_group_id,\n      total_skus: Number(run.total_skus || 0),\n      dispatched_at: run.dispatched_at,\n      estimated_seconds: Number(run.estimated_seconds || 0),\n      scraper_job_ids: scraperJobIds,\n      stokapi_job_id: String(run.stokapi_job_id || ''),\n      scraper_job_url: primaryScraperJobId\n        ? scraperBase + '/api/v1/jobs/' + primaryScraperJobId\n        : '',\n      stokapi_job_url: run.stokapi_job_id\n        ? stokapiBase + '/api/v1/muvstok/jobs/' + run.stokapi_job_id\n        : '',\n      scraper_api_key: apiKey,\n      stokapi_api_key: stokapiKey,\n    },\n  },\n];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "305278ef-2e34-445e-ab06-2b3c176ba720",
+      "name": "📊 Status: preparar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        1440
+      ],
+      "notes": "Phase 3: reads staticData active run, builds API poll URLs or 'no run' message."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "d8720559-0c7b-4591-b9d9-497beafe4047",
+              "leftValue": "={{ !$json.skip_poll }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1ac24e3d-a38b-4367-b37d-91977712d010",
+      "name": "❓ Status: tem execução?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        656,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.scraper_job_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.scraper_api_key }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "7269b38e-3b0f-48ec-8ab0-ab1630f85577",
+      "name": "📊 GET Scraper Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        1320
+      ],
+      "continueOnFail": true,
+      "notes": "Phase 3: GET /api/v1/jobs/{id} for scraper progress."
+    },
+    {
+      "parameters": {
+        "url": "={{ $('📊 Status: preparar').first().json.stokapi_job_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $('📊 Status: preparar').first().json.stokapi_api_key }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "2396fac2-030e-402a-ac70-7834e3afbeee",
+      "name": "📊 GET StokAPI Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1104,
+        1320
+      ],
+      "continueOnFail": true,
+      "notes": "Phase 3: GET /api/v1/muvstok/jobs/{id} for StokAPI progress."
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_router — format combined scraper + StokAPI progress for Telegram.\n\nfunction num(v, fallback) {\n  const n = Number(v);\n  return Number.isFinite(n) ? n : fallback;\n}\n\nfunction statusLabel(status) {\n  const s = String(status || '').toLowerCase();\n  if (s === 'completed' || s === 'succeeded') return 'concluído';\n  if (s === 'partial' || s === 'partially_succeeded') return 'parcial';\n  if (s === 'failed') return 'falhou';\n  if (s === 'running' || s === 'processing') return 'em execução';\n  if (s === 'pending' || s === 'queued') return 'na fila';\n  return s || 'desconhecido';\n}\n\nfunction formatDuration(seconds) {\n  const sec = Math.max(0, Math.round(num(seconds, 0)));\n  if (sec < 60) return '~' + sec + ' s';\n  const mins = Math.ceil(sec / 60);\n  return mins === 1 ? '~1 minuto' : '~' + mins + ' minutos';\n}\n\nfunction formatClock(iso) {\n  if (!iso) return '—';\n  try {\n    const d = new Date(iso);\n    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });\n  } catch (e) {\n    return '—';\n  }\n}\n\nconst prep = $('📊 Status: preparar').first().json;\nif (prep.skip_poll) {\n  return [{ json: { chat_id: prep.chat_id, msg_telegram: prep.msg_telegram } }];\n}\n\nlet scraper = {};\nlet stokapi = {};\ntry {\n  scraper = $('📊 GET Scraper Job').first().json;\n} catch (e) {}\ntry {\n  stokapi = $('📊 GET StokAPI Job').first().json;\n} catch (e) {}\n\nconst total = num(prep.total_skus, num(scraper.total_items, num(stokapi.submitted_sku_count, 0)));\nconst scraperProcessed = num(\n  scraper.items_processed,\n  num(scraper.items_succeeded, 0) + num(scraper.items_failed, 0)\n);\nconst scraperPct = num(scraper.progress_pct, total > 0 ? (scraperProcessed / total) * 100 : 0);\nconst stokProcessed = num(\n  stokapi.processed_sku_count,\n  num(stokapi.succeeded_sku_count, 0) + num(stokapi.failed_sku_count, 0)\n);\nconst stokPct = num(stokapi.progress_pct, total > 0 ? (stokProcessed / total) * 100 : 0);\n\nconst dispatchedAt = prep.dispatched_at || scraper.started_at;\nconst elapsedSec = dispatchedAt\n  ? Math.max(0, Math.floor((Date.now() - new Date(dispatchedAt).getTime()) / 1000))\n  : 0;\n\nconst scraperEta = scraper.estimated_seconds_remaining;\nconst stokEta = stokapi.estimated_seconds_remaining;\nconst etaSec =\n  num(scraperEta, null) != null && scraperEta > 0\n    ? scraperEta\n    : num(stokEta, null) != null && stokEta > 0\n      ? stokEta\n      : Math.max(0, num(prep.estimated_seconds, 0) - elapsedSec);\n\nconst lines = [\n  '🤖 *Assistente CDP* — andamento',\n  '',\n  '📦 *Sites (scraper):* ' +\n    scraperProcessed +\n    '/' +\n    (total || '?') +\n    ' peças (~' +\n    Math.round(scraperPct) +\n    '%) — ' +\n    statusLabel(scraper.status),\n];\n\nif (etaSec > 0 && String(scraper.status || '').toLowerCase() === 'running') {\n  lines.push('⏱️ ' + formatDuration(etaSec) + ' restantes (estimativa)');\n}\nlines.push(\n  '🕐 Início: ' + formatClock(dispatchedAt) + ' · Já decorrido: ' + formatDuration(elapsedSec)\n);\nlines.push('');\nlines.push(\n  '📦 *Estoque:* ' +\n    statusLabel(stokapi.status) +\n    ' (' +\n    stokProcessed +\n    '/' +\n    (total || '?') +\n    ' com dados, ~' +\n    Math.round(stokPct) +\n    '%)'\n);\n\nconst scraperTerminal = ['completed', 'partial', 'failed'].includes(\n  String(scraper.status || '').toLowerCase()\n);\nconst stokTerminal = ['succeeded', 'partially_succeeded', 'failed'].includes(\n  String(stokapi.status || '').toLowerCase()\n);\n\ntry {\n  if (typeof $getWorkflowStaticData === 'function') {\n    const sd = $getWorkflowStaticData('global');\n    if (sd.cdp_active_run) {\n      sd.cdp_active_run.scraper_completed = scraperTerminal;\n      sd.cdp_active_run.stokapi_completed = stokTerminal;\n      if (scraperTerminal && stokTerminal) {\n        delete sd.cdp_active_run;\n      }\n    }\n  }\n} catch (e) {}\n\nreturn [{ json: { chat_id: prep.chat_id, msg_telegram: lines.join('\\n') } }];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "9fba51da-250e-4b5e-8502-859f11c25545",
+      "name": "📊 Formatar Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        1320
+      ],
+      "notes": "Phase 3: combines scraper + StokAPI HTTP responses into PT-BR status message."
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.msg_telegram }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "appendAttribution": false
+        }
+      },
+      "id": "4cac7ed4-94a1-410d-a53f-945069f781e8",
+      "name": "📱 Enviar Status (Telegram)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1552,
+        1440
+      ],
+      "webhookId": "6b511123-84d4-4c91-a1fe-d3a170776705",
+      "credentials": {
+        "telegramApi": {
+          "id": "UmDqGKD8k0bA10j2",
+          "name": "Telegram account"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "Phase 3: sends .status/.andamento progress reply to Telegram."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.dispatch_runs_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.dispatch_runs_api_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ batch_group_id: $json.batch_group_id, chat_id: $json.chat_id, command_route: $json.command_route, scraper_job_ids: $json.scraper_job_ids, stokapi_job_id: $json.stokapi_job_id, total_skus: $json.total_skus, estimated_seconds: $json.estimated_seconds, dispatched_at: $json.dispatched_at }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "e42f357d-c4b7-4048-8923-cc7e9c40b6fa",
+      "name": "📋 POST dispatch-runs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2448,
+        2528
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ (String($env.CDP_SCRAPER_API_BASE || $env.MUVSTOK_SCRAPER_API_BASE || '').trim().replace(/\\/+$/, '')) + '/api/v1/dispatch-runs/active/for-chat/' + String($('📱 Roteador de Comando').first().json.chat_id || $json.chat_id || '') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.CDP_API_KEY || $env.MUVSTOK_API_KEY || $env.API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        },
+        "continueOnFail": true
+      },
+      "id": "09be08e5-d945-4d43-a92a-784bcf42a4db",
+      "name": "📊 GET dispatch run (chat)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        256,
+        1200
+      ],
+      "notes": "Phase 5: Postgres dispatch_runs fallback when staticData is empty."
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "📧 Roteador de Comando",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Trigger Telegram": {
+      "main": [
+        [
+          {
+            "node": "📱 Roteador de Comando",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Email entrada OK?": {
+      "main": [
+        [
+          {
+            "node": "🎲 Limitar SKUs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Telegram entrada OK?": {
+      "main": [
+        [
+          {
+            "node": "🎲 Limitar SKUs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Emparelhar SKUs → PROCESSADO": {
+      "main": [
+        [
+          {
+            "node": "✅ Marcar PROCESSADO → CDP_SKUs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❌ Formatar Erro de Despacho": {
+      "main": [
+        [
+          {
+            "node": "📝 Erro → CDP_Resultados (Histórico)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📧 Enviar Alerta de Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ API OK?": {
+      "main": [
+        [
+          {
+            "node": "🔗 Emparelhar SKUs → PROCESSADO",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📊 Registrar Execução",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❌ Formatar Erro de Despacho",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🚀 POST → Scraper API (/jobs)": {
+      "main": [
+        [
+          {
+            "node": "✅ API OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Formatar Payload Scraper": {
+      "main": [
+        [
+          {
+            "node": "🚀 POST → Scraper API (/jobs)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 DQ: Validar & Deduplicar": {
+      "main": [
+        [
+          {
+            "node": "🎲 Limitar SKUs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎲 Limitar SKUs": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Formatar Payload Scraper",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📋 Formatar Confirmação (Planilha)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📤 Router: API Diversos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Router: API Diversos": {
+      "main": [
+        [
+          {
+            "node": "❓ Disparar API Diversos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Disparar API Diversos?": {
+      "main": [
+        [
+          {
+            "node": "🚀 POST API Diversos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "🚀 POST API Diversos": {
+      "main": [
+        [
+          {
+            "node": "📦 API Diversos job aceito?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 API Diversos job aceito?": {
+      "main": [
+        [
+          {
+            "node": "📊 Registrar Execução",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📋 Formatar erro API Diversos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Formatar erro API Diversos": {
+      "main": [
+        [
+          {
+            "node": "📱 Telegram: erro API Diversos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Ler CDP_SKUs": {
+      "main": [
+        [
+          {
+            "node": "🔍 DQ: Validar & Deduplicar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Trigger Agendado (Seg 8h)": {
+      "main": [
+        [
+          {
+            "node": "📊 Ler CDP_SKUs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ Trigger Manual": {
+      "main": [
+        [
+          {
+            "node": "📊 Ler CDP_SKUs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Roteador de Comando": {
+      "main": [
+        [
+          {
+            "node": "🔀 Switch Comando (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Switch Comando (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "💾 Salvar Contexto do Solicitante",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📱 Parsear SKUs do Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📥 Obter Path do Arquivo (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📥 Obter Path do Arquivo (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📱 Resposta .sku Vazio (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [],
+        [
+          {
+            "node": "📊 GET dispatch run (chat)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Roteador de Comando": {
+      "main": [
+        [
+          {
+            "node": "🔀 Switch Comando (Email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Switch Comando (Email)": {
+      "main": [
+        [
+          {
+            "node": "💾 Salvar Contexto do Solicitante",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📧 Parsear SKUs do Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📥 Baixar Anexo (Email)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📥 Baixar Anexo (Email)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📧 Resposta .sku Vazio (Email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Parsear SKUs do Telegram": {
+      "main": [
+        [
+          {
+            "node": "📱 Telegram entrada OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Obter Path do Arquivo (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "📥 Baixar Arquivo (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Baixar Arquivo (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "📊 Parsear Planilha (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Parsear Planilha (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "📋 Formatar SKUs da Planilha (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Formatar SKUs da Planilha (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "📱 Telegram entrada OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Parsear SKUs do Email": {
+      "main": [
+        [
+          {
+            "node": "📧 Email entrada OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Baixar Anexo (Email)": {
+      "main": [
+        [
+          {
+            "node": "📊 Parsear Planilha (Email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Parsear Planilha (Email)": {
+      "main": [
+        [
+          {
+            "node": "📋 Formatar SKUs da Planilha (Email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Formatar SKUs da Planilha (Email)": {
+      "main": [
+        [
+          {
+            "node": "📧 Email entrada OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Formatar Confirmação (Planilha)": {
+      "main": [
+        [
+          {
+            "node": "✅ Foi Disparado por Comando?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Foi Disparado por Comando?": {
+      "main": [
+        [
+          {
+            "node": "🔀 Rota Confirmação Planilha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Rota Confirmação Planilha": {
+      "main": [
+        [
+          {
+            "node": "📱 Confirmar Planilha (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📧 Confirmar Planilha (Email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Salvar Contexto do Solicitante": {
+      "main": [
+        [
+          {
+            "node": "📊 Ler CDP_SKUs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Status: preparar": {
+      "main": [
+        [
+          {
+            "node": "❓ Status: tem execução?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Status: tem execução?": {
+      "main": [
+        [
+          {
+            "node": "📊 GET Scraper Job",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📱 Enviar Status (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 GET Scraper Job": {
+      "main": [
+        [
+          {
+            "node": "📊 GET StokAPI Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 GET StokAPI Job": {
+      "main": [
+        [
+          {
+            "node": "📊 Formatar Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Formatar Status": {
+      "main": [
+        [
+          {
+            "node": "📱 Enviar Status (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Registrar Execução": {
+      "main": [
+        []
+      ]
+    },
+    "📊 GET dispatch run (chat)": {
+      "main": [
+        [
+          {
+            "node": "📊 Status: preparar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "de7dfde7182ba46a60ed6b250bd1db3a7076885f7c50487eea26aeedab86a5e3"
+  },
+  "name": "cdp_router"
+}

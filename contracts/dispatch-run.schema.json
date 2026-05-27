@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DispatchRunRegistry",
+  "description": "Scraper API dispatch-run registry for dual-pipeline progress. Source: scrapers/src/models/schemas.py",
+  "$defs": {
+    "DispatchRunUpsertRequest": {
+      "type": "object",
+      "required": ["batch_group_id"],
+      "properties": {
+        "batch_group_id": { "type": "string" },
+        "chat_id": { "type": ["string", "null"] },
+        "command_route": { "type": ["string", "null"] },
+        "scraper_job_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "stokapi_job_id": { "type": ["string", "null"] },
+        "total_skus": { "type": "integer", "minimum": 0, "default": 0 },
+        "estimated_seconds": { "type": ["integer", "null"] },
+        "dispatched_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "DispatchRunResponse": {
+      "type": "object",
+      "required": ["id", "batch_group_id", "dispatched_at"],
+      "properties": {
+        "id": { "type": "string" },
+        "batch_group_id": { "type": "string" },
+        "chat_id": { "type": ["string", "null"] },
+        "command_route": { "type": ["string", "null"] },
+        "scraper_job_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "stokapi_job_id": { "type": ["string", "null"] },
+        "total_skus": { "type": "integer" },
+        "dispatched_at": { "type": "string", "format": "date-time" },
+        "estimated_seconds": { "type": ["integer", "null"] },
+        "scraper_status": { "type": "string", "default": "pending" },
+        "stokapi_status": { "type": "string", "default": "pending" },
+        "last_progress_pct": { "type": "number", "default": 0 },
+        "last_notified_at": { "type": ["string", "null"], "format": "date-time" },
+        "progress_message_count": { "type": "integer", "default": 0 },
+        "completed_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "DispatchRunProgressUpdate": {
+      "type": "object",
+      "properties": {
+        "last_progress_pct": { "type": ["number", "null"] },
+        "progress_message_count": { "type": ["integer", "null"] },
+        "scraper_status": { "type": ["string", "null"] },
+        "stokapi_status": { "type": ["string", "null"] },
+        "completed_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    }
+  }
+}

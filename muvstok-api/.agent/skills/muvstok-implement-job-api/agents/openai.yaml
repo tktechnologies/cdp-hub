@@ -1,0 +1,4 @@
+interface:
+  display_name: "Muvstok Job API"
+  short_description: "Implement FastAPI job endpoints safely."
+  default_prompt: "Use this skill when changing Muvstok FastAPI routes, schemas, dependencies, or job API behavior."

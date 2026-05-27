@@ -1,0 +1,89 @@
+services:
+  # ─── Scraper API ──────────────────────────────────────────────
+  scraper-api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      - browser_states:/app/browser_states
+      - screenshots:/app/screenshots
+      - ./src:/app/src  # Hot reload in dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Celery Worker ─────────────────────────────────────────────
+  scraper-worker:
+    build: .
+    command: celery -A src.celery_app.celery_app worker --loglevel=INFO --concurrency=${CELERY_WORKER_CONCURRENCY:-1}
+    env_file: .env
+    environment:
+      JOB_EXECUTION_BACKEND: celery
+    volumes:
+      - browser_states:/app/browser_states
+      - screenshots:/app/screenshots
+      - ./src:/app/src
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── PostgreSQL ───────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cdp_scraper
+      POSTGRES_USER: cdp
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cdp_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cdp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis ────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_HOST_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
+  browser_states:
+  screenshots:

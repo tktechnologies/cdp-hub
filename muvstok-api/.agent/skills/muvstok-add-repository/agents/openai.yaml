@@ -1,0 +1,4 @@
+interface:
+  display_name: "Muvstok Repository"
+  short_description: "Add database repositories and queries."
+  default_prompt: "Use this skill when adding or changing SQLAlchemy repositories for Muvstok data."

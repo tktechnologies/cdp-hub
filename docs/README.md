@@ -1,0 +1,24 @@
+# CDP Documentation Index
+
+| Document | Purpose |
+|----------|---------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | **Canonical** platform design (services, dual pipeline, n8n, agents) |
+| [SETUP.md](SETUP.md) | Local dev quick start |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Change workflow, gates, n8n rules |
+| [PLATFORM_OVERVIEW.md](PLATFORM_OVERVIEW.md) | Detailed reference (API tables, Azure, progress) |
+| [MAINTENANCE.md](MAINTENANCE.md) | Cross-service maintenance |
+| [architecture/AGENT_ARCHITECTURE.md](architecture/AGENT_ARCHITECTURE.md) | Three-tier AI agent model |
+| [architecture/DUAL_PIPELINE.md](architecture/DUAL_PIPELINE.md) | `.analisar` / `.sku` behavior |
+| [decisions/](decisions/) | Architecture decision records (ADR-0001 … ADR-0005) |
+| [n8n/LIVE_WORKFLOWS.md](n8n/LIVE_WORKFLOWS.md) | Production workflow IDs |
+| [n8n/WORKFLOW_GUIDE.md](n8n/WORKFLOW_GUIDE.md) | Edit, sync, publish workflows |
+| [n8n/DATA_CONTRACTS.md](n8n/DATA_CONTRACTS.md) | Scraper result field semantics (Sheets) |
+| [runbooks/](runbooks/) | Deploy and n8n release |
+
+**Shared contracts:** [contracts/](../contracts/) (jobs, callbacks, dispatch-runs)
+
+**Service docs:** [scrapers/docs/](../scrapers/docs/), [muvstok-api/specs/](../muvstok-api/specs/)
+
+**Agent workspaces:** [.agent/](../.agent/), [scrapers/.agent/](../scrapers/.agent/), [muvstok-api/.agent/](../muvstok-api/.agent/)
+
+**Cursor rules:** [.cursor/rules/](../.cursor/rules/) (platform, scraper, stokapi, n8n, python, contracts, infra)

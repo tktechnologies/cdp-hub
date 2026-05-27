@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "postgresAdminPassword": {
+      "value": "REPLACE_WITH_STRONG_PASSWORD"
+    },
+    "meliboxUser": {
+      "value": ""
+    },
+    "meliboxPass": {
+      "value": ""
+    },
+    "apiKey": {
+      "value": "REPLACE_WITH_API_KEY"
+    },
+    "callbackWebhookSecret": {
+      "value": "REPLACE_WITH_CALLBACK_SECRET"
+    },
+    "proxyUrls": {
+      "value": "[]"
+    },
+    "proxyRotationEnabled": {
+      "value": true
+    },
+    "maxConcurrentScrapers": {
+      "value": 3
+    },
+    "workerMaxConcurrentScrapers": {
+      "value": 2
+    },
+    "deployContainerApps": {
+      "value": true
+    },
+    "deployProxyPool": {
+      "value": false
+    },
+    "proxyAdminPassword": {
+      "value": ""
+    },
+    "n8nEncryptionKey": {
+      "value": "REPLACE_WITH_N8N_ENCRYPTION_KEY"
+    },
+    "n8nBasicAuthUser": {
+      "value": "admin"
+    },
+    "n8nBasicAuthPassword": {
+      "value": "REPLACE_WITH_N8N_BASIC_AUTH_PASSWORD"
+    }
+  }
+}

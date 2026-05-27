@@ -1,0 +1,14 @@
+{
+  "id": "VfBSV3WU6on8BXm8",
+  "local_file": "n8n/workflows/cdp_scraper.json",
+  "workflow_name": "cdp_scraper",
+  "live_name": "cdp_scraper",
+  "live_status": "active",
+  "trigger_count": 1,
+  "production_role": "Scraper receiver: POST /webhook/scraper-result → cdp_resultados sheets + Telegram/email.",
+  "webhook": {
+    "path": "scraper-result",
+    "production_url": "https://automacao.tktechnologies.com.br/webhook/scraper-result"
+  },
+  "last_verified_at_iso": "2026-05-25T00:00:00Z"
+}

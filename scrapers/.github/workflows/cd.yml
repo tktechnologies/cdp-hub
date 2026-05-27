@@ -1,0 +1,87 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".github/workflows/ci.yml"
+
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+env:
+  ACR_NAME: cdpscraperprodacr
+  IMAGE_NAME: cdp-scraper
+  RESOURCE_GROUP: automation
+  API_APP_NAME: cdp-scrapers-api-prod
+  WORKER_APP_NAME: cdp-scrapers-worker-prod
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR
+        run: az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Build and push image
+        run: |
+          TAG="${{ github.sha }}"
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${TAG} \
+                        -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${TAG}
+          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL_SYNC: ${{ secrets.DATABASE_URL_SYNC }}
+          UV_CACHE_DIR: /tmp/uv-cache
+        run: uv run alembic upgrade head
+
+      - name: Deploy API and worker images
+        run: |
+          TAG="${{ github.sha }}"
+
+          az containerapp update \
+            --name ${{ env.API_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${TAG}
+
+          az containerapp update \
+            --name ${{ env.WORKER_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${TAG}
+
+      - name: Verify health
+        run: |
+          URL=$(az containerapp show \
+            --name ${{ env.API_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query "properties.configuration.ingress.fqdn" -o tsv)
+          echo "Deployed to: https://${URL}"
+          sleep 30
+          curl -sf "https://${URL}/api/v1/health" || echo "Health check pending..."
+          az containerapp show \
+            --name ${{ env.WORKER_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query "properties.runningStatus" -o tsv
+          echo "## Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: \`${TAG}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: https://${URL}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Worker**: \`${{ env.WORKER_APP_NAME }}\`" >> $GITHUB_STEP_SUMMARY

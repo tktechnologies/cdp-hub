@@ -1,0 +1,4 @@
+interface:
+  display_name: "Muvstok Worker"
+  short_description: "Implement worker and SKU processing flows."
+  default_prompt: "Use this skill when implementing Redis worker, job processor, or SKU processing behavior."

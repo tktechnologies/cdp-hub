@@ -1,0 +1,39 @@
+# Skill: Change dual pipeline behavior
+
+Use when modifying `.analisar`, `.sku`, parallel dispatch, batch limits, or cross-service metadata.
+
+## Read first
+
+1. `docs/architecture/DUAL_PIPELINE.md`
+2. `docs/architecture/AGENT_ARCHITECTURE.md`
+3. `.agent/boundaries/services.md`
+
+## Typical change map
+
+| User-visible change | Files to touch |
+|---------------------|----------------|
+| SKU limit (5) | `n8n/src/router_limitar_skus.js` |
+| Scraper sites / cache bypass | `n8n/src/formatar_payload_scraper.js` + possibly `scrapers/src/services/orchestrator.py` |
+| StokAPI callback query params | `n8n/src/router_stokapi.js` + `muvstok-api/app/schemas/` |
+| Sheet PROCESSADO timing | `n8n/src/emparelhar_scraper.js` |
+| Receiver sheets/Telegram | Service workflow JSON only |
+
+## Parallelism model
+
+Both arms fire from **one** router execution. They are independent HTTP jobs:
+
+- Different `job_id` / `batch_group_id` links them in metadata
+- Two completion messages (one per webhook) are expected
+- Do not block Scraper on StokAPI or vice versa in n8n
+
+## Testing
+
+```bash
+make smoke-cache   # from monorepo root, if script covers your change
+```
+
+Manual: Telegram `.sku TESTSKU` and verify both sheet updates + two notifications.
+
+## Sync
+
+After router JS changes: follow `n8n-router-sync` skill.

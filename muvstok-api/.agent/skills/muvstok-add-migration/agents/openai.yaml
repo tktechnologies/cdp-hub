@@ -1,0 +1,4 @@
+interface:
+  display_name: "Muvstok Migration"
+  short_description: "Add schema models and Alembic migrations."
+  default_prompt: "Use this skill when changing Muvstok database models or Alembic migrations."

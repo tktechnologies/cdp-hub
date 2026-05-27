@@ -1,0 +1,2124 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "languageVersion": "2.0",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.43.8.12551",
+      "templateHash": "12463143846745379726"
+    }
+  },
+  "parameters": {
+    "postgresLocation": {
+      "type": "string",
+      "defaultValue": "brazilsouth",
+      "metadata": {
+        "description": "Azure region for PostgreSQL Flexible Server."
+      }
+    },
+    "appLocation": {
+      "type": "string",
+      "defaultValue": "eastus2",
+      "metadata": {
+        "description": "Azure region for ACR, Redis, Key Vault, Log Analytics, Container Apps, API, worker, and N8N."
+      }
+    },
+    "environmentName": {
+      "type": "string",
+      "defaultValue": "production",
+      "metadata": {
+        "description": "Environment name used in resource tags."
+      }
+    },
+    "acrName": {
+      "type": "string",
+      "defaultValue": "cdpscraperprodacr"
+    },
+    "containerAppEnvironmentName": {
+      "type": "string",
+      "defaultValue": "cdp-scrapers-prod-env"
+    },
+    "apiContainerAppName": {
+      "type": "string",
+      "defaultValue": "cdp-scrapers-api-prod"
+    },
+    "workerContainerAppName": {
+      "type": "string",
+      "defaultValue": "cdp-scrapers-worker-prod"
+    },
+    "n8nContainerAppName": {
+      "type": "string",
+      "defaultValue": "cdp-n8n-prod"
+    },
+    "imageName": {
+      "type": "string",
+      "defaultValue": "cdpscraperprodacr.azurecr.io/cdp-scraper:latest"
+    },
+    "n8nImageName": {
+      "type": "string",
+      "defaultValue": "docker.io/n8nio/n8n:latest"
+    },
+    "n8nHost": {
+      "type": "string",
+      "defaultValue": "automacao.tktechnologies.com.br"
+    },
+    "n8nEditorBaseUrl": {
+      "type": "string",
+      "defaultValue": "https://automacao.tktechnologies.com.br"
+    },
+    "n8nWebhookUrl": {
+      "type": "string",
+      "defaultValue": "https://automacao.tktechnologies.com.br/"
+    },
+    "postgresServerName": {
+      "type": "string",
+      "defaultValue": "cdp-scrapers-pg-prod"
+    },
+    "postgresDatabaseName": {
+      "type": "string",
+      "defaultValue": "cdp_scraper"
+    },
+    "n8nDatabaseName": {
+      "type": "string",
+      "defaultValue": "n8n"
+    },
+    "postgresAdminUser": {
+      "type": "string",
+      "defaultValue": "cdp"
+    },
+    "postgresAdminPassword": {
+      "type": "securestring"
+    },
+    "redisName": {
+      "type": "string",
+      "defaultValue": "cdp-scrapers-redis-prod"
+    },
+    "keyVaultName": {
+      "type": "string",
+      "defaultValue": "cdp-scrapers-kv-prod"
+    },
+    "apiKey": {
+      "type": "securestring"
+    },
+    "callbackWebhookSecret": {
+      "type": "securestring"
+    },
+    "meliboxUser": {
+      "type": "securestring",
+      "defaultValue": ""
+    },
+    "meliboxPass": {
+      "type": "securestring",
+      "defaultValue": ""
+    },
+    "proxyUrls": {
+      "type": "securestring"
+    },
+    "proxyRotationEnabled": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "maxConcurrentScrapers": {
+      "type": "int",
+      "defaultValue": 3
+    },
+    "workerMaxConcurrentScrapers": {
+      "type": "int",
+      "defaultValue": 2
+    },
+    "deployContainerApps": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deployProxyPool": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "proxyAdminUsername": {
+      "type": "string",
+      "defaultValue": "proxyadmin"
+    },
+    "proxyAdminPassword": {
+      "type": "securestring",
+      "defaultValue": ""
+    },
+    "n8nEncryptionKey": {
+      "type": "securestring"
+    },
+    "n8nBasicAuthUser": {
+      "type": "string",
+      "defaultValue": "admin"
+    },
+    "n8nBasicAuthPassword": {
+      "type": "securestring"
+    }
+  },
+  "variables": {
+    "tags": {
+      "app": "cdp-scraper",
+      "environment": "[parameters('environmentName')]"
+    },
+    "meliboxUserSecretValue": "[if(empty(parameters('meliboxUser')), 'not-configured', parameters('meliboxUser'))]",
+    "meliboxPassSecretValue": "[if(empty(parameters('meliboxPass')), 'not-configured', parameters('meliboxPass'))]"
+  },
+  "resources": {
+    "acrPullRole": {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, parameters('acrName'), 'cdp-scrapers-prod-pull', 'AcrPull')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+        "principalId": "[reference('identity').outputs.principalId.value]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "identity"
+      ]
+    },
+    "acr": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "acr",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('acrName')]"
+          },
+          "location": {
+            "value": "[parameters('appLocation')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "11410948350757344667"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ContainerRegistry/registries",
+              "apiVersion": "2023-07-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Basic"
+              },
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "adminUserEnabled": false
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('name'))]"
+            },
+            "loginServer": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('name')), '2023-07-01').loginServer]"
+            }
+          }
+        }
+      }
+    },
+    "identity": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "container-app-pull-identity",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "cdp-scrapers-prod-pull"
+          },
+          "location": {
+            "value": "[parameters('appLocation')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "15216834490098829485"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]"
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('name'))]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('name')), '2023-01-31').principalId]"
+            }
+          }
+        }
+      }
+    },
+    "postgres": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "postgres",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "serverName": {
+            "value": "[parameters('postgresServerName')]"
+          },
+          "databaseName": {
+            "value": "[parameters('postgresDatabaseName')]"
+          },
+          "n8nDatabaseName": {
+            "value": "[parameters('n8nDatabaseName')]"
+          },
+          "adminUser": {
+            "value": "[parameters('postgresAdminUser')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('postgresAdminPassword')]"
+          },
+          "location": {
+            "value": "[parameters('postgresLocation')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "13051729802182380472"
+            }
+          },
+          "parameters": {
+            "serverName": {
+              "type": "string"
+            },
+            "databaseName": {
+              "type": "string"
+            },
+            "n8nDatabaseName": {
+              "type": "string"
+            },
+            "adminUser": {
+              "type": "string"
+            },
+            "adminPassword": {
+              "type": "securestring"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+              "apiVersion": "2023-06-01-preview",
+              "name": "[parameters('serverName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard_B1ms",
+                "tier": "Burstable"
+              },
+              "properties": {
+                "version": "16",
+                "administratorLogin": "[parameters('adminUser')]",
+                "administratorLoginPassword": "[parameters('adminPassword')]",
+                "storage": {
+                  "storageSizeGB": 32
+                },
+                "backup": {
+                  "backupRetentionDays": 7,
+                  "geoRedundantBackup": "Disabled"
+                },
+                "highAvailability": {
+                  "mode": "Disabled"
+                },
+                "authConfig": {
+                  "passwordAuth": "Enabled",
+                  "activeDirectoryAuth": "Disabled"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+              "apiVersion": "2023-06-01-preview",
+              "name": "[format('{0}/{1}', parameters('serverName'), parameters('databaseName'))]",
+              "properties": {
+                "charset": "UTF8",
+                "collation": "en_US.utf8"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('serverName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+              "apiVersion": "2023-06-01-preview",
+              "name": "[format('{0}/{1}', parameters('serverName'), parameters('n8nDatabaseName'))]",
+              "properties": {
+                "charset": "UTF8",
+                "collation": "en_US.utf8"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('serverName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/firewallRules",
+              "apiVersion": "2023-06-01-preview",
+              "name": "[format('{0}/{1}', parameters('serverName'), 'allow-azure-services')]",
+              "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('serverName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "hostName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('serverName')), '2023-06-01-preview').fullyQualifiedDomainName]"
+            },
+            "databaseName": {
+              "type": "string",
+              "value": "[parameters('databaseName')]"
+            },
+            "n8nDatabaseName": {
+              "type": "string",
+              "value": "[parameters('n8nDatabaseName')]"
+            }
+          }
+        }
+      }
+    },
+    "redis": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "redis",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('redisName')]"
+          },
+          "location": {
+            "value": "[parameters('appLocation')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "languageVersion": "2.0",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "17512640476240418170"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": {
+            "redis": {
+              "type": "Microsoft.Cache/redis",
+              "apiVersion": "2023-08-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "name": "Basic",
+                  "family": "C",
+                  "capacity": 0
+                },
+                "enableNonSslPort": false,
+                "minimumTlsVersion": "1.2"
+              }
+            }
+          },
+          "outputs": {
+            "hostName": {
+              "type": "string",
+              "value": "[reference('redis').hostName]"
+            },
+            "primaryKey": {
+              "type": "securestring",
+              "value": "[listKeys('redis', '2023-08-01').primaryKey]"
+            }
+          }
+        }
+      }
+    },
+    "keyVault": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "key-vault",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('keyVaultName')]"
+          },
+          "location": {
+            "value": "[parameters('appLocation')]"
+          },
+          "apiKey": {
+            "value": "[parameters('apiKey')]"
+          },
+          "callbackWebhookSecret": {
+            "value": "[parameters('callbackWebhookSecret')]"
+          },
+          "databaseUrl": {
+            "value": "[format('postgresql+asyncpg://{0}:{1}@{2}/{3}?ssl=require', parameters('postgresAdminUser'), parameters('postgresAdminPassword'), reference('postgres').outputs.hostName.value, parameters('postgresDatabaseName'))]"
+          },
+          "databaseUrlSync": {
+            "value": "[format('postgresql://{0}:{1}@{2}/{3}?sslmode=require', parameters('postgresAdminUser'), parameters('postgresAdminPassword'), reference('postgres').outputs.hostName.value, parameters('postgresDatabaseName'))]"
+          },
+          "redisUrl": {
+            "value": "[format('rediss://:{0}@{1}:6380/0', listOutputsWithSecureValues('redis', '2025-04-01').primaryKey, reference('redis').outputs.hostName.value)]"
+          },
+          "celeryBrokerUrl": {
+            "value": "[format('{0}?ssl_cert_reqs=CERT_NONE', format('rediss://:{0}@{1}:6380/0', listOutputsWithSecureValues('redis', '2025-04-01').primaryKey, reference('redis').outputs.hostName.value))]"
+          },
+          "celeryResultBackend": {
+            "value": "[format('{0}?ssl_cert_reqs=CERT_NONE', format('rediss://:{0}@{1}:6380/0', listOutputsWithSecureValues('redis', '2025-04-01').primaryKey, reference('redis').outputs.hostName.value))]"
+          },
+          "meliboxUser": {
+            "value": "[variables('meliboxUserSecretValue')]"
+          },
+          "meliboxPass": {
+            "value": "[variables('meliboxPassSecretValue')]"
+          },
+          "proxyUrls": {
+            "value": "[parameters('proxyUrls')]"
+          },
+          "n8nDatabaseUrl": {
+            "value": "[format('postgresql://{0}:{1}@{2}/{3}?sslmode=require', parameters('postgresAdminUser'), parameters('postgresAdminPassword'), reference('postgres').outputs.hostName.value, parameters('n8nDatabaseName'))]"
+          },
+          "n8nEncryptionKey": {
+            "value": "[parameters('n8nEncryptionKey')]"
+          },
+          "n8nBasicAuthUser": {
+            "value": "[parameters('n8nBasicAuthUser')]"
+          },
+          "n8nBasicAuthPassword": {
+            "value": "[parameters('n8nBasicAuthPassword')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "142833394852173324"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "apiKey": {
+              "type": "securestring"
+            },
+            "callbackWebhookSecret": {
+              "type": "securestring"
+            },
+            "databaseUrl": {
+              "type": "securestring"
+            },
+            "databaseUrlSync": {
+              "type": "securestring"
+            },
+            "redisUrl": {
+              "type": "securestring"
+            },
+            "celeryBrokerUrl": {
+              "type": "securestring"
+            },
+            "celeryResultBackend": {
+              "type": "securestring"
+            },
+            "meliboxUser": {
+              "type": "securestring"
+            },
+            "meliboxPass": {
+              "type": "securestring"
+            },
+            "proxyUrls": {
+              "type": "securestring"
+            },
+            "n8nDatabaseUrl": {
+              "type": "securestring"
+            },
+            "n8nEncryptionKey": {
+              "type": "securestring"
+            },
+            "n8nBasicAuthUser": {
+              "type": "securestring"
+            },
+            "n8nBasicAuthPassword": {
+              "type": "securestring"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "enableRbacAuthorization": true,
+                "enabledForTemplateDeployment": true,
+                "enableSoftDelete": true,
+                "softDeleteRetentionInDays": 7
+              }
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'api-key')]",
+              "properties": {
+                "value": "[parameters('apiKey')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'callback-webhook-secret')]",
+              "properties": {
+                "value": "[parameters('callbackWebhookSecret')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'database-url')]",
+              "properties": {
+                "value": "[parameters('databaseUrl')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'database-url-sync')]",
+              "properties": {
+                "value": "[parameters('databaseUrlSync')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'redis-url')]",
+              "properties": {
+                "value": "[parameters('redisUrl')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'celery-broker-url')]",
+              "properties": {
+                "value": "[parameters('celeryBrokerUrl')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'celery-result-backend')]",
+              "properties": {
+                "value": "[parameters('celeryResultBackend')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'melibox-user')]",
+              "properties": {
+                "value": "[parameters('meliboxUser')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'melibox-pass')]",
+              "properties": {
+                "value": "[parameters('meliboxPass')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'proxy-urls')]",
+              "properties": {
+                "value": "[parameters('proxyUrls')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'n8n-database-url')]",
+              "properties": {
+                "value": "[parameters('n8nDatabaseUrl')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'n8n-encryption-key')]",
+              "properties": {
+                "value": "[parameters('n8nEncryptionKey')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'n8n-basic-auth-user')]",
+              "properties": {
+                "value": "[parameters('n8nBasicAuthUser')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'n8n-basic-auth-password')]",
+              "properties": {
+                "value": "[parameters('n8nBasicAuthPassword')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "postgres",
+        "redis"
+      ]
+    },
+    "appEnv": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "container-app-env",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('containerAppEnvironmentName')]"
+          },
+          "location": {
+            "value": "[parameters('appLocation')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "7654617361060167615"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2022-10-01",
+              "name": "[format('{0}-logs', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": 30
+              }
+            },
+            {
+              "type": "Microsoft.App/managedEnvironments",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "appLogsConfiguration": {
+                  "destination": "log-analytics",
+                  "logAnalyticsConfiguration": {
+                    "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').customerId]",
+                    "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').primarySharedKey]"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]"
+            }
+          }
+        }
+      }
+    },
+    "apiContainerApp": {
+      "condition": "[parameters('deployContainerApps')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "scrapers-api-container-app",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('apiContainerAppName')]"
+          },
+          "containerName": {
+            "value": "scraper-api"
+          },
+          "location": {
+            "value": "[parameters('appLocation')]"
+          },
+          "environmentId": {
+            "value": "[reference('appEnv').outputs.id.value]"
+          },
+          "identityId": {
+            "value": "[reference('identity').outputs.id.value]"
+          },
+          "acrLoginServer": {
+            "value": "[reference('acr').outputs.loginServer.value]"
+          },
+          "imageName": {
+            "value": "[parameters('imageName')]"
+          },
+          "command": {
+            "value": []
+          },
+          "ingressExternal": {
+            "value": true
+          },
+          "targetPort": {
+            "value": 8000
+          },
+          "minReplicas": {
+            "value": 1
+          },
+          "maxReplicas": {
+            "value": 3
+          },
+          "maxConcurrentScrapers": {
+            "value": "[parameters('maxConcurrentScrapers')]"
+          },
+          "databaseUrl": {
+            "value": "[format('postgresql+asyncpg://{0}:{1}@{2}/{3}?ssl=require', parameters('postgresAdminUser'), parameters('postgresAdminPassword'), reference('postgres').outputs.hostName.value, parameters('postgresDatabaseName'))]"
+          },
+          "databaseUrlSync": {
+            "value": "[format('postgresql://{0}:{1}@{2}/{3}?sslmode=require', parameters('postgresAdminUser'), parameters('postgresAdminPassword'), reference('postgres').outputs.hostName.value, parameters('postgresDatabaseName'))]"
+          },
+          "redisUrl": {
+            "value": "[format('rediss://:{0}@{1}:6380/0', listOutputsWithSecureValues('redis', '2025-04-01').primaryKey, reference('redis').outputs.hostName.value)]"
+          },
+          "celeryBrokerUrl": {
+            "value": "[format('{0}?ssl_cert_reqs=CERT_NONE', format('rediss://:{0}@{1}:6380/0', listOutputsWithSecureValues('redis', '2025-04-01').primaryKey, reference('redis').outputs.hostName.value))]"
+          },
+          "celeryResultBackend": {
+            "value": "[format('{0}?ssl_cert_reqs=CERT_NONE', format('rediss://:{0}@{1}:6380/0', listOutputsWithSecureValues('redis', '2025-04-01').primaryKey, reference('redis').outputs.hostName.value))]"
+          },
+          "apiKey": {
+            "value": "[parameters('apiKey')]"
+          },
+          "callbackWebhookSecret": {
+            "value": "[parameters('callbackWebhookSecret')]"
+          },
+          "meliboxUser": {
+            "value": "[variables('meliboxUserSecretValue')]"
+          },
+          "meliboxPass": {
+            "value": "[variables('meliboxPassSecretValue')]"
+          },
+          "proxyUrls": {
+            "value": "[parameters('proxyUrls')]"
+          },
+          "proxyRotationEnabled": {
+            "value": "[parameters('proxyRotationEnabled')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "12685353193560035879"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "containerName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "environmentId": {
+              "type": "string"
+            },
+            "identityId": {
+              "type": "string"
+            },
+            "acrLoginServer": {
+              "type": "string"
+            },
+            "imageName": {
+              "type": "string"
+            },
+            "databaseUrl": {
+              "type": "securestring"
+            },
+            "databaseUrlSync": {
+              "type": "securestring"
+            },
+            "redisUrl": {
+              "type": "securestring"
+            },
+            "celeryBrokerUrl": {
+              "type": "securestring"
+            },
+            "celeryResultBackend": {
+              "type": "securestring"
+            },
+            "apiKey": {
+              "type": "securestring"
+            },
+            "callbackWebhookSecret": {
+              "type": "securestring"
+            },
+            "meliboxUser": {
+              "type": "securestring"
+            },
+            "meliboxPass": {
+              "type": "securestring"
+            },
+            "proxyUrls": {
+              "type": "securestring"
+            },
+            "proxyRotationEnabled": {
+              "type": "bool"
+            },
+            "command": {
+              "type": "array"
+            },
+            "ingressExternal": {
+              "type": "bool"
+            },
+            "targetPort": {
+              "type": "int"
+            },
+            "minReplicas": {
+              "type": "int"
+            },
+            "maxReplicas": {
+              "type": "int"
+            },
+            "maxConcurrentScrapers": {
+              "type": "int"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('identityId'))]": {}
+                }
+              },
+              "properties": {
+                "managedEnvironmentId": "[parameters('environmentId')]",
+                "configuration": "[union(createObject('activeRevisionsMode', 'Single', 'registries', createArray(createObject('server', parameters('acrLoginServer'), 'identity', parameters('identityId'))), 'secrets', createArray(createObject('name', 'database-url', 'value', parameters('databaseUrl')), createObject('name', 'database-url-sync', 'value', parameters('databaseUrlSync')), createObject('name', 'redis-url', 'value', parameters('redisUrl')), createObject('name', 'celery-broker-url', 'value', parameters('celeryBrokerUrl')), createObject('name', 'celery-result-backend', 'value', parameters('celeryResultBackend')), createObject('name', 'api-key', 'value', parameters('apiKey')), createObject('name', 'callback-webhook-secret', 'value', parameters('callbackWebhookSecret')), createObject('name', 'melibox-user', 'value', parameters('meliboxUser')), createObject('name', 'melibox-pass', 'value', parameters('meliboxPass')), createObject('name', 'proxy-urls', 'value', parameters('proxyUrls')))), if(parameters('ingressExternal'), createObject('ingress', createObject('external', true(), 'targetPort', parameters('targetPort'), 'transport', 'auto')), createObject()))]",
+                "template": {
+                  "containers": [
+                    {
+                      "name": "[parameters('containerName')]",
+                      "image": "[parameters('imageName')]",
+                      "command": "[parameters('command')]",
+                      "env": [
+                        {
+                          "name": "DATABASE_URL",
+                          "secretRef": "database-url"
+                        },
+                        {
+                          "name": "DATABASE_URL_SYNC",
+                          "secretRef": "database-url-sync"
+                        },
+                        {
+                          "name": "REDIS_URL",
+                          "secretRef": "redis-url"
+                        },
+                        {
+                          "name": "CELERY_BROKER_URL",
+                          "secretRef": "celery-broker-url"
+                        },
+                        {
+                          "name": "CELERY_RESULT_BACKEND",
+                          "secretRef": "celery-result-backend"
+                        },
+                        {
+                          "name": "API_KEY",
+                          "secretRef": "api-key"
+                        },
+                        {
+                          "name": "CALLBACK_WEBHOOK_SECRET",
+                          "secretRef": "callback-webhook-secret"
+                        },
+                        {
+                          "name": "CREDENTIAL_MELIBOX_USER",
+                          "secretRef": "melibox-user"
+                        },
+                        {
+                          "name": "CREDENTIAL_MELIBOX_PASS",
+                          "secretRef": "melibox-pass"
+                        },
+                        {
+                          "name": "PROXY_URLS",
+                          "secretRef": "proxy-urls"
+                        },
+                        {
+                          "name": "PROXY_ROTATION_ENABLED",
+                          "value": "[string(parameters('proxyRotationEnabled'))]"
+                        },
+                        {
+                          "name": "PLAYWRIGHT_HEADLESS",
+                          "value": "true"
+                        },
+                        {
+                          "name": "MOCK_SCRAPERS",
+                          "value": "false"
+                        },
+                        {
+                          "name": "JOB_EXECUTION_BACKEND",
+                          "value": "celery"
+                        },
+                        {
+                          "name": "LOG_LEVEL",
+                          "value": "INFO"
+                        },
+                        {
+                          "name": "LOG_FORMAT",
+                          "value": "json"
+                        },
+                        {
+                          "name": "MAX_CONCURRENT_SCRAPERS",
+                          "value": "[string(parameters('maxConcurrentScrapers'))]"
+                        },
+                        {
+                          "name": "SCRAPE_DELAY_MIN",
+                          "value": "2.0"
+                        },
+                        {
+                          "name": "SCRAPE_DELAY_MAX",
+                          "value": "6.0"
+                        },
+                        {
+                          "name": "SCRAPER_ACTION_DELAY_MIN_MS",
+                          "value": "400"
+                        },
+                        {
+                          "name": "SCRAPER_ACTION_DELAY_MAX_MS",
+                          "value": "1400"
+                        },
+                        {
+                          "name": "MELIBOX_SKU_DELAY_MIN",
+                          "value": "3"
+                        },
+                        {
+                          "name": "MELIBOX_SKU_DELAY_MAX",
+                          "value": "8"
+                        },
+                        {
+                          "name": "CREDENTIAL_MELIBOX_URL",
+                          "value": "https://app.melibox.com.br/advProductPosition"
+                        },
+                        {
+                          "name": "CELERY_WORKER_PREFETCH_MULTIPLIER",
+                          "value": "1"
+                        },
+                        {
+                          "name": "CELERY_TASK_TIME_LIMIT_SECONDS",
+                          "value": "3600"
+                        }
+                      ],
+                      "resources": {
+                        "cpu": "[json('1.0')]",
+                        "memory": "2Gi"
+                      }
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": "[parameters('minReplicas')]",
+                    "maxReplicas": "[parameters('maxReplicas')]"
+                  }
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "fqdn": {
+              "type": "string",
+              "value": "[if(parameters('ingressExternal'), reference(resourceId('Microsoft.App/containerApps', parameters('name')), '2024-03-01').configuration.ingress.fqdn, '')]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "acr",
+        "acrPullRole",
+        "appEnv",
+        "identity",
+        "keyVault",
+        "postgres",
+        "redis"
+      ]
+    },
+    "workerContainerApp": {
+      "condition": "[parameters('deployContainerApps')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "scrapers-worker-container-app",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('workerContainerAppName')]"
+          },
+          "containerName": {
+            "value": "scraper-worker"
+          },
+          "location": {
+            "value": "[parameters('appLocation')]"
+          },
+          "environmentId": {
+            "value": "[reference('appEnv').outputs.id.value]"
+          },
+          "identityId": {
+            "value": "[reference('identity').outputs.id.value]"
+          },
+          "acrLoginServer": {
+            "value": "[reference('acr').outputs.loginServer.value]"
+          },
+          "imageName": {
+            "value": "[parameters('imageName')]"
+          },
+          "command": {
+            "value": [
+              "celery",
+              "-A",
+              "src.celery_app.celery_app",
+              "worker",
+              "--loglevel=INFO",
+              "--concurrency=1"
+            ]
+          },
+          "ingressExternal": {
+            "value": false
+          },
+          "targetPort": {
+            "value": 8000
+          },
+          "minReplicas": {
+            "value": 1
+          },
+          "maxReplicas": {
+            "value": 1
+          },
+          "maxConcurrentScrapers": {
+            "value": "[parameters('workerMaxConcurrentScrapers')]"
+          },
+          "databaseUrl": {
+            "value": "[format('postgresql+asyncpg://{0}:{1}@{2}/{3}?ssl=require', parameters('postgresAdminUser'), parameters('postgresAdminPassword'), reference('postgres').outputs.hostName.value, parameters('postgresDatabaseName'))]"
+          },
+          "databaseUrlSync": {
+            "value": "[format('postgresql://{0}:{1}@{2}/{3}?sslmode=require', parameters('postgresAdminUser'), parameters('postgresAdminPassword'), reference('postgres').outputs.hostName.value, parameters('postgresDatabaseName'))]"
+          },
+          "redisUrl": {
+            "value": "[format('rediss://:{0}@{1}:6380/0', listOutputsWithSecureValues('redis', '2025-04-01').primaryKey, reference('redis').outputs.hostName.value)]"
+          },
+          "celeryBrokerUrl": {
+            "value": "[format('{0}?ssl_cert_reqs=CERT_NONE', format('rediss://:{0}@{1}:6380/0', listOutputsWithSecureValues('redis', '2025-04-01').primaryKey, reference('redis').outputs.hostName.value))]"
+          },
+          "celeryResultBackend": {
+            "value": "[format('{0}?ssl_cert_reqs=CERT_NONE', format('rediss://:{0}@{1}:6380/0', listOutputsWithSecureValues('redis', '2025-04-01').primaryKey, reference('redis').outputs.hostName.value))]"
+          },
+          "apiKey": {
+            "value": "[parameters('apiKey')]"
+          },
+          "callbackWebhookSecret": {
+            "value": "[parameters('callbackWebhookSecret')]"
+          },
+          "meliboxUser": {
+            "value": "[variables('meliboxUserSecretValue')]"
+          },
+          "meliboxPass": {
+            "value": "[variables('meliboxPassSecretValue')]"
+          },
+          "proxyUrls": {
+            "value": "[parameters('proxyUrls')]"
+          },
+          "proxyRotationEnabled": {
+            "value": "[parameters('proxyRotationEnabled')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "12685353193560035879"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "containerName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "environmentId": {
+              "type": "string"
+            },
+            "identityId": {
+              "type": "string"
+            },
+            "acrLoginServer": {
+              "type": "string"
+            },
+            "imageName": {
+              "type": "string"
+            },
+            "databaseUrl": {
+              "type": "securestring"
+            },
+            "databaseUrlSync": {
+              "type": "securestring"
+            },
+            "redisUrl": {
+              "type": "securestring"
+            },
+            "celeryBrokerUrl": {
+              "type": "securestring"
+            },
+            "celeryResultBackend": {
+              "type": "securestring"
+            },
+            "apiKey": {
+              "type": "securestring"
+            },
+            "callbackWebhookSecret": {
+              "type": "securestring"
+            },
+            "meliboxUser": {
+              "type": "securestring"
+            },
+            "meliboxPass": {
+              "type": "securestring"
+            },
+            "proxyUrls": {
+              "type": "securestring"
+            },
+            "proxyRotationEnabled": {
+              "type": "bool"
+            },
+            "command": {
+              "type": "array"
+            },
+            "ingressExternal": {
+              "type": "bool"
+            },
+            "targetPort": {
+              "type": "int"
+            },
+            "minReplicas": {
+              "type": "int"
+            },
+            "maxReplicas": {
+              "type": "int"
+            },
+            "maxConcurrentScrapers": {
+              "type": "int"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('identityId'))]": {}
+                }
+              },
+              "properties": {
+                "managedEnvironmentId": "[parameters('environmentId')]",
+                "configuration": "[union(createObject('activeRevisionsMode', 'Single', 'registries', createArray(createObject('server', parameters('acrLoginServer'), 'identity', parameters('identityId'))), 'secrets', createArray(createObject('name', 'database-url', 'value', parameters('databaseUrl')), createObject('name', 'database-url-sync', 'value', parameters('databaseUrlSync')), createObject('name', 'redis-url', 'value', parameters('redisUrl')), createObject('name', 'celery-broker-url', 'value', parameters('celeryBrokerUrl')), createObject('name', 'celery-result-backend', 'value', parameters('celeryResultBackend')), createObject('name', 'api-key', 'value', parameters('apiKey')), createObject('name', 'callback-webhook-secret', 'value', parameters('callbackWebhookSecret')), createObject('name', 'melibox-user', 'value', parameters('meliboxUser')), createObject('name', 'melibox-pass', 'value', parameters('meliboxPass')), createObject('name', 'proxy-urls', 'value', parameters('proxyUrls')))), if(parameters('ingressExternal'), createObject('ingress', createObject('external', true(), 'targetPort', parameters('targetPort'), 'transport', 'auto')), createObject()))]",
+                "template": {
+                  "containers": [
+                    {
+                      "name": "[parameters('containerName')]",
+                      "image": "[parameters('imageName')]",
+                      "command": "[parameters('command')]",
+                      "env": [
+                        {
+                          "name": "DATABASE_URL",
+                          "secretRef": "database-url"
+                        },
+                        {
+                          "name": "DATABASE_URL_SYNC",
+                          "secretRef": "database-url-sync"
+                        },
+                        {
+                          "name": "REDIS_URL",
+                          "secretRef": "redis-url"
+                        },
+                        {
+                          "name": "CELERY_BROKER_URL",
+                          "secretRef": "celery-broker-url"
+                        },
+                        {
+                          "name": "CELERY_RESULT_BACKEND",
+                          "secretRef": "celery-result-backend"
+                        },
+                        {
+                          "name": "API_KEY",
+                          "secretRef": "api-key"
+                        },
+                        {
+                          "name": "CALLBACK_WEBHOOK_SECRET",
+                          "secretRef": "callback-webhook-secret"
+                        },
+                        {
+                          "name": "CREDENTIAL_MELIBOX_USER",
+                          "secretRef": "melibox-user"
+                        },
+                        {
+                          "name": "CREDENTIAL_MELIBOX_PASS",
+                          "secretRef": "melibox-pass"
+                        },
+                        {
+                          "name": "PROXY_URLS",
+                          "secretRef": "proxy-urls"
+                        },
+                        {
+                          "name": "PROXY_ROTATION_ENABLED",
+                          "value": "[string(parameters('proxyRotationEnabled'))]"
+                        },
+                        {
+                          "name": "PLAYWRIGHT_HEADLESS",
+                          "value": "true"
+                        },
+                        {
+                          "name": "MOCK_SCRAPERS",
+                          "value": "false"
+                        },
+                        {
+                          "name": "JOB_EXECUTION_BACKEND",
+                          "value": "celery"
+                        },
+                        {
+                          "name": "LOG_LEVEL",
+                          "value": "INFO"
+                        },
+                        {
+                          "name": "LOG_FORMAT",
+                          "value": "json"
+                        },
+                        {
+                          "name": "MAX_CONCURRENT_SCRAPERS",
+                          "value": "[string(parameters('maxConcurrentScrapers'))]"
+                        },
+                        {
+                          "name": "SCRAPE_DELAY_MIN",
+                          "value": "2.0"
+                        },
+                        {
+                          "name": "SCRAPE_DELAY_MAX",
+                          "value": "6.0"
+                        },
+                        {
+                          "name": "SCRAPER_ACTION_DELAY_MIN_MS",
+                          "value": "400"
+                        },
+                        {
+                          "name": "SCRAPER_ACTION_DELAY_MAX_MS",
+                          "value": "1400"
+                        },
+                        {
+                          "name": "MELIBOX_SKU_DELAY_MIN",
+                          "value": "3"
+                        },
+                        {
+                          "name": "MELIBOX_SKU_DELAY_MAX",
+                          "value": "8"
+                        },
+                        {
+                          "name": "CREDENTIAL_MELIBOX_URL",
+                          "value": "https://app.melibox.com.br/advProductPosition"
+                        },
+                        {
+                          "name": "CELERY_WORKER_PREFETCH_MULTIPLIER",
+                          "value": "1"
+                        },
+                        {
+                          "name": "CELERY_TASK_TIME_LIMIT_SECONDS",
+                          "value": "3600"
+                        }
+                      ],
+                      "resources": {
+                        "cpu": "[json('1.0')]",
+                        "memory": "2Gi"
+                      }
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": "[parameters('minReplicas')]",
+                    "maxReplicas": "[parameters('maxReplicas')]"
+                  }
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "fqdn": {
+              "type": "string",
+              "value": "[if(parameters('ingressExternal'), reference(resourceId('Microsoft.App/containerApps', parameters('name')), '2024-03-01').configuration.ingress.fqdn, '')]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "acr",
+        "acrPullRole",
+        "appEnv",
+        "identity",
+        "keyVault",
+        "postgres",
+        "redis"
+      ]
+    },
+    "n8nContainerApp": {
+      "condition": "[parameters('deployContainerApps')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "n8n-container-app",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('n8nContainerAppName')]"
+          },
+          "location": {
+            "value": "[parameters('appLocation')]"
+          },
+          "environmentId": {
+            "value": "[reference('appEnv').outputs.id.value]"
+          },
+          "imageName": {
+            "value": "[parameters('n8nImageName')]"
+          },
+          "databaseHost": {
+            "value": "[reference('postgres').outputs.hostName.value]"
+          },
+          "databaseName": {
+            "value": "[parameters('n8nDatabaseName')]"
+          },
+          "databaseUser": {
+            "value": "[parameters('postgresAdminUser')]"
+          },
+          "databasePassword": {
+            "value": "[parameters('postgresAdminPassword')]"
+          },
+          "n8nEncryptionKey": {
+            "value": "[parameters('n8nEncryptionKey')]"
+          },
+          "n8nBasicAuthUser": {
+            "value": "[parameters('n8nBasicAuthUser')]"
+          },
+          "n8nBasicAuthPassword": {
+            "value": "[parameters('n8nBasicAuthPassword')]"
+          },
+          "n8nHost": {
+            "value": "[parameters('n8nHost')]"
+          },
+          "n8nEditorBaseUrl": {
+            "value": "[parameters('n8nEditorBaseUrl')]"
+          },
+          "n8nWebhookUrl": {
+            "value": "[parameters('n8nWebhookUrl')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "3546193517619477432"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "environmentId": {
+              "type": "string"
+            },
+            "imageName": {
+              "type": "string"
+            },
+            "databaseHost": {
+              "type": "string"
+            },
+            "databaseName": {
+              "type": "string"
+            },
+            "databaseUser": {
+              "type": "string"
+            },
+            "databasePassword": {
+              "type": "securestring"
+            },
+            "n8nEncryptionKey": {
+              "type": "securestring"
+            },
+            "n8nBasicAuthUser": {
+              "type": "securestring"
+            },
+            "n8nBasicAuthPassword": {
+              "type": "securestring"
+            },
+            "n8nHost": {
+              "type": "string"
+            },
+            "n8nEditorBaseUrl": {
+              "type": "string"
+            },
+            "n8nWebhookUrl": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "managedEnvironmentId": "[parameters('environmentId')]",
+                "configuration": {
+                  "activeRevisionsMode": "Single",
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 5678,
+                    "transport": "auto"
+                  },
+                  "secrets": [
+                    {
+                      "name": "n8n-postgres-password",
+                      "value": "[parameters('databasePassword')]"
+                    },
+                    {
+                      "name": "n8n-encryption-key",
+                      "value": "[parameters('n8nEncryptionKey')]"
+                    },
+                    {
+                      "name": "n8n-basic-auth-user",
+                      "value": "[parameters('n8nBasicAuthUser')]"
+                    },
+                    {
+                      "name": "n8n-basic-auth-password",
+                      "value": "[parameters('n8nBasicAuthPassword')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "n8n",
+                      "image": "[parameters('imageName')]",
+                      "env": [
+                        {
+                          "name": "DB_TYPE",
+                          "value": "postgresdb"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_HOST",
+                          "value": "[parameters('databaseHost')]"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_PORT",
+                          "value": "5432"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_DATABASE",
+                          "value": "[parameters('databaseName')]"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_USER",
+                          "value": "[parameters('databaseUser')]"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_PASSWORD",
+                          "secretRef": "n8n-postgres-password"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_SSL_ENABLED",
+                          "value": "true"
+                        },
+                        {
+                          "name": "N8N_ENCRYPTION_KEY",
+                          "secretRef": "n8n-encryption-key"
+                        },
+                        {
+                          "name": "N8N_BASIC_AUTH_ACTIVE",
+                          "value": "true"
+                        },
+                        {
+                          "name": "N8N_BASIC_AUTH_USER",
+                          "secretRef": "n8n-basic-auth-user"
+                        },
+                        {
+                          "name": "N8N_BASIC_AUTH_PASSWORD",
+                          "secretRef": "n8n-basic-auth-password"
+                        },
+                        {
+                          "name": "N8N_PORT",
+                          "value": "5678"
+                        },
+                        {
+                          "name": "N8N_PROTOCOL",
+                          "value": "https"
+                        },
+                        {
+                          "name": "N8N_HOST",
+                          "value": "[parameters('n8nHost')]"
+                        },
+                        {
+                          "name": "N8N_EDITOR_BASE_URL",
+                          "value": "[parameters('n8nEditorBaseUrl')]"
+                        },
+                        {
+                          "name": "WEBHOOK_URL",
+                          "value": "[parameters('n8nWebhookUrl')]"
+                        },
+                        {
+                          "name": "N8N_DIAGNOSTICS_ENABLED",
+                          "value": "false"
+                        },
+                        {
+                          "name": "N8N_VERSION_NOTIFICATIONS_ENABLED",
+                          "value": "false"
+                        }
+                      ],
+                      "resources": {
+                        "cpu": "[json('1.0')]",
+                        "memory": "2Gi"
+                      }
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 1
+                  }
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "fqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/containerApps', parameters('name')), '2024-03-01').configuration.ingress.fqdn]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "appEnv",
+        "keyVault",
+        "postgres"
+      ]
+    },
+    "proxyPool": {
+      "condition": "[parameters('deployProxyPool')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "proxy-pool",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('appLocation')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('proxyAdminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('proxyAdminPassword')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "17776611400678140454"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "adminUsername": {
+              "type": "string"
+            },
+            "adminPassword": {
+              "type": "securestring"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "variables": {
+            "count": 3
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-11-01",
+              "name": "cdp-proxy-vnet",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "10.42.0.0/16"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "proxy",
+                    "properties": {
+                      "addressPrefix": "10.42.1.0/24"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-11-01",
+              "name": "cdp-proxy-nsg",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "securityRules": [
+                  {
+                    "name": "allow-authenticated-proxy-port",
+                    "properties": {
+                      "priority": 1000,
+                      "protocol": "Tcp",
+                      "access": "Allow",
+                      "direction": "Inbound",
+                      "sourceAddressPrefix": "*",
+                      "sourcePortRange": "*",
+                      "destinationAddressPrefix": "*",
+                      "destinationPortRange": "3128"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "copy": {
+                "name": "publicIps",
+                "count": "[length(range(0, variables('count')))]"
+              },
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2023-11-01",
+              "name": "[format('cdp-proxy-{0}-pip', add(range(0, variables('count'))[copyIndex()], 1))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static"
+              }
+            },
+            {
+              "copy": {
+                "name": "nics",
+                "count": "[length(range(0, variables('count')))]"
+              },
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2023-11-01",
+              "name": "[format('cdp-proxy-{0}-nic', add(range(0, variables('count'))[copyIndex()], 1))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "networkSecurityGroup": {
+                  "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'cdp-proxy-nsg')]"
+                },
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig1",
+                    "properties": {
+                      "subnet": {
+                        "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', 'cdp-proxy-vnet'), '2023-11-01').subnets[0].id]"
+                      },
+                      "privateIPAllocationMethod": "Dynamic",
+                      "publicIPAddress": {
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('cdp-proxy-{0}-pip', add(range(0, variables('count'))[range(0, variables('count'))[copyIndex()]], 1)))]"
+                      }
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'cdp-proxy-nsg')]",
+                "[resourceId('Microsoft.Network/publicIPAddresses', format('cdp-proxy-{0}-pip', add(range(0, variables('count'))[range(0, variables('count'))[copyIndex()]], 1)))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'cdp-proxy-vnet')]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "vms",
+                "count": "[length(range(0, variables('count')))]"
+              },
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2023-09-01",
+              "name": "[format('cdp-proxy-{0}', add(range(0, variables('count'))[copyIndex()], 1))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "Standard_B1s"
+                },
+                "osProfile": {
+                  "computerName": "[format('cdp-proxy-{0}', add(range(0, variables('count'))[copyIndex()], 1))]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "adminPassword": "[parameters('adminPassword')]",
+                  "linuxConfiguration": {
+                    "disablePasswordAuthentication": false
+                  },
+                  "customData": "[base64('#cloud-config\npackage_update: true\npackages:\n  - squid\nruncmd:\n  - systemctl enable squid\n  - systemctl restart squid\n')]"
+                },
+                "storageProfile": {
+                  "imageReference": {
+                    "publisher": "Canonical",
+                    "offer": "0001-com-ubuntu-server-jammy",
+                    "sku": "22_04-lts-gen2",
+                    "version": "latest"
+                  },
+                  "osDisk": {
+                    "createOption": "FromImage",
+                    "managedDisk": {
+                      "storageAccountType": "Standard_LRS"
+                    }
+                  }
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('cdp-proxy-{0}-nic', add(range(0, variables('count'))[range(0, variables('count'))[copyIndex()]], 1)))]"
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', format('cdp-proxy-{0}-nic', add(range(0, variables('count'))[range(0, variables('count'))[copyIndex()]], 1)))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "publicIpAddresses": {
+              "type": "array",
+              "copy": {
+                "count": "[length(range(0, variables('count')))]",
+                "input": "[reference(resourceId('Microsoft.Network/publicIPAddresses', format('cdp-proxy-{0}-pip', add(range(0, variables('count'))[range(0, variables('count'))[copyIndex()]], 1))), '2023-11-01').ipAddress]"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "outputs": {
+    "acrLoginServer": {
+      "type": "string",
+      "value": "[reference('acr').outputs.loginServer.value]"
+    },
+    "apiContainerAppFqdn": {
+      "type": "string",
+      "value": "[if(parameters('deployContainerApps'), reference('apiContainerApp').outputs.fqdn.value, '')]"
+    },
+    "workerContainerAppName": {
+      "type": "string",
+      "value": "[if(parameters('deployContainerApps'), reference('workerContainerApp').outputs.name.value, '')]"
+    },
+    "n8nContainerAppFqdn": {
+      "type": "string",
+      "value": "[if(parameters('deployContainerApps'), reference('n8nContainerApp').outputs.fqdn.value, '')]"
+    },
+    "postgresHost": {
+      "type": "string",
+      "value": "[reference('postgres').outputs.hostName.value]"
+    },
+    "redisHost": {
+      "type": "string",
+      "value": "[reference('redis').outputs.hostName.value]"
+    },
+    "keyVaultName": {
+      "type": "string",
+      "value": "[reference('keyVault').outputs.name.value]"
+    },
+    "proxyPublicIps": {
+      "type": "array",
+      "value": "[if(parameters('deployProxyPool'), reference('proxyPool').outputs.publicIpAddresses.value, createArray())]"
+    }
+  }
+}

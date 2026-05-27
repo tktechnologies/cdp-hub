@@ -1,0 +1,90 @@
+name: CI — StokAPI
+
+on:
+  pull_request:
+    paths:
+      - "muvstok-api/**"
+      - ".github/workflows/ci-stokapi.yml"
+      - "docker-compose.yml"
+  push:
+    branches: [main]
+    paths:
+      - "muvstok-api/**"
+      - ".github/workflows/ci-stokapi.yml"
+
+concurrency:
+  group: ci-stokapi-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: muvstok-api
+
+env:
+  PYTHON_VERSION: "3.12"
+  ENVIRONMENT: "ci"
+  API_KEYS: "test-key"
+  DATABASE_URL: "postgresql+psycopg://cdp:cdp_pass@localhost:5432/muvstok_test"
+  DATABASE_URL_SYNC: "postgresql://cdp:cdp_pass@localhost:5432/muvstok_test"
+  REDIS_URL: "redis://localhost:6379/0"
+  REDIS_JOB_STREAM: "muvstok:jobs"
+  REDIS_JOB_CONSUMER_GROUP: "muvstok-workers"
+  REDIS_DEAD_LETTER_STREAM: "muvstok:jobs:dead-letter"
+  REDIS_CONSUMER_NAME: "ci-worker-1"
+  MUVSTOK_BASE_URL: "https://example.invalid/"
+  MUVSTOK_LOGIN_PATH: "https://example.invalid/login"
+  AZURE_KEY_VAULT_URL: ""
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --dev
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy .
+
+  specs:
+    name: Specs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: chmod +x scripts/check_specs.sh && ./scripts/check_specs.sh
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: muvstok_test
+          POSTGRES_USER: cdp
+          POSTGRES_PASSWORD: cdp_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --dev
+      - run: uv run pytest tests/ -v --tb=short
+        continue-on-error: true

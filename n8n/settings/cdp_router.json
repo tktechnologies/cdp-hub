@@ -1,0 +1,24 @@
+{
+  "id": "6id6dkinK9xTLfsb",
+  "local_file": "n8n/workflows/cdp_router.json",
+  "workflow_name": "cdp_router",
+  "live_name": "cdp_router",
+  "live_status": "active",
+  "trigger_count": 3,
+  "production_role": "Orchestrator: Telegram/Gmail .analisar and .sku → parallel Scraper API + StokAPI (Muvstok); daily per-SKU/site dedup; metadata on jobs.",
+  "required_env": [
+    "CDP_SCRAPER_API_BASE",
+    "CDP_API_KEY",
+    "CDP_MUVSTOK_API_BASE",
+    "CDP_MUVSTOK_API_KEY",
+    "WEBHOOK_URL",
+    "CDP_CALLBACK_WEBHOOK_SECRET",
+    "TELEGRAM_BOT_TOKEN"
+  ],
+  "webhooks_outbound": {
+    "scraper_callback": "webhook/scraper-result",
+    "stokapi_callback": "webhook/muvstok-result"
+  },
+  "shared_code": "../../n8n/src/",
+  "last_verified_at_iso": "2026-05-25T00:00:00Z"
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "StokapiCallbackPayload",
+  "type": "object",
+  "required": [
+    "job_id",
+    "correlation_id",
+    "status",
+    "submitted_sku_count",
+    "succeeded_sku_count",
+    "failed_sku_count",
+    "items",
+    "metadata",
+    "completed_at"
+  ],
+  "properties": {
+    "job_id": { "type": "string", "format": "uuid" },
+    "correlation_id": { "type": "string" },
+    "status": { "type": "string" },
+    "submitted_sku_count": { "type": "integer", "minimum": 0 },
+    "succeeded_sku_count": { "type": "integer", "minimum": 0 },
+    "failed_sku_count": { "type": "integer", "minimum": 0 },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sku", "status"],
+        "properties": {
+          "sku": { "type": "string" },
+          "status": { "type": "string" },
+          "snapshot_id": { "type": ["string", "null"], "format": "uuid" },
+          "error_code": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "metadata": { "type": "object" },
+    "started_at": { "type": ["string", "null"], "format": "date-time" },
+    "duration_seconds": { "type": ["number", "null"] },
+    "completed_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

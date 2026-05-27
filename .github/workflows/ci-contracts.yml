@@ -1,0 +1,29 @@
+name: CI — Contracts
+
+on:
+  pull_request:
+    paths:
+      - "contracts/**"
+      - ".github/workflows/ci-contracts.yml"
+  push:
+    branches: [main]
+    paths:
+      - "contracts/**"
+      - ".github/workflows/ci-contracts.yml"
+
+jobs:
+  validate-json:
+    name: Validate JSON schemas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse all contract schemas
+        run: |
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("contracts")
+          for path in sorted(root.glob("*.schema.json")):
+              json.loads(path.read_text(encoding="utf-8"))
+              print(f"ok: {path.name}")
+          PY

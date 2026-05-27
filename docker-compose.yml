@@ -1,0 +1,146 @@
+# CDP full-stack local development.
+# Profiles: deps (default) | scraper | stokapi | full
+#
+#   docker compose up -d                          # postgres + redis only
+#   docker compose --profile scraper up -d        # + scraper API + Celery worker
+#   docker compose --profile stokapi up -d        # + StokAPI API + worker
+#   docker compose --profile full up -d           # all services
+#
+# Host ports: scraper :8000, stokapi :8001, postgres :5432, redis :6379
+
+name: cdp-platform
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cdp
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cdp_pass}
+      POSTGRES_DB: cdp_scraper
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - cdp_pg_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cdp -d cdp_scraper"]
+      interval: 5s
+      timeout: 5s
+      retries: 8
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_HOST_PORT:-6379}:6379"
+    volumes:
+      - cdp_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 8
+
+  scraper-api:
+    profiles: [scraper, full]
+    build:
+      context: ./scrapers
+      dockerfile: Dockerfile
+    ports:
+      - "${SCRAPER_API_PORT:-8000}:8000"
+    env_file:
+      - path: ./scrapers/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+asyncpg://cdp:${POSTGRES_PASSWORD:-cdp_pass}@postgres:5432/cdp_scraper
+      DATABASE_URL_SYNC: postgresql://cdp:${POSTGRES_PASSWORD:-cdp_pass}@postgres:5432/cdp_scraper
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      JOB_EXECUTION_BACKEND: celery
+    volumes:
+      - scraper_browser_states:/app/browser_states
+      - scraper_screenshots:/app/screenshots
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  scraper-worker:
+    profiles: [scraper, full]
+    build:
+      context: ./scrapers
+      dockerfile: Dockerfile
+    command: >
+      celery -A src.celery_app.celery_app worker
+      --loglevel=INFO
+      --concurrency=${CELERY_WORKER_CONCURRENCY:-1}
+    env_file:
+      - path: ./scrapers/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+asyncpg://cdp:${POSTGRES_PASSWORD:-cdp_pass}@postgres:5432/cdp_scraper
+      DATABASE_URL_SYNC: postgresql://cdp:${POSTGRES_PASSWORD:-cdp_pass}@postgres:5432/cdp_scraper
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      JOB_EXECUTION_BACKEND: celery
+    volumes:
+      - scraper_browser_states:/app/browser_states
+      - scraper_screenshots:/app/screenshots
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  stokapi-api:
+    profiles: [stokapi, full]
+    build:
+      context: ./muvstok-api
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - "${STOKAPI_API_PORT:-8001}:8000"
+    env_file:
+      - path: ./muvstok-api/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://cdp:${POSTGRES_PASSWORD:-cdp_pass}@postgres:5432/muvstok
+      DATABASE_URL_SYNC: postgresql://cdp:${POSTGRES_PASSWORD:-cdp_pass}@postgres:5432/muvstok
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: local
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  stokapi-worker:
+    profiles: [stokapi, full]
+    build:
+      context: ./muvstok-api
+      dockerfile: docker/Dockerfile.worker
+    env_file:
+      - path: ./muvstok-api/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://cdp:${POSTGRES_PASSWORD:-cdp_pass}@postgres:5432/muvstok
+      DATABASE_URL_SYNC: postgresql://cdp:${POSTGRES_PASSWORD:-cdp_pass}@postgres:5432/muvstok
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: local
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  cdp_pg_data:
+  cdp_redis_data:
+  scraper_browser_states:
+  scraper_screenshots:

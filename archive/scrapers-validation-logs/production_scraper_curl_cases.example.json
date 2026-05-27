@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "description": "Production curl smoke cases. Copy to production_scraper_curl_cases.local.json and adjust SKUs/status expectations for currently verified production data.",
+  "cases": [
+    {
+      "id": "gm-known",
+      "site": "gm",
+      "sku": "22781768",
+      "brand": "GM",
+      "expected_statuses": ["success"],
+      "require_exact": true,
+      "require_price": true,
+      "expected_currency": "BRL"
+    },
+    {
+      "id": "ml-known",
+      "site": "ml",
+      "sku": "06K907811B",
+      "brand": "",
+      "expected_statuses": ["success"],
+      "require_exact": true,
+      "require_price": true,
+      "expected_currency": "BRL"
+    },
+    {
+      "id": "vw-known",
+      "site": "vw",
+      "sku": "5U6867287Y20",
+      "brand": "VW",
+      "expected_statuses": ["success"],
+      "require_exact": true,
+      "require_price": true,
+      "expected_currency": "BRL"
+    },
+    {
+      "id": "eu-known",
+      "site": "eu",
+      "sku": "06K907811B",
+      "brand": "VW",
+      "expected_statuses": ["success"],
+      "require_exact": true,
+      "require_price": true,
+      "expected_currency": "USD"
+    },
+    {
+      "id": "pecadireta-known",
+      "site": "pecadireta",
+      "sku": "06K907811B",
+      "brand": "",
+      "expected_statuses": ["success", "no_price"],
+      "require_exact": true,
+      "require_price": false,
+      "expected_currency": "BRL"
+    }
+  ]
+}
