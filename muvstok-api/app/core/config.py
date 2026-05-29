@@ -30,6 +30,20 @@ class Settings(BaseSettings):
     max_skus_per_job: int = 10_000
     job_item_batch_size: int = 250
 
+    # Per-SKU result cache (holds Muvstok prices to avoid re-requesting duplicates and
+    # repeats within the TTL window). In-job duplicates are always served from an in-memory
+    # memo; this Redis layer additionally serves cross-job repeats. Mirrors the scraper's
+    # 24h scrape cache. Falls back to redis_url (DB 0) when muvstok_cache_redis_url is empty;
+    # keys use a distinct "muvstok:sku:" prefix so they never collide with the job streams.
+    muvstok_cache_enabled: bool = True
+    muvstok_cache_redis_url: str = ""
+    muvstok_cache_ttl_seconds: int = 86_400
+    muvstok_cache_ttl_not_found_seconds: int = 21_600
+
+    @property
+    def sku_cache_redis_url(self) -> str:
+        return self.muvstok_cache_redis_url.strip() or self.redis_url
+
     muvstok_base_url: str = "https://data-bi.muvstok.com.br/api/Demand/"
     muvstok_login_path: str = "https://api.integracao.muvstok.com.br/api/Auth/Login"
     muvstok_user: str = ""

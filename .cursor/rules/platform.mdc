@@ -5,7 +5,7 @@ alwaysApply: true
 
 # CDP Platform Rules
 
-Read [AGENTS.md](AGENTS.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before cross-service work.
+Read [AGENTS.md](../../AGENTS.md) and [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) before cross-service work.
 
 ## Architecture
 

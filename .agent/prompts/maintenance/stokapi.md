@@ -34,7 +34,7 @@ Boundaries (do not cross):
 Before done:
 - uv run ruff check . && uv run mypy . (or make check-muvstok from monorepo root)
 - bash scripts/check_specs.sh if behavior/spec contract changed
-- uv run pytest when tests exist for the change
+- uv run pytest for API, service, queue, or contract changes
 - Update specs/ and .agent/memory if production facts changed
 
 End of turn: what changed, verified, Azure validation status (run/skipped/blocked), risks, next step.

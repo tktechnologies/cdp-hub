@@ -59,7 +59,7 @@ Router Code edits: `n8n/src/` → `python3 scripts/sync_workflow_code_from_share
 
 ## Azure Monitor alerting
 
-`muvstok-api/infra/` is not yet provisioned (no Bicep modules in-repo). Until infrastructure lands:
+`muvstok-api/infra/` is still placeholder-level, and the root StokAPI Bicep module is scaffolded with deploy disabled. Until infrastructure is wired:
 
 - **Planned alerts** (documented in `scrapers/docs/PRODUCTION_PLAN.md` and `scrapers/docs/AZURE_REBUILD_PLAN.md`): failed jobs, elevated `blocked` scraper rate, worker crashes, Redis/queue depth.
 - **Current signals:** Prometheus metrics endpoints (Scraper + StokAPI), structured logs (`event_name` fields), n8n execution history for `cdp_router` / `cdp_scraper` / `cdp_stokapi`.
@@ -76,7 +76,7 @@ Router Code edits: `n8n/src/` → `python3 scripts/sync_workflow_code_from_share
 | `contracts` | Run both test suites above | Fails if schemas drift from models |
 | `stokapi-specs` | `cd muvstok-api && bash scripts/check_specs.sh` | Spec consistency |
 
-Optional: add a root `make test-all` target that runs Scraper + StokAPI pytest in one step.
+Root `make test-all` already runs Scraper + StokAPI pytest; use it when the change crosses service boundaries.
 
 ## Pass criteria
 

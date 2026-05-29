@@ -1,6 +1,6 @@
 # Scraper skills
 
-Linked from [`.agent/index.md`](../index.md). Platform n8n sync: [`../../.agent/skills/n8n-router-sync/SKILL.md`](../../.agent/skills/n8n-router-sync/SKILL.md).
+Linked from [`.agent/index.md`](../index.md). Platform n8n sync: [`../../../.agent/skills/n8n-router-sync/SKILL.md`](../../../.agent/skills/n8n-router-sync/SKILL.md).
 
 | Skill | Use when |
 |-------|----------|

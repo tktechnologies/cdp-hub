@@ -46,7 +46,7 @@ Verification rules:
 - Run the narrowest relevant checks first:
   - `uv run ruff check .`
   - `uv run mypy .`
-  - `uv run pytest` (when tests exist)
+  - `uv run pytest`
   - `bash scripts/check_specs.sh`
 - Official done/not-done decisions require Azure-hosted validation when the task depends on production-like behavior.
 

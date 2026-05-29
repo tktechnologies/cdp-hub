@@ -125,7 +125,7 @@ Script/API probe (5 SKUs: 2 known + 3 fake for not_found path):
 | Risk | Severity | Detail | Mitigation |
 |------|----------|--------|------------|
 | **Parallel jobs at scale** | High | n8n sends batches of 50; ~20 jobs for 1k SKUs → up to 2 workers × concurrent jobs = many parallel Muvstok calls | Set `CDP_MUVSTOK_BATCH_SIZE=1` or `5` for rollout; scale worker `maxReplicas=1` during soak; add inter-SKU delay in worker if Muvstok throttles |
-| **No response cache (v1)** | Medium | Every SKU hits Muvstok API; `POST /lookup` not implemented | Add snapshot lookup + TTL before bulk; use `muvstok_api_data` for re-runs |
+| ~~**No response cache (v1)**~~ | Resolved 2026-05-29 | Per-SKU Redis cache (`app/services/sku_cache.py`, 24h) + in-job memo; duplicate/repeat SKUs reuse the cached result instead of re-requesting Muvstok | `MUVSTOK_CACHE_ENABLED`, `MUVSTOK_CACHE_TTL_SECONDS` |
 | **GovernanceService stub** | Medium | `governance_service.py` empty — no automated consistency rules | Implement checks: price &gt; 0, required fields, branch dedupe |
 | **JSON vs SDK sender drift** | Medium | Repo JSON missing `CDP_MUVSTOK_MAX_SKUS` / `AUDIT_SAMPLE` in DQ node; SDK has MAX_SKUS | Run `sync_n8n_workflows.py` after aligning JSON/SDK |
 | **Sheet column mismatch** | Medium | DQ reads `CODIGO`; update node writes `SKU` + `row_number` | Confirm sheet headers; align to one column name |
@@ -137,7 +137,7 @@ Script/API probe (5 SKUs: 2 known + 3 fake for not_found path):
 
 | Cache | Exists? | Location |
 |-------|---------|----------|
-| Muvstok API response (SKU) | **No** (v1) | N/A — always live fetch |
+| Muvstok API response (SKU) | **Yes** (2026-05-29) | Redis `muvstok:sku:v1:<SKU>` (24h success / 6h not_found) + per-job in-memory memo |
 | Auth token | **Yes** | Key Vault secret `muvstok-api-token` when KV configured; else in-memory per worker run |
 | Job queue | **Yes** | Redis `muvstok:jobs` |
 | Scraper price cache | **Separate** | `product_price_snapshots` (scraper pipeline; not wired in Muvstok worker) |

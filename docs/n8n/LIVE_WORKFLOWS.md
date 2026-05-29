@@ -1,6 +1,6 @@
 # CDP n8n — Live workflows
 
-Last verified: 2026-05-27.
+Last verified: 2026-05-29.
 
 | Workflow | Live ID | Webhook / trigger | Role |
 |----------|---------|-------------------|------|
@@ -16,6 +16,8 @@ Deprecated: `cdp_muvstok-api_starter` (`PXLHDzRbBVgs8Xl2`) — use `cdp_router` 
 ```bash
 make sync-n8n   # from monorepo root; user approval required for publish
 ```
+
+> ⚠️ **Known limitation (2026-05-29):** `make sync-n8n` runs the patch scripts (repo JSON stays correct) and re-publishes, but the `update_workflow` call in `scrapers/scripts/push_workflow_mcp.py` is **code-based** and the current MCP `update_workflow` only accepts `operations` — so the live **graph is not updated** by sync. The pusher now fails loudly when this happens. Until it is rewritten to diff→`operations`, apply structural workflow changes via `update_workflow` `operations` + `publish_workflow` (see `.agent/memory/implementation-state.md`). The duplicate-SKU `row_number` writeback fix (both receivers) was applied this way on 2026-05-29.
 
 ## Local files
 

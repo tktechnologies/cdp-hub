@@ -3,10 +3,17 @@
 const DEFAULT_BATCH_SIZE = 100;
 const MAX_BATCH_SIZE = 100;
 const DEFAULT_SITES = ['gm', 'ml', 'vw', 'eu', 'pecadireta'];
+const DEFAULT_SCRAPER_API_BASE =
+  'https://cdp-scrapers-api-prod.bravecoast-b14d791e.eastus2.azurecontainerapps.io';
 const data = $input.first().json;
 const skus = Array.isArray(data.skus) ? data.skus : [];
 
 function env(name) {
+  try {
+    if (typeof $env !== 'undefined' && $env && $env[name]) {
+      return String($env[name]).trim();
+    }
+  } catch (e) {}
   try {
     if (typeof process !== 'undefined' && process.env && process.env[name]) {
       return String(process.env[name]).trim();
@@ -42,6 +49,10 @@ function readStaticRequester() {
 const configuredSites = envList('CDP_SCRAPER_SITES');
 const sites = configuredSites.length ? configuredSites : DEFAULT_SITES;
 const commandRoute = String(data.command_route || 'analisar');
+const scraperApiBase = trimTrailingSlashes(
+  env('CDP_SCRAPER_API_BASE') || env('MUVSTOK_SCRAPER_API_BASE') || DEFAULT_SCRAPER_API_BASE
+);
+const apiKey = env('CDP_API_KEY') || env('MUVSTOK_API_KEY') || env('API_KEY');
 const batchSizeRaw = Number(env('CDP_SCRAPER_BATCH_SIZE') || DEFAULT_BATCH_SIZE);
 const BATCH_SIZE = Math.max(
   1,
@@ -103,9 +114,15 @@ return batches.map((batch, index) => ({
       brand: it.brand || '',
       description: it.description || '',
     })),
+    sheet_rows: batch.map((it) => ({
+      sku: it.sku,
+      row_number: it.row_number ?? null,
+    })),
     sites,
     priority: 5,
     force_refresh: false,
+    api_jobs_url: scraperApiBase + '/api/v1/jobs',
+    api_key: apiKey,
     batch_group_id: batchGroupId,
     batch_index: index + 1,
     total_batches: totalBatches,

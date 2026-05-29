@@ -2,6 +2,11 @@
 
 function readEnv(name) {
   try {
+    if (typeof $env !== 'undefined' && $env && $env[name]) {
+      return String($env[name]).trim();
+    }
+  } catch (e) {}
+  try {
     if (typeof process !== 'undefined' && process.env && process.env[name]) {
       return String(process.env[name]).trim();
     }
@@ -89,6 +94,11 @@ const apiBase = trimTrailingSlashes(
   readEnv('CDP_MUVSTOK_API_BASE') ||
     'https://cdp-muv-api.bravecoast-b14d791e.eastus2.azurecontainerapps.io'
 );
+const apiKey =
+  readEnv('CDP_MUVSTOK_API_KEY') ||
+  readEnv('CDP_API_KEY') ||
+  readEnv('MUVSTOK_API_KEY') ||
+  readEnv('API_KEY');
 
 const metadata = {
   source: 'cdp_router',
@@ -107,6 +117,7 @@ return [
       sku_rows: skuRows,
       callback_url: callbackUrl,
       api_jobs_url: apiBase + '/api/v1/muvstok/jobs',
+      api_key: apiKey,
       metadata,
       idempotency_key: batchGroupId + '-stokapi-1',
       chat_id: chatId,

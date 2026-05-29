@@ -17,6 +17,14 @@ Last publish: 2026-05-27 14:15 UTC via `make sync-n8n`; router, scraper receiver
 
 Post-deploy audit (2026-05-27 15:25 UTC): `cdp_router`, `cdp_scraper`, and `cdp_stokapi` active via MCP at `https://automacao.tktechnologies.com.br/mcp-server/http`; custom hostname binding restored on `cdp-n8n-prod` with SNI managed certificate.
 
+Ops fix (2026-05-27 17:09 UTC): Telegram `.analisar` failed because HTTP node URL/header expressions read `$env` while n8n blocked env access. Router now resolves API URLs/keys inside shared Code nodes (`$env` first, `process.env` fallback), HTTP nodes read `$json.*`, and `cdp-n8n-prod` explicitly sets `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`; live revision `cdp-n8n-prod--0000016`, router active version `73c60e4c-91cd-4b61-8710-7dec588c6839`. MCP retry execution `609` succeeded; scraper job `a0332b0b-2c42-4c48-9fcc-848e842409c7` and StokAPI job `3f76d662-8911-4bc2-aa41-38a0874798db` were accepted.
+
+Router publish (2026-05-27): duplicate SKUs are now included as real work items in `cdp_router` DQ instead of being skipped; live active router version `031e8d67-32f1-4ec8-a585-1ee970eecab4`.
+
+Duplicate SKU end-to-end (2026-05-29): the desired contract is **N input SKUs → N results, duplicates served from cache, no re-request**. The router already preserves + flags duplicates (`router_dq.js`), and the scraper already returns N results with duplicate rows served from its 24h Redis cache. The gap was **StokAPI**, which deduped at ingestion (93 vs 95) and had no per-SKU cache. Fixed in `muvstok-api`: ingestion keeps duplicates, the `(job_id, sku)` unique constraint was dropped (migration `20260529_0004`), the worker reuses the first occurrence via an in-job memo + a new Redis 24h per-SKU cache (`app/services/sku_cache.py`, `MUVSTOK_CACHE_*`), and the callback now returns N results with `submitted_sku_count=N`. **Deployed 2026-05-29:** migration on `cdp-scrapers-pg-prod`; images `cdp-muv-api:20260529-1040` and `cdp-muv-worker:20260529-1040` with `MUVSTOK_CACHE_ENABLED=true`. Tests: `muvstok-api/tests/` (25 pass).
+
+Duplicate SKU sheet marking fix (2026-05-29): both receivers wrote back to `CDP_SKUs` matching on `CODIGO`, so only the **first** row sharing a SKU was marked — duplicate CODIGO rows stayed blank in PROCESSADO/ENCONTRADO/NOTIFICADO (StokAPI also dedups SKUs at ingestion via `normalize_skus`). Fix: read the `SKUs` sheet, fan out one update per matching `row_number`, and match on `row_number`. StokAPI (`cdp_stokapi`, 17 nodes, active `028f36fd-698b-4d28-9c61-d5c52718df69`) adds `📄 Ler CDP_SKUs (linhas)` → `🧭 Mapear linhas por CODIGO` before `✅ Atualizar CDP_SKUs`. Scraper (`cdp_scraper`, 47 nodes, active `d834d15c-7796-4f9f-be9c-988ab5efafe2`) adds a `🧺 Coletar → 📄 Ler → 🧭 Mapear` trio before each of the 3 markers (ENCONTRADO, NOTIFICADO, Bulk NOTIFICADO). Idempotent patch logic lives in `muvstok-api/scripts/patch_muvstok_receiver_workflow.py` (`patch_rownum_pipeline` + `patch_cdp_skus_node`) and `scrapers/scripts/patch_scraper_receiver_workflow.py` (`patch_rownum_markers`). StokAPI dedup is intentionally kept; row-level fan-out covers duplicate sheet rows.
+
 ## Scraper (scrapers/)
 
 - **Stack:** FastAPI + Celery + Playwright + PostgreSQL + Redis (DB 0 queue, DB 1 cache).
@@ -60,6 +68,7 @@ Post-deploy audit (2026-05-27 15:25 UTC): `cdp_router`, `cdp_scraper`, and `cdp_
 
 ## Known gaps (platform)
 
+- **`make sync-n8n` does NOT apply graph changes (2026-05-29).** `scrapers/scripts/push_workflow_mcp.py` calls `update_workflow` with a `code` argument, but the current MCP `update_workflow` only accepts `operations` (`additionalProperties:false`). The code-based update silently no-ops (`update OK id=None`); `validate_workflow` and `publish_workflow` still report success, so the pipeline *looks* like it worked while the live graph is unchanged. Until `push_workflow_mcp.py` is rewritten to diff→`operations` (or `create_workflow_from_code`), structural workflow changes must be applied via `update_workflow` `operations` + `publish_workflow` (see the 2026-05-29 dup-SKU fix). The repo JSON + patch scripts remain the source of truth.
 - `cdp_progress` not in `make sync-n8n` yet — manual import until script updated.
 - Legacy `scrapers/n8n/docs/` deprecated; use `docs/n8n/` and `.agent/boundaries/n8n.md`.
 - GitHub remote/push is not configured for root monorepo yet; local commit can be created, but remote publication needs `gh auth login` or a repo URL/token.

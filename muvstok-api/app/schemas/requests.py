@@ -14,17 +14,18 @@ class CreateMuvstokJobRequest(BaseModel):
     @field_validator("skus")
     @classmethod
     def normalize_skus(cls, value: list[str]) -> list[str]:
+        # Duplicates are intentionally preserved: a job with N input SKUs must yield
+        # N results (one per input row), even when SKUs repeat. The worker fetches each
+        # unique SKU once and serves repeats from cache (in-job memo + Redis), so we keep
+        # every occurrence here and let downstream caching avoid redundant upstream calls.
         normalized: list[str] = []
-        seen: set[str] = set()
         for raw_sku in value:
             sku = raw_sku.strip()
             if not sku:
                 raise ValueError("SKU cannot be empty.")
             if len(sku) > 128:
                 raise ValueError("SKU cannot exceed 128 characters.")
-            if sku not in seen:
-                normalized.append(sku)
-                seen.add(sku)
+            normalized.append(sku)
         return normalized
 
     @field_validator("callback_url")

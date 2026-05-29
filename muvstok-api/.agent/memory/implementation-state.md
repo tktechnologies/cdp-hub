@@ -21,6 +21,15 @@ Sync: `cdp-app/scripts/sync-all-n8n.sh` or `make -C .. sync-n8n` from monorepo r
 - `.sku` and `.analisar` both run dual pipeline
 - Job metadata: `batch_group_id`, `command_route`, `pipeline`
 
+## Duplicate SKUs + per-SKU cache (2026-05-29)
+
+- **Contract change:** ingestion no longer dedups SKUs (`requests.normalize_skus` keeps duplicates + order). A job with N input SKUs stores N `muvstok_job_items` and returns **N callback results**. The `(job_id, sku)` unique constraint was dropped (migration `20260529_0004_drop_job_items_sku_unique`).
+- **No re-request for duplicates:** `SkuProcessor` keeps a job-scoped in-memory memo so a duplicate SKU reuses the first occurrence's rows (no second upstream call). A new Redis cache (`app/services/sku_cache.py`, prefix `muvstok:sku:v1:`, 24h success / 6h not_found TTL, `MUVSTOK_CACHE_*`) additionally serves the same SKU across jobs within the window. Cache is best-effort (errors → miss). Failures are never cached.
+- `submitted_sku_count` = N (was unique count); callback `items`/`results` length = N; governance counts stay consistent.
+- n8n receiver unchanged: `cdp_stokapi` still fans out by `row_number` (maps each unique SKU result to all duplicate sheet rows). Telegram/Historico counts now match the scraper (e.g. 95/95).
+- Tests: `tests/test_workers/test_sku_processor_cache.py`, `tests/test_services/test_sku_cache.py`, `tests/test_services/test_request_skus.py`.
+- **Deployed 2026-05-29:** migration `20260529_0004` on prod PG; images `20260529-1040` on `cdp-muv-api` / `cdp-muv-worker` with `MUVSTOK_CACHE_*` env.
+
 ## API / worker
 
 - FastAPI + worker on Azure `cdp-muv-api` / `cdp-muv-worker`

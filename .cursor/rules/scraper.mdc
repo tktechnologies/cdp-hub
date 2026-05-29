@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Scraper Service
 
-Entry: [scrapers/AGENTS.md](scrapers/AGENTS.md) → [scrapers/.agent/index.md](scrapers/.agent/index.md).
+Entry: [scrapers/AGENTS.md](../../scrapers/AGENTS.md) -> [scrapers/.agent/index.md](../../scrapers/.agent/index.md).
 
 ## Stack
 

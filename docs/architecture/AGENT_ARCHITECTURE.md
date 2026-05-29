@@ -91,6 +91,6 @@ Receivers are owned by services but **published together** in one sync script.
 - **Thin cross-repo coupling:** APIs talk via HTTP + webhooks only; no shared Python packages between services.
 - **Stable webhook paths:** `scraper-result`, `muvstok-result` — rename only with coordinated deploy.
 - **Cache vs live scrape:** Router always `force_refresh: false`; never bypass cache in router to “fix” stale data without understanding TTL.
-- **Max 5 SKUs** per `.analisar` / `.sku` round — enforced in `router_limitar_skus.js`.
+- `.analisar` / `.sku` pass all valid SKUs by default; optional sampling is controlled by `CDP_DISPATCH_SAMPLE_SIZE` in `router_limitar_skus.js`.
 - **Secrets:** Key Vault → Container App env; never in workflow JSON or agent memory files.
 - **Documentation:** Platform truth in `docs/`; service truth in service `docs/` + `.agent/memory/`; avoid duplicating full architecture in three places — link to canonical docs.

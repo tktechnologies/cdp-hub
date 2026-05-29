@@ -1,22 +1,61 @@
 // ─── Telegram Command Router v4 — adds .status / .andamento ─────────────────
 
-function env(name) {
+const DEFAULT_SCRAPER_API_BASE =
+  'https://cdp-scrapers-api-prod.bravecoast-b14d791e.eastus2.azurecontainerapps.io';
+
+function envValue(name) {
   try {
-    const raw = (typeof process !== 'undefined' && process.env && process.env[name]) || '';
-    return raw.split(',').map((s) => s.trim()).filter(Boolean);
+    if (typeof $env !== 'undefined' && $env && $env[name]) {
+      return String($env[name]).trim();
+    }
   } catch (e) {
-    return [];
+    return '';
   }
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env[name]) {
+      return String(process.env[name]).trim();
+    }
+  } catch (e) {
+    return '';
+  }
+  return '';
 }
 
 function envList(name) {
-  return env(name);
+  const raw = envValue(name);
+  return raw ? raw.split(',').map((s) => s.trim()).filter(Boolean) : [];
 }
 
 function statusCommands() {
-  const raw = env('CDP_STATUS_COMMANDS');
+  const raw = envList('CDP_STATUS_COMMANDS');
   if (raw.length) return raw;
   return ['.status', '.andamento', '.progresso'];
+}
+
+function trimTrailingSlashes(value) {
+  let out = String(value || '').trim();
+  while (out.endsWith('/')) out = out.slice(0, -1);
+  return out;
+}
+
+function scraperApiBase() {
+  return trimTrailingSlashes(
+    envValue('CDP_SCRAPER_API_BASE') ||
+      envValue('MUVSTOK_SCRAPER_API_BASE') ||
+      DEFAULT_SCRAPER_API_BASE
+  );
+}
+
+function cdpApiKey() {
+  return envValue('CDP_API_KEY') || envValue('MUVSTOK_API_KEY') || envValue('API_KEY');
+}
+
+function telegramBotToken() {
+  return (
+    envValue('TELEGRAM_BOT_TOKEN') ||
+    envValue('TELEGRAM_TOKEN') ||
+    envValue('TELEGRAM_API_TOKEN')
+  );
 }
 
 const msg = $input.first().json;
@@ -37,6 +76,7 @@ const isSku = lower.startsWith('.sku');
 const isStatus = statusCommands().some((cmd) => lower.startsWith(cmd.toLowerCase()));
 
 if (isStatus) {
+  const base = scraperApiBase();
   return [
     {
       json: {
@@ -45,6 +85,9 @@ if (isStatus) {
         username,
         origem: 'telegram',
         notify: chatId,
+        dispatch_runs_lookup_url:
+          base + '/api/v1/dispatch-runs/active/for-chat/' + encodeURIComponent(chatId),
+        dispatch_runs_api_key: cdpApiKey(),
       },
     },
   ];
@@ -68,6 +111,7 @@ if (isSku || hasFile) {
           text_skus: textSkus,
           file_id: doc.file_id,
           file_name: doc.file_name || 'attachment',
+          telegram_bot_token: telegramBotToken(),
           origem: 'telegram',
           notify: chatId,
         },
@@ -84,6 +128,7 @@ if (isSku || hasFile) {
           text_skus: [],
           file_id: doc.file_id,
           file_name: doc.file_name || 'attachment',
+          telegram_bot_token: telegramBotToken(),
           origem: 'telegram',
           notify: chatId,
         },

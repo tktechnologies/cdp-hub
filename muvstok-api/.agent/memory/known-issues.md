@@ -23,7 +23,7 @@ Last reviewed: 2026-05-26.
 
 - One queue message per SKU (parallel SKU processing).
 - Advanced analytics dashboards.
-- Redis caching beyond queue needs.
+- ~~Redis caching beyond queue needs.~~ Done 2026-05-29: per-SKU result cache (`app/services/sku_cache.py`, 24h) + in-job memo; duplicates no longer re-request upstream and jobs return N results.
 - Synchronous live lookup (`/api/v1/muvstok`) unless explicitly required.
 - Final callback HMAC contract.
 - Production API-key storage, rotation, and revocation workflow.

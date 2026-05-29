@@ -37,7 +37,7 @@ Use this skill to keep API changes aligned with the job ingestion contract and t
 
 - Run `uv run ruff check .` after Python edits.
 - Run `uv run mypy .` after typed interface changes.
-- Run `uv run pytest` when tests exist or were added.
+- Run `uv run pytest` for API contract or service behavior changes.
 - Run `bash scripts/check_specs.sh` after spec changes.
 - Record Azure validation status before calling the task done.
 

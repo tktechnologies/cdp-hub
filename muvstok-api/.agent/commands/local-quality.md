@@ -32,4 +32,4 @@ Use after typed Python changes.
 uv run pytest
 ```
 
-Current state: tests are not implemented beyond `tests/README.md`, so passing or empty local tests are not enough for done.
+Current state: unit, service, and contract tests exist. Passing local tests are useful feedback, but Azure-hosted validation is still required when production-like behavior is in scope.

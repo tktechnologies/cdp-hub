@@ -1,6 +1,14 @@
 // cdp_router — .status / .andamento: resolve active run and API poll targets.
 
+const DEFAULT_SCRAPER_API_BASE =
+  'https://cdp-scrapers-api-prod.bravecoast-b14d791e.eastus2.azurecontainerapps.io';
+
 function env(name) {
+  try {
+    if (typeof $env !== 'undefined' && $env && $env[name]) {
+      return String($env[name]).trim();
+    }
+  } catch (e) {}
   try {
     if (typeof process !== 'undefined' && process.env && process.env[name]) {
       return String(process.env[name]).trim();
@@ -77,7 +85,7 @@ if (chatId && run.chat_id && chatId !== String(run.chat_id).trim()) {
 }
 
 const scraperBase = trimTrailingSlashes(
-  env('CDP_SCRAPER_API_BASE') || env('MUVSTOK_SCRAPER_API_BASE') || ''
+  env('CDP_SCRAPER_API_BASE') || env('MUVSTOK_SCRAPER_API_BASE') || DEFAULT_SCRAPER_API_BASE
 );
 const stokapiBase = trimTrailingSlashes(
   env('CDP_MUVSTOK_API_BASE') ||

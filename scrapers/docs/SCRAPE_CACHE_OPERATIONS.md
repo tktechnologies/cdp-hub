@@ -105,7 +105,7 @@ Expected on **second** lookup: `from_cache=true`, `cache_hits >= 1`, `live_scrap
 
 | Symptom | Check |
 |---------|--------|
-| Always `live_scrapes` = all sites | `SCRAPE_CACHE_ENABLED=false` or Redis down (logs: "Redis unavailable"); on Azure ensure `SCRAPE_CACHE_REDIS_URL` ends with `?ssl_cert_reqs=CERT_NONE` |
+| Always `live_scrapes` = all sites | `SCRAPE_CACHE_ENABLED=false` or Redis down (logs: "Redis unavailable"); on Azure use DB 1 (`rediss://...:6380/1`) and let the app configure TLS |
 | `Invalid API key` from smoke script | Trim CR/LF from Key Vault / `az` output (`tr -d '\r\n'`) before curl |
 | Cache never hits after first call | Wrong Redis DB (must be `/1`), or API/worker using different URLs |
 | Stale blocked status cached 24h | Should only cache `blocked` for 30m; verify `SCRAPE_CACHE_TTL_BLOCKED_SECONDS` |

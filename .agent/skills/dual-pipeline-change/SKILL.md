@@ -12,7 +12,7 @@ Use when modifying `.analisar`, `.sku`, parallel dispatch, batch limits, or cros
 
 | User-visible change | Files to touch |
 |---------------------|----------------|
-| SKU limit (5) | `n8n/src/router_limitar_skus.js` |
+| SKU pass-through / optional sampling | `n8n/src/router_limitar_skus.js` (`CDP_DISPATCH_SAMPLE_SIZE`, default 0 = all) |
 | Scraper sites / cache bypass | `n8n/src/formatar_payload_scraper.js` + possibly `scrapers/src/services/orchestrator.py` |
 | StokAPI callback query params | `n8n/src/router_stokapi.js` + `muvstok-api/app/schemas/` |
 | Sheet PROCESSADO timing | `n8n/src/emparelhar_scraper.js` |

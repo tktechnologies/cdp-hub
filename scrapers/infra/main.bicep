@@ -63,7 +63,7 @@ var meliboxPassSecretValue = empty(meliboxPass) ? 'not-configured' : meliboxPass
 var databaseUrl = 'postgresql+asyncpg://${postgresAdminUser}:${postgresAdminPassword}@${postgres.outputs.hostName}/${postgresDatabaseName}?ssl=require'
 var databaseUrlSync = 'postgresql://${postgresAdminUser}:${postgresAdminPassword}@${postgres.outputs.hostName}/${postgresDatabaseName}?sslmode=require'
 var redisUrl = 'rediss://:${redis.outputs.primaryKey}@${redis.outputs.hostName}:6380/0'
-var scrapeCacheRedisUrl = 'rediss://:${redis.outputs.primaryKey}@${redis.outputs.hostName}:6380/1?ssl_cert_reqs=CERT_NONE'
+var scrapeCacheRedisUrl = 'rediss://:${redis.outputs.primaryKey}@${redis.outputs.hostName}:6380/1'
 var celeryRedisUrl = '${redisUrl}?ssl_cert_reqs=CERT_NONE'
 var n8nDatabaseUrl = 'postgresql://${postgresAdminUser}:${postgresAdminPassword}@${postgres.outputs.hostName}/${n8nDatabaseName}?sslmode=require'
 

@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Contracts
 
-Entry: [contracts/README.md](../contracts/README.md).
+Entry: [contracts/README.md](../../contracts/README.md).
 
 ## Rules
 

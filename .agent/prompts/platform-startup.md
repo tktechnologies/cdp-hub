@@ -4,10 +4,11 @@ Use at the start of any CDP **monorepo-wide** or **n8n router** session.
 
 ## Bootstrap
 
-1. Read `AGENTS.md` and `docs/PLATFORM_OVERVIEW.md`.
-2. Read `docs/architecture/AGENT_ARCHITECTURE.md` — three tiers.
+1. Read `AGENTS.md` and `docs/ARCHITECTURE.md`.
+2. Read `docs/n8n/LIVE_WORKFLOWS.md` and `docs/architecture/AGENT_ARCHITECTURE.md`.
 3. Read `.agent/index.md` and `.agent/memory/implementation-state.md`.
-4. `git status --short` — never revert user changes.
+4. Use `docs/PLATFORM_OVERVIEW.md` as the detailed API/Azure reference when needed.
+5. `git status --short` — never revert user changes.
 
 ## Classify the task
 

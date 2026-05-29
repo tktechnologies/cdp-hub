@@ -17,7 +17,7 @@ Scraper Tier 2 rules. For platform-wide n8n rules see `../../.agent/boundaries/n
 ## Data contracts
 
 - Public models: `src/models/schemas.py`; persistence: `src/models/database.py`.
-- Required result fields per CLAUDE.md business rules.
+- Required result fields per `docs/SCRAPER_FIELD_GUIDE.md` and `src/models/schemas.py`.
 - Exact SKU match after normalization; EU/Mercedes trim; ML new items only.
 
 ## Engineering

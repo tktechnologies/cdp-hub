@@ -14,7 +14,7 @@ Platform workflow — run before publishing any n8n change to production.
 - [ ] Ran `python3 scripts/sync_workflow_code_from_shared.py`
 - [ ] Verified StokAPI uses inline HTTP (no Execute Workflow)
 - [ ] `force_refresh: false` unchanged unless intentional
-- [ ] Max 5 SKUs unchanged unless intentional
+- [ ] SKU pass-through / `CDP_DISPATCH_SAMPLE_SIZE` behavior unchanged unless intentional
 
 ## Receiver changes
 

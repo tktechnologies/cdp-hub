@@ -33,14 +33,14 @@ Python 3.12 FastAPI ingestion platform for API Diversos SKU data. Accepts jobs w
 | Scripts | `scripts/` | Deploy, sync, audit, and ops scripts |
 | Docker | `docker/` | Dockerfiles (API + worker) and local compose |
 | Docs | `docs/` | Production audit results |
-| Tests | `tests/` | Test directory (tests not yet implemented) |
+| Tests | `tests/` | Unit, service, and contract tests |
 | Infra | `infra/` | Azure infrastructure (placeholder) |
 
 ## Quality Gates
 
 - `uv run ruff check .`
 - `uv run mypy .`
-- `uv run pytest` (when tests exist)
+- `uv run pytest`
 - `bash scripts/check_specs.sh`
 
 ## Key Constraints
@@ -50,4 +50,4 @@ Python 3.12 FastAPI ingestion platform for API Diversos SKU data. Accepts jobs w
 - Secrets belong in Azure Key Vault, never in logs or plain DB fields.
 - Official validation requires Azure-hosted environments.
 - n8n: `cdp_stokapi` receiver in this repo; production dispatch is inline in monorepo `cdp_router` via `n8n/src/router_stokapi.js` (not Execute Workflow).
-- Platform docs: `../docs/PLATFORM_OVERVIEW.md`, `../docs/architecture/DUAL_PIPELINE.md`.
+- Platform docs: `../docs/ARCHITECTURE.md`, `../docs/architecture/DUAL_PIPELINE.md`, `../docs/PLATFORM_OVERVIEW.md` for detailed API/Azure reference.

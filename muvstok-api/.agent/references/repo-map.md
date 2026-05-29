@@ -39,4 +39,4 @@
 - `Makefile`: `check-specs` and `azure-test` wrappers.
 - `docker/`: Dockerfiles (API + worker) and local compose stack.
 - `scripts/deploy_muv_api.sh`, `scripts/deploy_muv_worker.sh`: Azure deploy.
-- `tests/`: test directories exist, but tests are not implemented yet.
+- `tests/`: service and contract tests for the current job/queue behavior.

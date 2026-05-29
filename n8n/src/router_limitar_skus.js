@@ -2,6 +2,11 @@
 
 function env(name) {
   try {
+    if (typeof $env !== 'undefined' && $env && $env[name]) {
+      return String($env[name]).trim();
+    }
+  } catch (e) {}
+  try {
     if (typeof process !== 'undefined' && process.env && process.env[name]) {
       return String(process.env[name]).trim();
     }

@@ -6,7 +6,7 @@ alwaysApply: false
 
 # StokAPI (API Diversos)
 
-Entry: [muvstok-api/AGENTS.md](muvstok-api/AGENTS.md) → [muvstok-api/.agent/index.md](muvstok-api/.agent/index.md).
+Entry: [muvstok-api/AGENTS.md](../../muvstok-api/AGENTS.md) -> [muvstok-api/.agent/index.md](../../muvstok-api/.agent/index.md).
 
 ## Stack
 

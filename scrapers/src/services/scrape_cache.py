@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import re
-import ssl
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import structlog
 from redis.asyncio import Redis
@@ -46,6 +46,29 @@ def build_cache_key(sku: str, brand: str, site_id: SiteId) -> str:
     return f"{SCRAPE_CACHE_PREFIX}{site_id.value}:{brand_key}:{sku_key}"
 
 
+def normalize_redis_tls_url(url: str) -> tuple[str, dict[str, Any]]:
+    """Return a Redis URL/kwargs pair that works across redis-py TLS versions."""
+    if not url.startswith("rediss://"):
+        return url, {}
+
+    parsed = urlsplit(url)
+    query = [
+        (key, value)
+        for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+        if key.lower() != "ssl_cert_reqs"
+    ]
+    normalized_url = urlunsplit(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            urlencode(query),
+            parsed.fragment,
+        )
+    )
+    return normalized_url, {"ssl_cert_reqs": "none"}
+
+
 class ScrapeCacheService:
     """Per-site SKU result cache in Redis with PostgreSQL warm fallback."""
 
@@ -59,11 +82,12 @@ class ScrapeCacheService:
         if self._client is None:
             try:
                 redis_kwargs: dict[str, Any] = {"decode_responses": True}
-                if settings.scrape_cache_redis_url.startswith("rediss://"):
-                    # Azure Cache for Redis uses TLS; match Celery broker SSL handling.
-                    redis_kwargs["ssl_cert_reqs"] = ssl.CERT_NONE
+                redis_url, tls_kwargs = normalize_redis_tls_url(
+                    settings.scrape_cache_redis_url
+                )
+                redis_kwargs.update(tls_kwargs)
                 self._client = Redis.from_url(
-                    settings.scrape_cache_redis_url,
+                    redis_url,
                     **redis_kwargs,
                 )
                 await self._client.ping()

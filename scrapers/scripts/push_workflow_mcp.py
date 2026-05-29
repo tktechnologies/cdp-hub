@@ -72,6 +72,18 @@ def push(workflow_id: str, sdk_path: pathlib.Path, description: str, publish: bo
     u = parse_structured(
         mcp_call("update_workflow", {"workflowId": workflow_id, "code": code, "description": description})
     )
+    # The MCP `update_workflow` tool only accepts `operations` (additionalProperties:false);
+    # a `code` payload is rejected and applies NOTHING while still returning 200. Detect the
+    # no-op so we never again "publish" a stale graph and think it worked.
+    if not (u.get("workflowId") or u.get("appliedOperations")):
+        print(
+            "ERROR: update_workflow did not apply (code-based update is a no-op on this MCP).\n"
+            "       The live graph was NOT changed. Apply structural changes via\n"
+            "       update_workflow `operations` + publish_workflow instead, or rewrite this\n"
+            f"       pusher to diff→operations. Raw response: {u}",
+            file=sys.stderr,
+        )
+        return 2
     print(f"update OK id={u.get('workflowId')} url={u.get('url', '')}")
 
     if publish:

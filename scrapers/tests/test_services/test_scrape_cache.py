@@ -22,6 +22,7 @@ from src.services.scrape_cache import (
     ScrapeCacheService,
     build_cache_key,
     normalize_cache_sku,
+    normalize_redis_tls_url,
 )
 from src.utils.monitoring import scrape_cache_hit_total, scrape_cache_miss_total
 
@@ -61,6 +62,20 @@ class TestCacheKeyHelpers:
         key = build_cache_key("93338835", "GM", SiteId.GM)
         assert key.startswith("scrape:v1:gm:")
         assert "93338835" in key
+
+    def test_normalize_redis_tls_url_strips_legacy_cert_query(self):
+        url, kwargs = normalize_redis_tls_url(
+            "rediss://:secret@example.redis.cache.windows.net:6380/1?ssl_cert_reqs=CERT_NONE"
+        )
+        assert url == "rediss://:secret@example.redis.cache.windows.net:6380/1"
+        assert kwargs == {"ssl_cert_reqs": "none"}
+
+    def test_normalize_redis_tls_url_preserves_other_query_values(self):
+        url, kwargs = normalize_redis_tls_url(
+            "rediss://:secret@example.redis.cache.windows.net:6380/1?foo=bar&ssl_cert_reqs=CERT_NONE"
+        )
+        assert url == "rediss://:secret@example.redis.cache.windows.net:6380/1?foo=bar"
+        assert kwargs == {"ssl_cert_reqs": "none"}
 
 
 class TestScrapeCacheService:

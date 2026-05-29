@@ -27,6 +27,15 @@ Docs: `scrapers/docs/SPECS/SCRAPE_CACHE_SPEC.md`, `scrapers/docs/SCRAPE_CACHE_OP
 
 **n8n does not pre-filter sites** — every dispatch sends full site list; the API/worker applies cache.
 
+## StokAPI cache (24h) + duplicate SKUs (2026-05-29)
+
+Both pipelines follow the same contract: **N input SKUs → N results, duplicates served from cache (one upstream call per unique SKU).**
+
+- **Scraper:** sequential per-row processing; the 2nd occurrence of a SKU hits the 24h Redis scrape cache.
+- **StokAPI:** ingestion keeps duplicates (no dedup); the worker reuses the first occurrence via an in-job memo and a Redis per-SKU cache (`muvstok:sku:v1:`, `MUVSTOK_CACHE_TTL_SECONDS=86400` success / 6h not_found). Returns one callback result per input row.
+
+Sheet writeback (`cdp_stokapi` / `cdp_scraper`) maps each unique SKU result to **all** duplicate `CODIGO` rows by `row_number`.
+
 ## Commands
 
 | Command | Scraper | StokAPI | Notes |

@@ -122,10 +122,9 @@ class MuvstokJobItem(Base, TimestampMixin):
     snapshots: Mapped[list["MuvstokRawSnapshot"]] = relationship(back_populates="job_item")
     api_data: Mapped["MuvstokApiData | None"] = relationship(back_populates="job_item")
 
-    __table_args__ = (
-        UniqueConstraint("job_id", "sku", name="uq_muvstok_job_items_job_sku"),
-        Index("ix_muvstok_job_items_status_job_id", "status", "job_id"),
-    )
+    # No (job_id, sku) unique constraint: duplicate SKUs in one job are stored as
+    # separate items so the callback returns one result per input row.
+    __table_args__ = (Index("ix_muvstok_job_items_status_job_id", "status", "job_id"),)
 
 
 class MuvstokRawSnapshot(Base, TimestampMixin):

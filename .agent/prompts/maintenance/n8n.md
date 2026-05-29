@@ -34,7 +34,7 @@ Hard rules:
 - NEVER use Execute Workflow for StokAPI production dispatch
 - NEVER publish or MCP-push workflows without my explicit approval
 - NEVER rename scraper-result or muvstok-result without coordinated API deploy
-- Scraper jobs: force_refresh: false; max 5 SKUs per .analisar/.sku
+- Scraper jobs: force_refresh: false; all valid SKUs pass through unless CDP_DISPATCH_SAMPLE_SIZE intentionally samples
 - Do not use scrapers/n8n/docs/ for truth — use docs/n8n/ and n8n/
 
 Before done (local):

@@ -21,7 +21,7 @@ Tier 1 rules. Service-specific rules live in `scrapers/.agent/rules.md` and `muv
 1. Production dispatch **only** in `cdp_router` — inline HTTP for both arms.
 2. Edit router Code in `n8n/src/`; inject before committing `cdp_router.json`.
 3. Stable webhooks: `scraper-result`, `muvstok-result`.
-4. `.analisar` and `.sku`: max 5 SKUs, Scraper + StokAPI parallel.
+4. `.analisar` and `.sku`: all valid SKUs pass through by default; optional sampling is controlled by `CDP_DISPATCH_SAMPLE_SIZE`.
 5. Never publish live n8n without explicit user approval.
 
 ## Secrets

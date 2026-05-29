@@ -1,6 +1,14 @@
 // cdp_router — persist active dual-pipeline run (staticData + dispatch_runs API).
 
+const DEFAULT_SCRAPER_API_BASE =
+  'https://cdp-scrapers-api-prod.bravecoast-b14d791e.eastus2.azurecontainerapps.io';
+
 function env(name) {
+  try {
+    if (typeof $env !== 'undefined' && $env && $env[name]) {
+      return String($env[name]).trim();
+    }
+  } catch (e) {}
   try {
     if (typeof process !== 'undefined' && process.env && process.env[name]) {
       return String(process.env[name]).trim();
@@ -65,7 +73,7 @@ try {
 } catch (e) {}
 
 const apiBase = trimTrailingSlashes(
-  env('CDP_SCRAPER_API_BASE') || env('MUVSTOK_SCRAPER_API_BASE') || ''
+  env('CDP_SCRAPER_API_BASE') || env('MUVSTOK_SCRAPER_API_BASE') || DEFAULT_SCRAPER_API_BASE
 );
 const apiKey = env('CDP_API_KEY') || env('MUVSTOK_API_KEY') || env('API_KEY');
 

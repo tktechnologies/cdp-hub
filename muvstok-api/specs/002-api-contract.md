@@ -49,7 +49,9 @@ Unauthenticated route health check.
 ## Version 1 Validation
 
 - SKU list must not be empty.
-- Duplicate SKUs are normalized away inside a request.
+- Duplicate SKUs are **preserved**: a request with N SKUs (including repeats) yields N
+  job items and N callback results. The worker fetches each unique SKU once and serves
+  duplicates/repeats from cache (in-job memo + Redis 24h), so upstream is not called again.
 - Callback URL must be public HTTPS.
 - Job size cannot exceed configured `MAX_SKUS_PER_JOB`.
 - Reusing the same `idempotency_key` for the same API client returns the existing job.

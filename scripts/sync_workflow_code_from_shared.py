@@ -10,6 +10,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SHARED = ROOT / "n8n" / "src"
 
 NODE_FILES = {
+    "🔍 DQ: Validar & Deduplicar": "router_dq.js",
     "🎲 Limitar SKUs": "router_limitar_skus.js",
     "🎲 Limitar SKUs (teste — remover depois)": "router_limitar_skus.js",
     "⚙️ Formatar Payload (Batches)": "formatar_payload_scraper.js",
@@ -46,8 +47,94 @@ LEGACY_SAMPLE_MARKERS = (
     "const FIXED_MAX_SKUS = 5",
 )
 
+PARAMETER_PATCHES = {
+    "🚀 POST → Scraper API (/jobs)": {
+        "url": "={{ $json.api_jobs_url }}",
+        "header:X-API-Key": "={{ $json.api_key }}",
+    },
+    "🚀 POST API Diversos": {
+        "header:X-API-Key": "={{ $json.api_key }}",
+    },
+    "📊 GET dispatch run (chat)": {
+        "url": "={{ $json.dispatch_runs_lookup_url }}",
+        "header:X-API-Key": "={{ $json.dispatch_runs_api_key }}",
+    },
+    "📥 Obter Path do Arquivo (Telegram)": {
+        "url": "={{ 'https://api.telegram.org/bot' + $json.telegram_bot_token + '/getFile' }}",
+    },
+    "📥 Baixar Arquivo (Telegram)": {
+        "url": "={{ 'https://api.telegram.org/file/bot' + $('📱 Roteador de Comando').first().json.telegram_bot_token + '/' + $json.result.file_path }}",
+    },
+    "📧 Enviar Alerta de Erro": {
+        "sendTo": "={{ $json.email_from || '' }}",
+    },
+}
+
 
 PROGRESS_WORKFLOW = ROOT / "n8n" / "workflows" / "cdp_progress.json"
+
+
+def schema_entry(col_id: str, col_type: str, *, read_only: bool = False) -> dict:
+    entry = {
+        "id": col_id,
+        "displayName": col_id,
+        "required": False,
+        "defaultMatch": False,
+        "display": True,
+        "type": col_type,
+        "canBeUsedToMatch": True,
+    }
+    if read_only:
+        entry["readOnly"] = True
+        entry["removed"] = False
+    return entry
+
+
+def patch_router_processado_node(node: dict) -> None:
+    if node.get("name") != "✅ Marcar PROCESSADO → CDP_SKUs":
+        return
+    columns = node.setdefault("parameters", {}).setdefault("columns", {})
+    columns["mappingMode"] = "defineBelow"
+    columns["value"] = {
+        "row_number": "={{ $json.row_number }}",
+        "PROCESSADO": "={{ $json.PROCESSADO }}",
+        "ENCONTRADO": "={{ $json.ENCONTRADO }}",
+        "NOTIFICADO": "={{ $json.NOTIFICADO }}",
+    }
+    columns["matchingColumns"] = ["row_number"]
+    columns["schema"] = [
+        schema_entry("row_number", "number", read_only=True),
+        schema_entry("PROCESSADO", "string"),
+        schema_entry("ENCONTRADO", "string"),
+        schema_entry("NOTIFICADO", "string"),
+    ]
+    columns["attemptToConvertTypes"] = False
+    columns["convertFieldsToString"] = True
+    node["notes"] = (
+        "Updates PROCESSADO/ENCONTRADO/NOTIFICADO=⏳ Processando for each dispatched "
+        "sheet row, matched by row_number so duplicate CODIGO rows are initialized too."
+    )
+
+
+def set_header_value(parameters: dict, header_name: str, value: str) -> None:
+    headers = parameters.setdefault("headerParameters", {}).setdefault("parameters", [])
+    for header in headers:
+        if header.get("name") == header_name:
+            header["value"] = value
+            return
+    headers.append({"name": header_name, "value": value})
+
+
+def apply_parameter_patches(node: dict) -> None:
+    patch = PARAMETER_PATCHES.get(node.get("name", ""))
+    if not patch:
+        return
+    parameters = node.setdefault("parameters", {})
+    for key, value in patch.items():
+        if key.startswith("header:"):
+            set_header_value(parameters, key.split(":", 1)[1], value)
+        else:
+            parameters[key] = value
 
 
 def patch_workflow(path: pathlib.Path) -> None:
@@ -64,11 +151,15 @@ def patch_workflow(path: pathlib.Path) -> None:
         name = node.get("name", "")
         src = NODE_FILES.get(name)
         if not src:
+            apply_parameter_patches(node)
+            patch_router_processado_node(node)
             continue
         code = (SHARED / src).read_text(encoding="utf-8")
         if node.get("type", "").endswith("code"):
             node.setdefault("parameters", {})["jsCode"] = code
             node["parameters"]["mode"] = node["parameters"].get("mode", "runOnceForAllItems")
+        apply_parameter_patches(node)
+        patch_router_processado_node(node)
 
     stale: list[str] = []
     for node in wf.get("nodes", []):
