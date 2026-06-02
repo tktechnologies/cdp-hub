@@ -15,6 +15,8 @@
 3. Review `n8n/workflows/cdp_router.json` diff.
 4. Publish: `make sync-n8n` — **only with user approval**.
 
+Publishing uses `scripts/n8n_publish.py` (n8n REST API for the full graph, then MCP `publish_workflow`). See [LIVE_WORKFLOWS.md](LIVE_WORKFLOWS.md#sync-from-repo).
+
 ## Dual pipeline
 
 `.analisar` and `.sku` dispatch **Scraper + StokAPI in parallel** from `cdp_router`. StokAPI uses inline HTTP (`router_stokapi.js`), not Execute Workflow.

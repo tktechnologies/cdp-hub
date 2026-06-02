@@ -26,4 +26,4 @@ Inject script targets `n8n/workflows/cdp_router.json` and `cdp_progress.json`.
 - **Phase 1 complete:** Workflow JSON removed from `scrapers/n8n/workflows/` and `muvstok-api/n8n/workflows/`. Only deprecated docs may remain under `scrapers/n8n/docs/`.
 - Docs and `.agent/boundaries/n8n.md` list canonical `n8n/` paths only.
 - Agents must not treat `scrapers/n8n/shared/dual_dispatch/` as source of truth.
-- `make sync-n8n` pushes `cdp_router`, `cdp_scraper`, `cdp_stokapi`; `cdp_progress` is manual import until added to `sync-all-n8n.sh`.
+- `make sync-n8n` pushes `cdp_router`, `cdp_scraper`, `cdp_stokapi`, and `cdp_progress` when `CDP_PROGRESS_WORKFLOW_ID` is set after first import.

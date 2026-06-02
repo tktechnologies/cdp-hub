@@ -26,7 +26,7 @@ Before making changes, run a project audit:
    - `app/workers/job_processor.py` and `app/workers/sku_processor.py`
    - `app/clients/muvstok_client.py`
    - `app/clients/redis_queue_client.py`
-7. If touching n8n receiver, read `n8n/docs/MUVSTOK_N8N_WORKFLOW_GUIDE.md`, `n8n/settings/cdp_stokapi.json`, `.agent/boundaries/n8n.md`.
+7. If touching n8n receiver, read `muvstok-api/n8n/docs/MUVSTOK_N8N_WORKFLOW_GUIDE.md`, `n8n/settings/cdp_stokapi.json`, `.agent/boundaries/n8n.md`.
 8. If touching router or syncing all workflows, switch to platform tier: `cdp-app/.agent/prompts/platform-startup.md` and `n8n-router-sync` skill — dispatch is **inline in cdp_router** via `n8n/src/router_stokapi.js`; receiver is **cdp_stokapi** only in this repo.
 
 Working rules:

@@ -25,8 +25,8 @@ Platform workflow — run before publishing any n8n change to production.
 ## Push
 
 - [ ] `make sync-n8n` (or documented subset) completed
-- [ ] MCP reported success for affected workflow IDs
-- [ ] Updated `.agent/memory/implementation-state.md`
+- [ ] `scripts/n8n_publish.py` reported REST update OK and MCP `publish_workflow` success
+- [ ] Updated `.agent/memory/implementation-state.md` and `docs/n8n/LIVE_WORKFLOWS.md` if versions changed
 
 ## Post-release smoke
 

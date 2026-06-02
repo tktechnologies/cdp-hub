@@ -15,7 +15,9 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 
 from src.config import settings
 from src.models.schemas import PartResult, SiteId, SiteResult
-from src.utils.proxy_manager import get_proxy_manager
+from src.utils.anti_bot_guard import anti_bot_circuit_breaker
+from src.utils.monitoring import record_scrape_result
+from src.utils.proxy_manager import ProxyEndpoint, get_proxy_manager
 
 logger = structlog.get_logger()
 
@@ -44,6 +46,8 @@ class BaseScraper(ABC):
         self._credentials: dict[str, str] = {}
         self._last_http_block: dict[str, int | str] | None = None
         self._session_confirmed_at: float | None = None
+        self._proxy_endpoint: ProxyEndpoint | None = None
+        self._proxy_identity: str | None = None
 
     # ─── Abstract Properties ──────────────────────────────────────
 
@@ -64,6 +68,12 @@ class BaseScraper(ABC):
         """Path to persisted browser state for this site."""
         state_dir = settings.browser_state_dir
         state_dir.mkdir(parents=True, exist_ok=True)
+        if (
+            settings.proxy_rotation_enabled
+            and settings.proxy_state_per_identity
+            and self._proxy_identity
+        ):
+            return state_dir / f"{self.site_id.value}_{self._proxy_identity}_state.json"
         return state_dir / f"{self.site_id.value}_state.json"
 
     @property
@@ -104,6 +114,10 @@ class BaseScraper(ABC):
     async def initialize(self) -> None:
         """Start browser and create context with stored session if available."""
         self._credentials = settings.get_site_credentials(self.site_id.value)
+        proxy = get_proxy_manager().proxy_for_site(self.site_id.value)
+        self._proxy_endpoint = proxy
+        self._proxy_identity = proxy.identity if proxy else None
+
         self._playwright = await async_playwright().start()
         playwright = self._playwright
         launch_opts: dict[str, Any] = {
@@ -124,13 +138,23 @@ class BaseScraper(ABC):
             context_opts["storage_state"] = str(self.state_file)
             logger.info("Restoring session state", site=self.site_id.value)
 
-        proxy = get_proxy_manager().next_proxy()
         if proxy:
             context_opts["proxy"] = proxy.to_playwright()
-            logger.info("Using outbound proxy", site=self.site_id.value, proxy=proxy.server)
+            logger.info(
+                "Using outbound proxy",
+                site=self.site_id.value,
+                proxy=proxy.server,
+                proxy_identity=proxy.identity,
+            )
 
         self._context = await self._browser.new_context(**context_opts)
         await self._install_anti_bot_context()
+
+    def _httpx_proxy_url(self) -> str | None:
+        """Return the current proxy URL for source-specific HTTP preflights."""
+        if not self._proxy_endpoint:
+            return None
+        return self._proxy_endpoint.to_httpx_url()
 
     def _select_user_agent(self, browser_version: str = "") -> str:
         """Choose a Chromium-compatible user agent for this browser context."""
@@ -334,6 +358,27 @@ class BaseScraper(ABC):
                 await self.initialize()
 
             assert self._context is not None
+            circuit_open, retry_after, reason = anti_bot_circuit_breaker.is_open(
+                self.site_id.value,
+                self._proxy_identity,
+            )
+            if circuit_open:
+                result = self._blocked_site_result(
+                    start_time,
+                    (
+                        "Anti-bot circuit breaker open"
+                        f" for {retry_after}s after repeated blocks"
+                        + (f": {reason}" if reason else "")
+                    ),
+                )
+                record_scrape_result(
+                    self.site_id.value,
+                    result.status,
+                    result.search_time_ms / 1000,
+                    self._proxy_identity,
+                )
+                return result
+
             self._last_http_block = None
             page = await self._new_page()
 
@@ -341,17 +386,36 @@ class BaseScraper(ABC):
             if not await self.ensure_authenticated(page):
                 blocked_message = await self._blocking_message(page)
                 if blocked_message:
-                    return self._blocked_site_result(
+                    result = self._blocked_site_result(
                         start_time,
                         blocked_message,
                     )
-                return SiteResult(
+                    anti_bot_circuit_breaker.record_block(
+                        self.site_id.value,
+                        self._proxy_identity,
+                        blocked_message,
+                    )
+                    record_scrape_result(
+                        self.site_id.value,
+                        result.status,
+                        result.search_time_ms / 1000,
+                        self._proxy_identity,
+                    )
+                    return result
+                result = SiteResult(
                     site=self.site_id,
                     site_name=self.site_name,
                     status="error",
                     error_message="Authentication failed",
                     search_time_ms=int((time.monotonic() - start_time) * 1000),
                 )
+                record_scrape_result(
+                    self.site_id.value,
+                    result.status,
+                    result.search_time_ms / 1000,
+                    self._proxy_identity,
+                )
+                return result
 
             # Normalize SKU based on business rules
             normalized_sku = self._normalize_sku(sku, brand)
@@ -377,7 +441,19 @@ class BaseScraper(ABC):
                     elapsed_ms=elapsed_ms,
                 )
                 if attempt >= max_attempts - 1:
-                    return self._blocked_site_result(start_time, blocked_message)
+                    result = self._blocked_site_result(start_time, blocked_message)
+                    anti_bot_circuit_breaker.record_block(
+                        self.site_id.value,
+                        self._proxy_identity,
+                        blocked_message,
+                    )
+                    record_scrape_result(
+                        self.site_id.value,
+                        result.status,
+                        result.search_time_ms / 1000,
+                        self._proxy_identity,
+                    )
+                    return result
 
                 await self._anti_bot_backoff(attempt)
                 with contextlib.suppress(Exception):
@@ -397,7 +473,16 @@ class BaseScraper(ABC):
                 elapsed_ms=elapsed_ms,
             )
 
-            return self._site_result_from_search(results, elapsed_ms)
+            result = self._site_result_from_search(results, elapsed_ms)
+            if result.status != "blocked":
+                anti_bot_circuit_breaker.record_success(self.site_id.value, self._proxy_identity)
+            record_scrape_result(
+                self.site_id.value,
+                result.status,
+                result.search_time_ms / 1000,
+                self._proxy_identity,
+            )
+            return result
 
         except Exception as e:
             elapsed_ms = int((time.monotonic() - start_time) * 1000)
@@ -413,13 +498,20 @@ class BaseScraper(ABC):
                 except Exception:
                     pass
 
-            return SiteResult(
+            result = SiteResult(
                 site=self.site_id,
                 site_name=self.site_name,
                 status="error",
                 error_message=str(e),
                 search_time_ms=elapsed_ms,
             )
+            record_scrape_result(
+                self.site_id.value,
+                result.status,
+                result.search_time_ms / 1000,
+                self._proxy_identity,
+            )
+            return result
         finally:
             if page:
                 await page.close()

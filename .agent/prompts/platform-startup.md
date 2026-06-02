@@ -1,14 +1,17 @@
 # Platform agent startup
 
-Use at the start of any CDP **monorepo-wide** or **n8n router** session.
+**Humans:** use [new-chat.md](new-chat.md) (copy-paste block) at the start of every Cursor session.
+
+**Agents:** follow the bootstrap below for monorepo-wide or n8n router work.
 
 ## Bootstrap
 
 1. Read `AGENTS.md` and `docs/ARCHITECTURE.md`.
-2. Read `docs/n8n/LIVE_WORKFLOWS.md` and `docs/architecture/AGENT_ARCHITECTURE.md`.
-3. Read `.agent/index.md` and `.agent/memory/implementation-state.md`.
-4. Use `docs/PLATFORM_OVERVIEW.md` as the detailed API/Azure reference when needed.
-5. `git status --short` — never revert user changes.
+2. Read `docs/n8n/LIVE_WORKFLOWS.md` (IDs + **publish reality**) and `docs/architecture/DUAL_PIPELINE.md`.
+3. Read `docs/architecture/AGENT_ARCHITECTURE.md`, `.agent/index.md`, `.agent/rules.md`.
+4. Read `.agent/memory/implementation-state.md` — **current snapshot** at top; ignore superseded version UUIDs in changelog.
+5. Use `docs/PLATFORM_OVERVIEW.md` only for API/Azure tables.
+6. `git status --short` — never revert user changes.
 
 ## Classify the task
 
@@ -25,6 +28,13 @@ Use at the start of any CDP **monorepo-wide** or **n8n router** session.
 - Dispatch: **only** `cdp_router` (`6id6dkinK9xTLfsb`)
 - Webhooks: `scraper-result`, `muvstok-result` (stable)
 - Sync: `make sync-n8n` — **never** without user approval
+- **Code-only** (`n8n/src/`): inject script + sync. **Graph/node changes**: MCP `update_workflow` `operations` + publish — sync alone may not update live graph ([LIVE_WORKFLOWS.md](../../docs/n8n/LIVE_WORKFLOWS.md))
+
+## Agent docs
+
+- Project-owned agent guidance lives in `.agent/` workspaces.
+- Task-scoped rule summaries live in `.agent/rules/`.
+- Cross-service ownership maps live in `.agent/knowledge/`.
 
 ## End of turn
 

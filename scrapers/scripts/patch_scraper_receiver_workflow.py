@@ -376,7 +376,7 @@ def main() -> None:
         elif name == "✅ Bulk: Marcar NOTIFICADO → CDP_SKUs":
             node["notes"] = (
                 "Updates NOTIFICADO=✅ Sim for all SKUs in this job by row_number. | "
-                "v0.8.0: retry 5×/5s; no continueOnFail (retries work; fail loud if Sheets still errors)."
+                "v0.8.0: retry 5x/5s; no continueOnFail (retries work; fail loud if Sheets still errors)."
             )
         if name in ("🔧 Expandir NOTIFICADO (✅ Sim)", "🔧 Expandir NOTIFICADO (❌ Não)", "🔧 Bulk: Expandir NOTIFICADO (✅ Sim)"):
             node["parameters"]["jsCode"] = patch_expandir_notificado(node["parameters"]["jsCode"])

@@ -35,4 +35,4 @@ Never commit `.env`, API keys, webhook HMAC values, or browser session files.
 ## Agent-assisted work
 
 - Platform: [.agent/index.md](../.agent/index.md)
-- Cursor rules: [.cursor/rules/](../.cursor/rules/)
+- Task-scoped agent rules: [.agent/rules/](../.agent/rules/)

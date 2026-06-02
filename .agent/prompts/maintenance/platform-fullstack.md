@@ -19,8 +19,8 @@ Bootstrap (read before editing):
 5. git status --short — never revert user changes without asking
 
 Delegate before coding:
-- Playwright / cache / Celery → scrapers/.agent/prompts/maintenance/scraper.md
-- Muvstok jobs / worker → muvstok-api/.agent/prompts/maintenance/stokapi.md
+- Playwright / cache / Celery → .agent/prompts/maintenance/scraper.md
+- Muvstok jobs / worker → .agent/prompts/maintenance/stokapi.md
 - n8n only → .agent/prompts/maintenance/n8n.md
 - Azure deploy only → .agent/prompts/maintenance/infrastructure.md
 

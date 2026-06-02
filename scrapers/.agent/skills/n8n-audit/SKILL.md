@@ -10,13 +10,15 @@ Confirm live n8n, local exports, scraper API contracts, and docs agree.
 
 ## Source files
 
+Paths are monorepo-root paths.
+
 | Artifact | Path |
 |----------|------|
-| Router JSON | `../../n8n/workflows/cdp_router.json` (Code from `../../n8n/src/`) |
-| Receiver JSON | `../../n8n/workflows/cdp_scraper.json` |
-| Live IDs | `../../docs/n8n/LIVE_WORKFLOWS.md` |
-| API contracts | `src/models/schemas.py`, `src/api/routes/` |
-| Sheets semantics | `../../docs/n8n/DATA_CONTRACTS.md` |
+| Router JSON | `n8n/workflows/cdp_router.json` (Code from `n8n/src/`) |
+| Receiver JSON | `n8n/workflows/cdp_scraper.json` |
+| Live IDs | `docs/n8n/LIVE_WORKFLOWS.md` |
+| API contracts | `scrapers/src/models/schemas.py`, `scrapers/src/api/routes/` |
+| Sheets semantics | `docs/n8n/DATA_CONTRACTS.md` |
 
 ## Live checks (MCP)
 

@@ -47,4 +47,4 @@ make -C scrapers test  # scraper pytest
 
 ## Documentation
 
-[Index](docs/README.md) · [Platform overview](docs/PLATFORM_OVERVIEW.md) · [n8n workflows](docs/n8n/LIVE_WORKFLOWS.md)
+[Index](docs/README.md) · [Architecture](docs/ARCHITECTURE.md) · [n8n live workflows](docs/n8n/LIVE_WORKFLOWS.md) · [API/Azure reference](docs/PLATFORM_OVERVIEW.md) · [Contributing](docs/CONTRIBUTING.md)

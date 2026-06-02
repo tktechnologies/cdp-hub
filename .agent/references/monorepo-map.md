@@ -1,11 +1,18 @@
 # CDP Monorepo Map
 
-**Updated:** 2026-05-27
+**Updated:** 2026-06-01
 
 ```text
 cdp-app/
-├── .cursor/rules/          # Cursor IDE rules (platform, scraper, stokapi, n8n)
-├── .agent/                 # Platform agent (Tier 1)
+├── .agent/                 # Platform agent workspace (Tier 1)
+│   ├── rules/              # Task-scoped agent rules
+│   ├── knowledge/          # Cross-service ownership and sync maps
+│   ├── memory/             # Durable project state and decisions
+│   ├── references/         # Knowledge maps
+│   ├── commands/           # Repeatable command recipes
+│   ├── prompts/            # Startup and maintenance prompts
+│   ├── skills/             # Reusable platform workflows
+│   └── sub-agents/         # Delegation briefs
 ├── docs/                   # Cross-cutting documentation
 ├── n8n/
 │   ├── src/                # Router Code source (12 JS files)

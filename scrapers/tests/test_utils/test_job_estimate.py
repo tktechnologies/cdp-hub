@@ -10,7 +10,7 @@ def test_parallel_five_skus_five_sites_about_four_minutes() -> None:
         scrape_sites_sequential=False,
         max_concurrent_scrapers=3,
     )
-    # 2 waves x 18s + 2.75s inter-SKU delay, x5 SKUs ~ 194s
+    # 2 waves x 18s + 7s inter-SKU delay, x5 SKUs ~ 215s.
     assert 170 <= seconds <= 220
 
 
@@ -21,4 +21,4 @@ def test_parallel_two_skus_two_sites() -> None:
         scrape_sites_sequential=False,
         max_concurrent_scrapers=3,
     )
-    assert seconds == 41
+    assert seconds == 50

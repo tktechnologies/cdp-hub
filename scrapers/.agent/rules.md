@@ -5,7 +5,7 @@ Scraper Tier 2 rules. For platform-wide n8n rules see `../../.agent/boundaries/n
 ## Scope
 
 - This repo is the scraper service only.
-- CDP n8n exports here: `cdp_router` (orchestrator JSON), `cdp_scraper` (receiver).
+- CDP n8n workflows at monorepo `n8n/workflows/` (`cdp_router`, `cdp_scraper`); router Code in `n8n/src/`.
 - Do not add Muvstok worker logic or StokAPI API routes here.
 
 ## Scraper contracts

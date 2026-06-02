@@ -6,7 +6,8 @@
 	inject-n8n sync-n8n-prep sync-n8n \
 	smoke-cache interview-demo \
 	migrate-scraper migrate-stokapi \
-	bicep-build bicep-what-if bicep-validate
+	bicep-build bicep-what-if bicep-validate \
+	deploy-scraper-prod deploy-scraper-dev import-n8n-progress
 
 ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 COMPOSE := docker compose -f $(ROOT)docker-compose.yml
@@ -121,6 +122,18 @@ bicep-what-if: ## What-if for platform stack (no changes applied)
 		--parameters @$(ROOT)infra/main.parameters.example.json
 
 bicep-validate: bicep-build ## Build Bicep only (validation)
+
+# ─── Deploy (explicit approval — mutates Azure) ─────────────────────────────
+deploy-scraper-prod: ## Build dated image + update prod API/worker
+	bash $(ROOT)scripts/deploy-scraper-image.sh
+
+deploy-scraper-dev: ## Full dev scraper stack (KV, Postgres, apps)
+	bash $(ROOT)scrapers/scripts/deploy-azure-dev.sh
+
+import-n8n-progress: inject-n8n ## First import of cdp_progress; prints workflow ID
+	@WF_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/cdp_progress.json --publish); \
+	echo "CDP_PROGRESS_WORKFLOW_ID=$$WF_ID"; \
+	echo "Add to .env and re-run: CDP_PROGRESS_WORKFLOW_ID=$$WF_ID make sync-n8n"
 
 # ─── Cleanup ─────────────────────────────────────────────────────────────────
 clean: ## Remove caches in both services

@@ -2,6 +2,9 @@
 
 Single source of truth for n8n router code, workflow JSON, and receiver helpers.
 
+Agent entry: [AGENTS.md](AGENTS.md) redirects n8n work to the platform `.agent`
+workspace.
+
 ## Layout
 
 | Path | Purpose |
@@ -19,18 +22,9 @@ Single source of truth for n8n router code, workflow JSON, and receiver helpers.
 make sync-n8n
 ```
 
-Steps: `scripts/sync_workflow_code_from_shared.py` → patch receivers → MCP push.
+Steps: `scripts/sync_workflow_code_from_shared.py` → patch receivers → `scripts/n8n_publish.py` (REST) → MCP publish.
 
-## Production workflows
-
-| Workflow | ID | Webhook |
-|----------|-----|---------|
-| `cdp_router` | `6id6dkinK9xTLfsb` | Telegram, Gmail, schedule |
-| `cdp_scraper` | `VfBSV3WU6on8BXm8` | `scraper-result` |
-| `cdp_stokapi` | `t160mzGPYYlJcrjZ` | `muvstok-result` |
-| `cdp_progress` | _(import manually)_ | Schedule |
-
-See [docs/n8n/LIVE_WORKFLOWS.md](../docs/n8n/LIVE_WORKFLOWS.md).
+See [docs/n8n/LIVE_WORKFLOWS.md](../docs/n8n/LIVE_WORKFLOWS.md) for workflow IDs and `cdp_progress` setup (`CDP_PROGRESS_WORKFLOW_ID`).
 
 ## Rules
 

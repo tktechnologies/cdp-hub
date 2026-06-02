@@ -118,24 +118,24 @@ class Settings(BaseSettings):
     metrics_port: int = 9090
 
     # --- Scraper Behavior ---
-    max_concurrent_scrapers: int = 3  # Live sites per SKU when SCRAPE_SITES_SEQUENTIAL=false
+    max_concurrent_scrapers: int = 1  # Live sites per SKU when SCRAPE_SITES_SEQUENTIAL=false
     scrape_timeout_seconds: int = 120
     retry_max_attempts: int = 3
     retry_wait_seconds: int = 5
     session_ttl_hours: int = 12
     session_recheck_seconds: int = 900  # Skip live session probe within worker TTL
-    scrape_delay_min: float = 1.5  # Min seconds between SKU searches
-    scrape_delay_max: float = 4.0  # Max seconds between SKU searches
-    scraper_action_delay_min_ms: int = 250
-    scraper_action_delay_max_ms: int = 900
-    anti_bot_retry_attempts: int = 2
+    scrape_delay_min: float = 4.0  # Min seconds between SKU searches
+    scrape_delay_max: float = 10.0  # Max seconds between SKU searches
+    scraper_action_delay_min_ms: int = 600
+    scraper_action_delay_max_ms: int = 1800
+    anti_bot_retry_attempts: int = 1
     anti_bot_backoff_min_seconds: float = 5.0
     anti_bot_backoff_max_seconds: float = 15.0
     anti_bot_block_status_codes: list[int] = [403, 429]
     melibox_sku_delay_min: float = 3.0
     melibox_sku_delay_max: float = 8.0
     melibox_rotate_context_per_sku: bool = False
-    scrape_sites_sequential: bool = False
+    scrape_sites_sequential: bool = True
 
     # --- Scrape result cache (Redis, anti-bot) ---
     scrape_cache_enabled: bool = True
@@ -149,6 +149,12 @@ class Settings(BaseSettings):
     proxy_rotation_enabled: bool = False
     proxy_urls: list[str] = []
     proxy_bypass: str = "localhost,127.0.0.1"
+    proxy_fail_closed: bool = False
+    proxy_affinity_enabled: bool = True
+    proxy_state_per_identity: bool = True
+    anti_bot_circuit_breaker_enabled: bool = True
+    anti_bot_circuit_breaker_threshold: int = 3
+    anti_bot_circuit_breaker_cooldown_seconds: int = 1800
 
     @property
     def resolved_celery_broker_url(self) -> str:

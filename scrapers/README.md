@@ -33,35 +33,29 @@ manual all-source checks.
 
 ## Production Status
 
-**Handoff snapshot:** `docs/MAINTENANCE_CHECKPOINT.md` (2026-05-21)
+**Handoff snapshot:** [`docs/MAINTENANCE_CHECKPOINT.md`](docs/MAINTENANCE_CHECKPOINT.md) (updated 2026-06-02)
 
-Production images (verify in Azure before deploy):
-
-```text
-API:    cdpscraperprodacr.azurecr.io/cdp-scraper:lookup-direct-20260521-1439
-Worker: cdpscraperprodacr.azurecr.io/cdp-scraper:scrape-cache-ssl-20260521-1402
-```
+Verify current image tags in Azure Container Apps (`cdp-scrapers-api-prod`, `cdp-scrapers-worker-prod`).
 
 Live Azure resources in `automation`:
-- API: `cdp-scrapers-api-prod`
-- Worker: `cdp-scrapers-worker-prod`
-- N8N: `cdp-n8n-prod` — `https://automacao.tktechnologies.com.br`
+- N8N: `https://automacao.tktechnologies.com.br`
 - PostgreSQL: `cdp-scrapers-pg-prod`
 - Redis: `cdp-scrapers-redis-prod` (DB 0 Celery, DB 1 scrape cache)
 - Key Vault: `cdp-scrapers-kv-prod`
-- ACR: `cdpscraperprodacr`
 
-Latest validation artifacts:
-- `docs/validation/latest_production_curl_smoke.json` (fixed SKU smoke)
-- `docs/validation/latest_production_5sku_cache_audit.json` (`/lookup` cache)
-- `docs/validation/latest_production_5sku_jobs_cache_audit.json` (`/jobs` cache)
-- `docs/validation/latest_5sku_e2e_20260521.md` (batch E2E)
+**Proxy (P0):** Code and scripts are ready; set Key Vault secret `proxy-urls` after
+purchasing a Brazilian ISP proxy. Workflow:
+[`.agent/workflows/proxy-rollout.md`](.agent/workflows/proxy-rollout.md).
+
+Validation scripts:
+- `scripts/proxy_readiness_check.py` — egress IP via proxy
+- `scripts/proxy_site_smoke.py` — per-site SKU smoke with proxy
+- `scripts/production_scraper_curl_smoke.py` — API smoke (ML SKU `51766536`)
 
 Summary:
-- Scrape cache: **PASS** on `/lookup` and `/jobs` (5-SKU audits).
-- Scraper prices: GM, Peça Direta, EU, VW OK; ML smoke SKU stale; Melibox blocked.
-- n8n automated callbacks: **blocked** until webhook secret strip is deployed.
-- Live n8n workflows: drift from repo — see `n8n/docs/AUDIT_2026-05-21.md`.
+- Scrape cache: validated on `/lookup` and `/jobs`.
+- Active scrapers: GM, VW, EU, Peça Direta OK; ML uses SKU `51766536` for smoke; Melibox blocked without BR ISP proxy.
+- Archived: GoParts, Procura Peças, eBay — see `SCRAPER_STATUS_BRIEFING.md` (historical).
 
 ## Quick Start
 

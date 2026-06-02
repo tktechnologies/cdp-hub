@@ -1,6 +1,6 @@
 # CDP agent architecture
 
-**Updated:** 2026-05-26
+**Updated:** 2026-06-01
 
 How AI agents should navigate the CDP monorepo: **platform**, **service**, and **n8n** layers.
 
@@ -72,8 +72,11 @@ Receivers are owned by services but **published together** in one sync script.
 | Path | Role |
 |------|------|
 | `cdp-app/.agent/` | Platform index, rules, boundaries, n8n skills, implementation state |
+| `cdp-app/.agent/knowledge/` | Service catalog and root/service workspace sync rules |
+| `cdp-app/.agent/rules/` | Task-scoped context for platform, n8n, services, Python, contracts, infra |
 | `scrapers/.agent/` | Scraper index, rules, memory, skills, commands |
 | `muvstok-api/.agent/` | Full StokAPI workspace (skills, sub-agents, specs) |
+| `n8n/AGENTS.md` | Folder-local redirect to platform `.agent` ownership |
 | `cdp-app/.agent/workflows/` (top-level `*.md`) | AIOX IDE personas — **not** CDP runtime |
 | `cdp-app/.agent/workflows/cdp/` | CDP platform workflows (n8n release, etc.) |
 

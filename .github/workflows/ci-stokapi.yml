@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - "muvstok-api/**"
+      - "contracts/**"
       - ".github/workflows/ci-stokapi.yml"
       - "docker-compose.yml"
   push:
     branches: [main]
     paths:
       - "muvstok-api/**"
+      - "contracts/**"
       - ".github/workflows/ci-stokapi.yml"
 
 concurrency:
@@ -87,4 +89,3 @@ jobs:
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync --dev
       - run: uv run pytest tests/ -v --tb=short
-        continue-on-error: true

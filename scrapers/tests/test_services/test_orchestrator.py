@@ -79,8 +79,8 @@ class TestOrchestrator:
         orch = Orchestrator()
         response = await orch.submit_job(sample_job_request)
 
-        # 2 items, 2 sites, 1 parallel wave (~18s) + inter-SKU delay
-        assert response.estimated_duration_seconds == 41
+        # Conservative default: 2 items, 2 sequential sites (~24s) + inter-SKU delay.
+        assert response.estimated_duration_seconds == 62
 
     @pytest.mark.asyncio
     async def test_submit_job_enqueues_celery_when_configured(self, sample_job_request, monkeypatch):

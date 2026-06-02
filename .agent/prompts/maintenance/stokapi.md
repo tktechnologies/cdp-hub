@@ -22,7 +22,7 @@ Classify my task:
 - DB / migration → muvstok-add-migration + muvstok-add-repository + app/db/models.py
 - Queue / worker / retry / DLQ → muvstok-redis-queue + app/workers/redis_worker.py
 - SKU processing / Muvstok client → muvstok-build-worker + app/clients/muvstok_client.py
-- n8n receiver (sheets, Telegram) → ../../n8n/workflows/cdp_stokapi.json + n8n/docs/MUVSTOK_N8N_WORKFLOW_GUIDE.md
+- n8n receiver (sheets, Telegram) → ../../n8n/workflows/cdp_stokapi.json + muvstok-api/n8n/docs/MUVSTOK_N8N_WORKFLOW_GUIDE.md
 - Router / sync all 3 workflows → STOP: platform .agent/prompts/maintenance/n8n.md + n8n-router-sync skill
 
 Boundaries (do not cross):

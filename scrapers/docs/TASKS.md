@@ -1,13 +1,10 @@
 # CDP Scraper — Project Status & Tasks
 
-**Last Updated:** 2026-05-21
-**Status:** Production Azure stack is live. Scrape cache and `/lookup` direct path
-are deployed and validated (5/5 SKU audits). Scraper API returns correct prices
-for GM, Peça Direta, EU, VW; ML smoke SKU is stale; Melibox is `blocked` (403).
-**Callbacks:** worker → n8n automated callbacks restored (A27 deploy
-`callback-strip-20260521-1649`). Live n8n
-workflows drift from repo exports — publish only with user approval. Handoff:
-`docs/MAINTENANCE_CHECKPOINT.md`.
+**Last Updated:** 2026-06-02  
+**Status:** Production Azure stack live. Scrape cache validated. Active sites OK
+except Melibox (`blocked` on Azure egress). **P0:** configure BR ISP proxy in Key
+Vault — see `docs/MAINTENANCE_CHECKPOINT.md` and `.agent/workflows/proxy-rollout.md`.  
+**Handoff:** `docs/MAINTENANCE_CHECKPOINT.md`.
 
 ---
 
@@ -69,8 +66,8 @@ workflows drift from repo exports — publish only with user approval. Handoff:
 - [x] 5.13 Run production curl smoke tests for all active scrapers after deployment
 - [x] 5.14 Fix production Celery asyncpg pooling failure with `NullPool`
 - [x] 5.15 Normalize asyncpg SSL URL handling for Azure PostgreSQL audit/runtime
-- [ ] 5.16 Replace or repair Mercado Livre production smoke SKU `06K907811B`
-- [ ] 5.17 Resolve Melibox production login-entry `403` access block
+- [x] 5.16 ML production curl smoke uses SKU `51766536` (`production_scraper_curl_smoke.py`)
+- [ ] 5.17 Resolve Melibox production login-entry `403` (BR ISP proxy in Key Vault + `proxy_site_smoke.py`)
 - [x] 5.17a Add shared anti-bot browser profile, HTTP block detection, and
       bounded backoff before reporting `blocked`
 - [x] 5.17b Fix demo fallout from anti-bot headers/timing: keep
@@ -78,7 +75,9 @@ workflows drift from repo exports — publish only with user approval. Handoff:
       wait for GM dealer-price rows before extraction
 - [x] 5.17c Update local demo/test SKU map for all sources, including
       demo-only archived sources: GoParts, Procura Peças, and eBay
-- [ ] 5.18 Configure production proxy endpoints or disable proxy rotation until `PROXY_URLS` is populated
+- [x] 5.17d Add ISP-proxy affinity, proxy-specific browser state, block circuit
+      breaker, safer production pacing, and proxy-aware HTTP preflight
+- [ ] 5.18 Configure production `PROXY_URLS` in Key Vault — workflow: `.agent/workflows/proxy-rollout.md`
 - [ ] 5.19 Harden Redis TLS validation for Celery instead of `ssl_cert_reqs=CERT_NONE`
 - [x] 5.20 Deploy Melibox login-entry fix and explicit blocked-status reporting
 - [x] 5.21 Bind and validate N8N custom DNS `automacao.tktechnologies.com.br`

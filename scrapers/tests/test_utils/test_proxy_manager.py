@@ -3,7 +3,12 @@
 import pytest
 
 from src.config import settings
-from src.utils.proxy_manager import ProxyEndpoint, ProxyManager, reset_proxy_manager
+from src.utils.proxy_manager import (
+    ProxyEndpoint,
+    ProxyManager,
+    get_proxy_manager,
+    reset_proxy_manager,
+)
 
 
 def test_proxy_endpoint_parses_authenticated_url() -> None:
@@ -30,8 +35,15 @@ def test_proxy_to_playwright_includes_bypass(monkeypatch: pytest.MonkeyPatch) ->
     }
 
 
+def test_proxy_to_httpx_url_preserves_authenticated_proxy() -> None:
+    endpoint = ProxyEndpoint.from_url("http://user:pa ss@20.1.2.3:3128")
+
+    assert endpoint.to_httpx_url() == "http://user:pa%20ss@20.1.2.3:3128"
+
+
 def test_proxy_manager_round_robin(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "proxy_rotation_enabled", True)
+    monkeypatch.setattr(settings, "proxy_affinity_enabled", False)
     manager = ProxyManager(
         [
             "http://20.1.2.3:3128",
@@ -46,11 +58,40 @@ def test_proxy_manager_round_robin(monkeypatch: pytest.MonkeyPatch) -> None:
     assert manager.next_proxy().server == "http://20.1.2.3:3128"
 
 
+def test_proxy_manager_site_affinity(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "proxy_rotation_enabled", True)
+    monkeypatch.setattr(settings, "proxy_affinity_enabled", True)
+    manager = ProxyManager(
+        [
+            "http://20.1.2.3:3128",
+            "http://20.1.2.4:3128",
+        ]
+    )
+
+    gm_proxy = manager.proxy_for_site("gm")
+    ml_proxy = manager.proxy_for_site("ml")
+
+    assert gm_proxy is not None
+    assert ml_proxy is not None
+    assert gm_proxy.server == "http://20.1.2.3:3128"
+    assert ml_proxy.server == "http://20.1.2.4:3128"
+    assert manager.proxy_for_site("gm").server == gm_proxy.server
+
+
 def test_proxy_manager_disabled_without_setting(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "proxy_rotation_enabled", False)
     manager = ProxyManager(["http://20.1.2.3:3128"])
 
     assert manager.next_proxy() is None
+
+
+def test_proxy_manager_fail_closed_without_urls(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "proxy_rotation_enabled", True)
+    monkeypatch.setattr(settings, "proxy_urls", [])
+    monkeypatch.setattr(settings, "proxy_fail_closed", True)
+
+    with pytest.raises(RuntimeError, match="no proxy URLs"):
+        get_proxy_manager()
 
 
 def teardown_function() -> None:

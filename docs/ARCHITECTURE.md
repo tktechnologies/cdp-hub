@@ -1,6 +1,6 @@
 # CDP Architecture
 
-**Updated:** 2026-05-27. Canonical platform design doc (consolidates [PLATFORM_OVERVIEW.md](PLATFORM_OVERVIEW.md), [architecture/DUAL_PIPELINE.md](architecture/DUAL_PIPELINE.md), and agent routing).
+**Updated:** 2026-06-01. Canonical platform design doc (consolidates [PLATFORM_OVERVIEW.md](PLATFORM_OVERVIEW.md), [architecture/DUAL_PIPELINE.md](architecture/DUAL_PIPELINE.md), and agent routing).
 
 ## Purpose
 
@@ -77,6 +77,8 @@ Details: [architecture/DUAL_PIPELINE.md](architecture/DUAL_PIPELINE.md).
 
 Sync: `python3 scripts/sync_workflow_code_from_shared.py` → `make sync-n8n` (user approval for publish). Live IDs: [n8n/LIVE_WORKFLOWS.md](n8n/LIVE_WORKFLOWS.md).
 
+**Publishing:** `make sync-n8n` updates injected Code reliably; **structural** workflow changes (nodes, wiring) may require MCP `update_workflow` `operations` + publish — see [n8n/LIVE_WORKFLOWS.md](n8n/LIVE_WORKFLOWS.md#sync-from-repo).
+
 ## Agent architecture (three tiers)
 
 | Tier | Entry | Owns |
@@ -86,6 +88,8 @@ Sync: `python3 scripts/sync_workflow_code_from_shared.py` → `make sync-n8n` (u
 | StokAPI | [muvstok-api/AGENTS.md](../muvstok-api/AGENTS.md) | Muvstok worker, stokapi receiver |
 
 Full guide: [architecture/AGENT_ARCHITECTURE.md](architecture/AGENT_ARCHITECTURE.md).
+
+Decisions: [decisions/README.md](decisions/README.md) (ADR index).
 
 ## API quick reference
 

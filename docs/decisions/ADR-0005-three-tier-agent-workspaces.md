@@ -1,7 +1,8 @@
 # ADR-0005: Three-tier agent workspaces
 
-**Status:** Accepted  
+**Status:** Accepted
 **Date:** 2026-05-27
+**Amended:** 2026-06-01
 
 ## Context
 
@@ -22,4 +23,4 @@ Scraper skills live in `scrapers/.agent/skills/` (migrated from legacy `.claude/
 
 - Platform agents delegate service-deep work to Tier 2 entries.
 - `muvstok-api/.agent/` is the template for commands, standards, sub-agents, and skills structure.
-- Cursor rules in `.cursor/rules/` mirror tier boundaries for IDE context.
+- Task-scoped rules live under `.agent/rules/` so agent guidance has one project-owned workspace.

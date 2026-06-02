@@ -135,10 +135,12 @@ Operational warnings:
    curl https://<app-url>/api/v1/health
    ```
 
-5. **Provision Proxy Pool:**
-   - Deploy three authenticated Azure proxy endpoints.
+5. **Provision Proxy Egress:**
+   - Start with one authenticated Brazilian ISP/static residential proxy.
    - Store `PROXY_URLS` as a Container App secret.
-   - Validate each proxy with `curl -x http://user:pass@<proxy-ip>:3128 https://api.ipify.org`.
+   - Set `PROXY_ROTATION_ENABLED=true`, `PROXY_FAIL_CLOSED=true`,
+     `PROXY_AFFINITY_ENABLED=true`, and `PROXY_STATE_PER_IDENTITY=true`.
+   - Validate each proxy with `curl -x http://user:pass@<proxy-host>:<port> https://api.ipify.org`.
 
 ---
 

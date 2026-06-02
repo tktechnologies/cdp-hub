@@ -1,8 +1,8 @@
 # Maintenance Checkpoint
 
-**Last updated:** 2026-05-27
+**Last updated:** 2026-06-02
 
-**Live snapshot:** Prefer [`.agent/memory/implementation-state.md`](../.agent/memory/implementation-state.md) and platform [`.agent/memory/implementation-state.md`](../../.agent/memory/implementation-state.md) for workflow IDs. Verify Azure image tags before deploy.
+**Live snapshot:** [`.agent/memory/implementation-state.md`](../.agent/memory/implementation-state.md) and platform [`.agent/memory/implementation-state.md`](../../.agent/memory/implementation-state.md). Historical site matrix: [`SCRAPER_STATUS_BRIEFING.md`](SCRAPER_STATUS_BRIEFING.md) (2026-05-21).
 
 ---
 
@@ -11,10 +11,11 @@
 | Area | Status |
 |------|--------|
 | Azure API + worker | **Live** — verify current image tag in Azure Container Apps |
-| Scrapers | Active sites: `gm`, `ml`, `vw`, `eu`, `pecadireta`; `melibox` optional |
+| Scrapers | Active: `gm`, `ml`, `vw`, `eu`, `pecadireta`; `melibox` optional (router env) |
+| Proxy | **Code ready** — `PROXY_URLS` must be set in Key Vault before `PROXY_FAIL_CLOSED=true` in prod |
 | Redis scrape cache | **Enabled** — 24h TTL; router sends `force_refresh: false` |
-| n8n | **Canonical:** `cdp_router`, `cdp_scraper`, `cdp_stokapi` — see [docs/n8n/LIVE_WORKFLOWS.md](../../docs/n8n/LIVE_WORKFLOWS.md) |
-| Progress | `cdp_progress` + `dispatch-runs` API — import workflow; see platform implementation state |
+| n8n | **Canonical:** `cdp_router`, `cdp_scraper`, `cdp_stokapi` — [docs/n8n/LIVE_WORKFLOWS.md](../../docs/n8n/LIVE_WORKFLOWS.md) |
+| Progress | `cdp_progress` + `dispatch-runs` API — see platform implementation state |
 
 ## Production Images
 
@@ -30,12 +31,28 @@ N8N: `https://automacao.tktechnologies.com.br`
 
 ---
 
+## Proxy rollout (P0)
+
+| Phase | Action |
+|-------|--------|
+| A | Buy 1× BR ISP/static residential HTTP proxy; store in Key Vault `proxy-urls` |
+| B | `scripts/proxy_readiness_check.py` — Playwright + egress IP |
+| C | `scripts/proxy_site_smoke.py --from-env` — Melibox first, then regression sites |
+| D | Restart Container Apps; clear stale `browser_states/` if switching egress |
+| E | Re-enable archived scrapers only after smoke — see `.agent/workflows/proxy-rollout.md` |
+
+**IPRoyal setup (step-by-step):** [docs/runbooks/iproyal-isp-proxy-setup.md](runbooks/iproyal-isp-proxy-setup.md)  
+**Providers (shortlist):** IPRoyal (first test), Decodo, Bright Data (enterprise). Prefer ISP/static BR over Azure datacenter pool.
+
+---
+
 ## Agent Quick Start
 
 | Intent | File |
 |--------|------|
 | **Maintenance prompts (copy into chat)** | `../../.agent/prompts/maintenance/README.md` |
 | Scraper maintenance | `../../.agent/prompts/maintenance/scraper.md` |
+| Proxy rollout | `.agent/workflows/proxy-rollout.md` |
 | Fresh session (short bootstrap) | `.agent/prompts/agent-startup.md` |
 | n8n + cache E2E | `.agent/prompts/n8n-cache-integration-test.md` |
 | n8n audit | `.agent/skills/n8n-audit/SKILL.md` |
@@ -47,6 +64,11 @@ N8N: `https://automacao.tktechnologies.com.br`
 ## Key Scripts
 
 ```bash
+# Proxy (after purchase)
+uv run python scripts/proxy_readiness_check.py --proxy-url 'http://user:pass@host:port'
+PROXY_ROTATION_ENABLED=true PROXY_URLS='["http://..."]' \
+  uv run python scripts/proxy_site_smoke.py --from-env
+
 # 5-SKU cache audits
 uv run python scripts/test_production_5sku_cache_audit.py
 uv run python scripts/test_production_5sku_jobs_cache_audit.py
@@ -54,7 +76,7 @@ uv run python scripts/test_production_5sku_jobs_cache_audit.py
 # E2E batch test
 ./scripts/test_5sku_n8n_e2e.sh
 
-# Production smoke
+# Production smoke (ML SKU 51766536)
 API_BASE_URL=... API_KEY=... uv run python scripts/production_scraper_curl_smoke.py
 ```
 
@@ -63,7 +85,9 @@ API_BASE_URL=... API_KEY=... uv run python scripts/production_scraper_curl_smoke
 ## Open Priorities
 
 See `docs/TASKS.md`. Top items:
-1. ML positive smoke SKU / Melibox 403
-2. Redis TLS validation (`CERT_NONE` → proper)
-3. Proxy URLs or disable rotation in prod
+
+1. Configure `PROXY_URLS` in production Key Vault + validate Melibox
+2. ML monitoring uses SKU `51766536` in curl smoke (replacing stale `06K907811B`)
+3. Redis TLS validation (`CERT_NONE` → proper)
 4. Trim Key Vault webhook secret at source
+5. `cdp_progress` live workflow ID on platform

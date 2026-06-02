@@ -6,7 +6,7 @@ Quality gates, smoke scripts, and contract validation across the monorepo.
 
 ## Read First
 
-- [.agent/commands/quality-gates.md](../commands/quality-gates.md)
+- [.agent/commands/run-quality-gates.md](../commands/run-quality-gates.md)
 - `scripts/smoke_dual_pipeline.sh`
 - [contracts/](../../contracts/)
 - Service test docs: `scrapers/docs/`, `muvstok-api/specs/`

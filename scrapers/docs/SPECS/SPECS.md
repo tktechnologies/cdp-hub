@@ -132,15 +132,18 @@ Persisted `scrape_items.site_results` stores the per-site status snapshot for ea
 ## Proxy Rotation Rules
 - Proxy rotation is enabled by `PROXY_ROTATION_ENABLED=true`.
 - Proxy endpoints are configured through `PROXY_URLS`.
-- The app supports round-robin proxy assignment to Playwright browser contexts.
+- The app supports stable site-to-proxy affinity for Playwright browser
+  contexts. Round-robin is still available when `PROXY_AFFINITY_ENABLED=false`.
 - Proxy rotation is one anti-bot layer; it works with browser profile realism,
   persistent storage state, action jitter, inter-SKU pacing, and blocked-status
   observability.
-- Melibox can reset its browser context between SKU searches when
-  `MELIBOX_ROTATE_CONTEXT_PER_SKU=true`, allowing the next configured proxy to
-  be assigned before the next authenticated SKU flow.
+- Browser state is partitioned by proxy identity when
+  `PROXY_STATE_PER_IDENTITY=true`.
+- Melibox context rotation is disabled by default; enable
+  `MELIBOX_ROTATE_CONTEXT_PER_SKU=true` only after source-specific validation.
 - Scrapers should use the shared `BaseScraper.initialize()` lifecycle unless a source-specific override preserves proxy assignment and the configured Playwright headless mode.
-- Azure should provide three independent outbound addresses for aggressive scraping workloads.
+- Azure or ISP proxies should start with one stable Brazilian ISP egress and
+  low concurrency; add more only after block rates are measured.
 - See `docs/SPECS/PROXY_ROTATION_SPEC.md`.
 
 ## Documentation Rules

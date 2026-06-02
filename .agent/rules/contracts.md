@@ -1,0 +1,23 @@
+# Contracts Rules
+
+**Applies to:** `contracts/**` JSON Schemas.
+
+Entry: [contracts/README.md](../../contracts/README.md).
+
+## Rules
+
+- Update Pydantic models in the owning service first, then the matching schema here.
+- Job or callback shape changes require n8n receiver updates and router/receiver validation before publish.
+- Dispatch-run registry is scraper-only: `scrapers/src/models/schemas.py` <-> `dispatch-run.schema.json`.
+
+## Validate
+
+```bash
+python3 -c "
+import json
+from pathlib import Path
+for p in Path('contracts').glob('*.schema.json'):
+    json.loads(p.read_text())
+print('contracts OK')
+"
+```

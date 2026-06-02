@@ -2,6 +2,8 @@
 
 Instructions for AI agents maintaining the **CDP monorepo** (scrapers + muvstok-api + n8n).
 
+**New chat:** copy-paste bootstrap → [.agent/prompts/new-chat.md](.agent/prompts/new-chat.md)
+
 ## Agent tiers
 
 | Tier | Scope | Entry |
@@ -17,15 +19,18 @@ Full model: [docs/architecture/AGENT_ARCHITECTURE.md](docs/architecture/AGENT_AR
 1. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 2. [docs/n8n/LIVE_WORKFLOWS.md](docs/n8n/LIVE_WORKFLOWS.md)
 3. [.agent/index.md](.agent/index.md)
-4. Service `AGENTS.md` when editing one service only
+4. [.agent/knowledge/service-catalog.md](.agent/knowledge/service-catalog.md) for cross-service ownership
+5. Service `AGENTS.md` when editing one service only
 
 ## Core rules
 
 - **Two APIs, one router** — no shared Python between services.
 - **Callbacks only** — `scraper-result`, `muvstok-result` webhooks.
-- **Router Code:** edit `n8n/src/` → `python3 scripts/sync_workflow_code_from_shared.py` → `make sync-n8n` (user approval).
+- **Router Code:** edit `n8n/src/` → `python3 scripts/sync_workflow_code_from_shared.py` → `make sync-n8n` (user approval). Graph/node changes may need MCP `operations` publish — see `docs/n8n/LIVE_WORKFLOWS.md`.
 - **No Execute Workflow** for StokAPI production dispatch.
 - **Contracts:** [contracts/](contracts/) when changing job or callback JSON.
+- **Agent docs:** keep project-owned agent guidance under [.agent/](.agent/) and service `.agent/` workspaces.
+- **Service catalog:** root [.agent/knowledge/](.agent/knowledge/) links n8n, Scraper, and API Diversos ownership.
 
 ## Platform skills
 
@@ -40,8 +45,7 @@ Copy-paste starters per task type: [.agent/prompts/maintenance/README.md](.agent
 
 ```text
 cdp-app/
-  .agent/           # Tier 1 — commands, standards, sub-agents, skills
-  .cursor/rules/    # IDE context (platform, scraper, stokapi, n8n, python, contracts, infra)
+  .agent/           # Tier 1 — rules, knowledge, commands, prompts, sub-agents, skills
   n8n/              # Canonical router + workflows (Phase 1 may retire legacy copies)
   scrapers/         # Tier 2a
   muvstok-api/      # Tier 2b (gold-standard .agent/)

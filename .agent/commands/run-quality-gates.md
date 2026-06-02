@@ -50,8 +50,9 @@ JSON Schemas live in [`contracts/`](../../contracts/). Contract tests validate:
 | `stokapi-callback.schema.json` | `muvstok-api/tests/test_contracts/` |
 | `scraper-job.schema.json` | `scrapers/tests/test_contracts/` |
 | `scraper-callback.schema.json` | `scrapers/tests/test_contracts/` |
+| `dispatch-run.schema.json` | `scrapers/tests/test_contracts/test_dispatch_run_schema.py` |
 
-When changing Pydantic models in either service, update the matching schema and re-run both contract test suites.
+When changing Pydantic models in either service, update the matching schema and re-run both contract test suites. CI: `.github/workflows/ci-contracts.yml`.
 
 ## n8n (manual approval)
 

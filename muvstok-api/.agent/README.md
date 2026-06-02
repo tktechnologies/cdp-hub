@@ -18,3 +18,5 @@ Start with `rules.md`, then `index.md`. For router / dual pipeline / `make sync-
 - `prompts/`: startup prompts for fresh AI chat sessions.
 
 When a decision, risk, pattern, or workflow becomes repeatable, update this workspace in the same change.
+
+Root service catalog: [../../.agent/knowledge/service-catalog.md](../../.agent/knowledge/service-catalog.md).

@@ -79,11 +79,14 @@ class SessionManager:
         """Force-invalidate a session (e.g., after auth failure)."""
         info = self._get_or_create(site_id)
         info.is_valid = False
-        # Delete state file
-        state_file = settings.browser_state_dir / f"{site_id.value}_state.json"
-        if state_file.exists():
+        # Delete both legacy site-only state and proxy-partitioned state files.
+        state_files = settings.browser_state_dir.glob(f"{site_id.value}*_state.json")
+        deleted = 0
+        for state_file in state_files:
             state_file.unlink()
-            logger.info("Session state file deleted", site=site_id.value)
+            deleted += 1
+        if deleted:
+            logger.info("Session state files deleted", site=site_id.value, deleted=deleted)
 
     def _get_or_create(self, site_id: SiteId) -> "SessionInfo":
         if site_id not in self._sessions:

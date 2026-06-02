@@ -22,7 +22,7 @@ Live workflows (verify IDs in LIVE_WORKFLOWS.md):
 - cdp_router 6id6dkinK9xTLfsb — Telegram/Gmail/schedule; .analisar / .sku; inline HTTP to both APIs
 - cdp_scraper VfBSV3WU6on8BXm8 — webhook scraper-result
 - cdp_stokapi t160mzGPYYlJcrjZ — webhook muvstok-result
-- cdp_progress — import from n8n/workflows/cdp_progress.json (not in make sync-n8n yet)
+- cdp_progress — import once, set CDP_PROGRESS_WORKFLOW_ID, then included in make sync-n8n
 
 Classify my task:
 - Router / dual dispatch / .status / dispatch-runs → edit n8n/src/ → python3 scripts/sync_workflow_code_from_shared.py

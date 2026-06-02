@@ -1,8 +1,8 @@
 # CDP maintenance guide
 
-**Updated:** 2026-05-27. Platform overview: [PLATFORM_OVERVIEW.md](PLATFORM_OVERVIEW.md). Agent tiers: [architecture/AGENT_ARCHITECTURE.md](architecture/AGENT_ARCHITECTURE.md).
+**Updated:** 2026-06-01. Design: [ARCHITECTURE.md](ARCHITECTURE.md). API/Azure reference: [PLATFORM_OVERVIEW.md](PLATFORM_OVERVIEW.md). Agent tiers: [architecture/AGENT_ARCHITECTURE.md](architecture/AGENT_ARCHITECTURE.md).
 
-## Maintenance starter prompts (copy into Cursor)
+## Maintenance starter prompts (copy into an agent chat)
 
 | Type | Prompt |
 |------|--------|
@@ -10,10 +10,12 @@
 | StokAPI / API | [.agent/prompts/maintenance/stokapi.md](../.agent/prompts/maintenance/stokapi.md) |
 | n8n workflows | [.agent/prompts/maintenance/n8n.md](../.agent/prompts/maintenance/n8n.md) |
 | Infrastructure | [.agent/prompts/maintenance/infrastructure.md](../.agent/prompts/maintenance/infrastructure.md) |
-| `.agent` / docs / Cursor rules | [.agent/prompts/maintenance/agent-workspace.md](../.agent/prompts/maintenance/agent-workspace.md) |
+| `.agent` / docs / agent rules | [.agent/prompts/maintenance/agent-workspace.md](../.agent/prompts/maintenance/agent-workspace.md) |
 | Full stack / platform | [.agent/prompts/maintenance/platform-fullstack.md](../.agent/prompts/maintenance/platform-fullstack.md) |
 
 Index: [.agent/prompts/maintenance/README.md](../.agent/prompts/maintenance/README.md).
+
+Cross-service ownership map: [.agent/knowledge/service-catalog.md](../.agent/knowledge/service-catalog.md).
 
 ## Scraper cache (24h)
 

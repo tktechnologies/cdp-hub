@@ -46,11 +46,10 @@ Primary flow (implemented):
 
 - `MELIBOX_SKU_DELAY_MIN` / `MELIBOX_SKU_DELAY_MAX` add source-specific pacing
   before each SKU search.
-- When `PROXY_ROTATION_ENABLED=true` and
-  `MELIBOX_ROTATE_CONTEXT_PER_SKU=true`, the scraper closes the existing browser
-  context before the next SKU so the shared proxy manager can assign the next
-  outbound proxy.
-- Rotation happens between SKU searches, not inside an authenticated page flow.
+- Keep `MELIBOX_ROTATE_CONTEXT_PER_SKU=false` for static ISP rollout so the
+  authenticated account and browser state stay tied to one network identity.
+- If rotation is explicitly enabled later, it happens between SKU searches, not
+  inside an authenticated page flow.
 - Do not add challenge-bypass logic. Detect access controls and return `blocked`.
 - Before retrying login, the scraper removes stale stored browser state and
   clears cookies/session storage once. This prevents an expired or rejected

@@ -47,13 +47,16 @@ class Orchestrator:
     def _apply_summary_metrics(self, job: ScrapeJobResult) -> None:
         """Populate callback-friendly summary fields from typed SKU results."""
         total = job.total_items or len(job.results)
-        successful = sum(
-            1
-            for result in job.results
-            if result.best_price is not None
-            and result.best_price.price is not None
-            and result.best_price.price > 0
-        )
+
+        def has_result_evidence(result: SKUResult) -> bool:
+            if result.total_results > 0:
+                return True
+            return any(
+                site_result.status.lower() in {"success", "no_price"}
+                for site_result in result.site_results
+            )
+
+        successful = sum(1 for result in job.results if has_result_evidence(result))
         all_sites_not_found = 0
         warning_messages: list[str] = []
 

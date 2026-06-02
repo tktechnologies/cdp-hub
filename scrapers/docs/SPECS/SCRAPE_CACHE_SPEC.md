@@ -47,7 +47,7 @@ SKU request (lookup or job)
 | `SCRAPE_CACHE_TTL_BLOCKED_SECONDS` | `1800` | blocked TTL |
 | `SCRAPE_CACHE_PG_FALLBACK` | `true` | Warm Redis from PostgreSQL on miss |
 | `SCRAPE_CACHE_BYPASS_STATUSES` | `error,timeout` | Never write cache |
-| `SCRAPE_SITES_SEQUENTIAL` | `false` | Live scrapes per SKU run up to 3 sites in parallel |
+| `SCRAPE_SITES_SEQUENTIAL` | `true` | Live scrapes run one site at a time by default to reduce anti-bot pressure |
 
 ## API
 

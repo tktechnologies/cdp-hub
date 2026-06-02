@@ -2,6 +2,13 @@
 
 > Agent workspace moved from `.claude/` to `.agent/` (2026-05-27). Historical entries below may still mention `.claude/` paths.
 
+## 2026-06-02
+- IPRoyal setup runbook: `docs/runbooks/iproyal-isp-proxy-setup.md` (purchase → local → Azure).
+- Proxy rollout workflow: `.agent/workflows/proxy-rollout.md`, `scripts/proxy_site_smoke.py`.
+- ML production curl smoke SKU `51766536` (replaces stale `06K907811B`).
+- Ops docs aligned: `MAINTENANCE_CHECKPOINT.md`, service/platform `implementation-state.md`, `AGENTS.md` proxy section.
+- `.env.production.example`: removed duplicate Melibox credentials; documented fail-closed proxy requirement.
+
 ## 2026-05-22
 - Parallel live scrapes: default `SCRAPE_SITES_SEQUENTIAL=false` with
   `max_concurrent_scrapers=3` (3 sites per SKU wave). Updated cold-run duration

@@ -1,14 +1,12 @@
-# Live CDP N8N Workflows
+# Deprecated — see canonical docs
 
-Last verified: 2026-05-25 (MCP publish).
+This file is a stub. Do not update.
 
-Canonical list: [../../../docs/n8n/LIVE_WORKFLOWS.md](../../../docs/n8n/LIVE_WORKFLOWS.md)
+**Use instead:**
 
-| Workflow | Live ID | Local JSON |
-|----------|---------|------------|
-| `cdp_router` | `6id6dkinK9xTLfsb` | `../../n8n/workflows/cdp_router.json` |
-| `cdp_scraper` | `VfBSV3WU6on8BXm8` | `../../n8n/workflows/cdp_scraper.json` |
+- Platform n8n: [../../../docs/n8n/LIVE_WORKFLOWS.md](../../../docs/n8n/LIVE_WORKFLOWS.md)
+- Edit guide: [../../../docs/n8n/WORKFLOW_GUIDE.md](../../../docs/n8n/WORKFLOW_GUIDE.md)
+- Architecture: [../../../docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md)
+- Agent context: [../../../.agent/prompts/new-chat.md](../../../.agent/prompts/new-chat.md)
 
-StokAPI receiver: `../../n8n/workflows/cdp_stokapi.json` (ID `t160mzGPYYlJcrjZ`).
-
-Sync all: from monorepo root, `make sync-n8n`.
+Legacy copies under `scrapers/n8n/docs/` are kept only to preserve old links.

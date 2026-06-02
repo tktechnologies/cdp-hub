@@ -63,7 +63,7 @@ Plain env: `WEBHOOK_URL`, `CDP_MUVSTOK_WEBHOOK_PATH=webhook/muvstok-result`.
 
 Implemented in `cdp-app/n8n/src/router_stokapi.js`:
 
-- Runs for `.analisar` and `.sku` when valid SKUs exist (max 5).
+- Runs for `.analisar` and `.sku` when valid SKUs exist (all valid SKUs by default; optional `CDP_DISPATCH_SAMPLE_SIZE` in router).
 - Builds `callback_url` → `webhook/muvstok-result` with query: `notify`, `batch_group_id`, `dual_run=stokapi`, `command_route`, optional `chat_id` / `reply_email`.
 - POST body to `{CDP_MUVSTOK_API_BASE}/api/v1/muvstok/jobs`.
 - Metadata: `source: cdp_router`, `pipeline: stokapi`, `batch_group_id`.

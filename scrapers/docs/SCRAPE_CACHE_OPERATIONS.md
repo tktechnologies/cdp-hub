@@ -63,7 +63,7 @@ After merging cache code, redeploy image and ensure Container Apps have cache en
 
 - `SCRAPE_CACHE_ENABLED=true`
 - `SCRAPE_CACHE_REDIS_URL` → `rediss://...:6380/1` (secret)
-- `SCRAPE_SITES_SEQUENTIAL=false` (3 sites in parallel per SKU)
+- `SCRAPE_SITES_SEQUENTIAL=true` (default: one live site at a time)
 
 ```bash
 # Rebuild + deploy (existing flow)

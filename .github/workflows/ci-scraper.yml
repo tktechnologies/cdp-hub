@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - "scrapers/**"
+      - "contracts/**"
       - ".github/workflows/ci-scraper.yml"
       - "docker-compose.yml"
   push:
     branches: [main]
     paths:
       - "scrapers/**"
+      - "contracts/**"
       - ".github/workflows/ci-scraper.yml"
 
 concurrency:

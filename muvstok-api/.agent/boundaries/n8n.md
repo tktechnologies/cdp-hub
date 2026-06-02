@@ -1,21 +1,29 @@
 # StokAPI n8n boundaries
 
+Workflow JSON lives at the **monorepo root** (`n8n/workflows/`), not under `muvstok-api/`.
+
+Paths below are monorepo-root paths unless they are Markdown links.
+
 ## Owns
 
-- `n8n/workflows/cdp_stokapi.json` — callback receiver, sheets, Telegram
-- `n8n/docs/MUVSTOK_N8N_WORKFLOW_GUIDE.md`
-- `n8n/settings/cdp_stokapi.json`
+- `n8n/workflows/cdp_stokapi.json` — callback receiver (`muvstok-result`)
+- `n8n/lib/` — shared receiver helpers used by stokapi workflow
+- `muvstok-api/n8n/docs/MUVSTOK_N8N_WORKFLOW_GUIDE.md` — receiver operations (not workflow JSON)
+
+## Shares (platform)
+
+- `n8n/workflows/cdp_router.json` — production dispatch via `n8n/src/router_stokapi.js`
+- Publish: monorepo `make sync-n8n`
 
 ## Does not own
 
-- `cdp_router` dispatch (platform: `n8n/src/router_stokapi.js`)
-- `cdp_scraper.json` (scraper service)
+- `n8n/workflows/cdp_scraper.json`
+- Router-only files under `n8n/src/` except coordination on `router_stokapi.js` (platform-owned)
 
 ## Webhook
 
 - Path: `muvstok-result` (stable)
-- Header: `x-webhook-secret`
 
-## Publish
+## Canonical docs
 
-All three workflows publish together: monorepo `make sync-n8n` (user approval). Do not push receiver alone unless documented exception.
+- [../../../docs/n8n/LIVE_WORKFLOWS.md](../../../docs/n8n/LIVE_WORKFLOWS.md)

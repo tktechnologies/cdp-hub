@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 from src.config import settings
 from src.models.schemas import SiteId
 from src.scrapers.base import BaseScraper
+from src.utils.proxy_manager import ProxyEndpoint
 
 
 class ConcreteScraper(BaseScraper):
@@ -109,6 +110,24 @@ def test_context_options_include_browser_profile(monkeypatch):
     assert options["timezone_id"] == "America/Sao_Paulo"
     assert options["user_agent"].startswith("Mozilla/5.0")
     assert options["extra_http_headers"] == {"Accept-Language": "pt-BR,pt;q=0.9"}
+
+
+def test_state_file_includes_proxy_identity_when_enabled(monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "browser_state_dir", tmp_path)
+    monkeypatch.setattr(settings, "proxy_rotation_enabled", True)
+    monkeypatch.setattr(settings, "proxy_state_per_identity", True)
+    scraper = ConcreteScraper(SiteId.MERCADO_LIVRE)
+    proxy = ProxyEndpoint.from_url("http://user:pass@20.1.2.3:3128")
+    scraper._proxy_identity = proxy.identity
+
+    assert scraper.state_file == tmp_path / f"ml_{proxy.identity}_state.json"
+
+
+def test_httpx_proxy_url_uses_current_proxy() -> None:
+    scraper = ConcreteScraper()
+    scraper._proxy_endpoint = ProxyEndpoint.from_url("http://user:pass@20.1.2.3:3128")
+
+    assert scraper._httpx_proxy_url() == "http://user:pass@20.1.2.3:3128"
 
 
 class FakeRequest:

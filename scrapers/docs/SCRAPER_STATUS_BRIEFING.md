@@ -1,5 +1,9 @@
 # CDP Scrapers - Full Status Briefing
 
+> **Historical snapshot (2026-05-21).** For current ops and proxy rollout, use
+> [`MAINTENANCE_CHECKPOINT.md`](MAINTENANCE_CHECKPOINT.md) and
+> [`.agent/workflows/proxy-rollout.md`](../.agent/workflows/proxy-rollout.md).
+
 **Date:** 2026-05-21  
 **Prepared for:** Team meeting
 
@@ -112,15 +116,15 @@ production gets `403 Forbidden` before credentials can even be used.
 
 **Solutions:**
 
-1. **Residential/rotating proxy** — Configure `PROXY_URLS` with Brazilian
-   residential proxies. The infrastructure already supports it
-   (`PROXY_ROTATION_ENABLED` + `BaseScraper` proxy integration), but
-   `PROXY_URLS` is currently empty in production.
+1. **Brazilian ISP/static residential proxy** — Configure `PROXY_URLS` with one
+   validated ISP proxy first. The scraper now keeps site/proxy affinity and
+   proxy-specific browser state, but `PROXY_URLS` is currently empty in
+   production.
 2. **Allowlist the Azure outbound IP** — If Melibox supports IP allowlisting,
    add the Container App's egress IP.
-3. **Per-SKU context rotation** — Already implemented
-   (`MELIBOX_ROTATE_CONTEXT_PER_SKU=true`) to spread requests across different
-   proxy exits.
+3. **Circuit breaker and measured rollout** — Keep per-SKU context rotation off
+   for authenticated sources until validated; rely on block cooldowns, cache,
+   and low concurrency first.
 
 ### Problem 2: Mercado Livre Smoke SKU Stale
 
@@ -196,11 +200,12 @@ cannot bypass it.
 
 ## Key Takeaway
 
-The single highest-leverage improvement is **adding residential proxy URLs to
-production**. The proxy infrastructure is already built (`BaseScraper`,
-`proxy_manager.py`, env vars `PROXY_ROTATION_ENABLED` + `PROXY_URLS`), it just
-needs actual proxy endpoints configured. This one change could recover **4 out
-of 4** blocked/archived scrapers.
+The single highest-leverage improvement is **adding a validated Brazilian
+ISP/static residential proxy** to production (`PROXY_URLS`). The proxy stack is
+built (`BaseScraper`, `proxy_manager.py`, readiness + site smoke scripts).
+**Melibox** is the best first validation target. **GoParts / Procura Peças**
+may remain blocked under Cloudflare even with ISP proxy — treat recovery as
+per-site smoke results, not a guarantee.
 
 ---
 

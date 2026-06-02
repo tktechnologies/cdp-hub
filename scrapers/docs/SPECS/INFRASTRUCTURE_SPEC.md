@@ -136,24 +136,34 @@ The production deployment script performs a two-phase rollout:
 4. Deploy the API, worker, and N8N Container Apps with `deployContainerApps=true`.
 
 ## Proxy Infrastructure Target
-The scraper needs three independent outbound addresses for proxy rotation.
+The scraper should start with one validated Brazilian ISP/static residential
+egress and stable site/session affinity. Add more proxy endpoints only after
+single-proxy block rates, account health, and cache hit rates are measured.
 
-Recommended Azure shape:
-- Three small Linux proxy VMs, each with its own static Standard Public IP.
+Recommended provider-first shape:
+- One authenticated HTTP/HTTPS or SOCKS5 ISP/static residential proxy.
+- Proxy credentials stored in Key Vault.
+- Container App receives a `PROXY_URLS` secret containing the proxy URL.
+- `PROXY_FAIL_CLOSED=true` in production so proxy-enabled revisions do not fall
+  back to direct Azure egress.
+
+Azure-managed fallback shape:
+- Two or three small Linux proxy VMs, each with its own static Standard Public IP.
 - Network Security Group allowing proxy access only from the scraper Container App outbound path or a tightly controlled private network path.
 - Squid or Envoy running as an authenticated HTTP CONNECT proxy.
 - Proxy credentials stored in Key Vault.
-- Container App receives a `PROXY_URLS` secret containing the three proxy URLs.
+- Container App receives a `PROXY_URLS` secret containing the proxy URLs.
 
 Initial simple form:
 
 ```text
 PROXY_URLS=[
-  "http://user:pass@<proxy-ip-1>:3128",
-  "http://user:pass@<proxy-ip-2>:3128",
-  "http://user:pass@<proxy-ip-3>:3128"
+  "http://user:pass@<br-isp-proxy>:12323"
 ]
 PROXY_ROTATION_ENABLED=true
+PROXY_FAIL_CLOSED=true
+PROXY_AFFINITY_ENABLED=true
+PROXY_STATE_PER_IDENTITY=true
 ```
 
 ## Security Requirements

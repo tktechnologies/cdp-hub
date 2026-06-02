@@ -44,7 +44,7 @@ class SmokeCase:
 
 DEFAULT_CASES: tuple[SmokeCase, ...] = (
     SmokeCase("gm-known", "gm", "22781768", "GM", expected_currency="BRL"),
-    SmokeCase("ml-known", "ml", "06K907811B", expected_currency="BRL"),
+    SmokeCase("ml-known", "ml", "51766536", expected_currency="BRL"),
     SmokeCase("vw-known", "vw", "5U6867287Y20", "VW", expected_currency="BRL"),
     SmokeCase("eu-known", "eu", "06K907811B", "VW", expected_currency="USD"),
     SmokeCase(

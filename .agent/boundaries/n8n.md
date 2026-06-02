@@ -7,9 +7,9 @@
 | `cdp_router` | `6id6dkinK9xTLfsb` | `n8n/workflows/cdp_router.json` | **Dispatches** both APIs; `.status` / `.andamento` |
 | `cdp_scraper` | `VfBSV3WU6on8BXm8` | `n8n/workflows/cdp_scraper.json` | Receives `scraper-result` |
 | `cdp_stokapi` | `t160mzGPYYlJcrjZ` | `n8n/workflows/cdp_stokapi.json` | Receives `muvstok-result` |
-| `cdp_progress` | _(import — no live ID yet)_ | `n8n/workflows/cdp_progress.json` | Schedule: proactive progress Telegram |
+| `cdp_progress` | `CDP_PROGRESS_WORKFLOW_ID` (after first import) | `n8n/workflows/cdp_progress.json` | Schedule: proactive progress Telegram |
 
-`make sync-n8n` pushes the first three workflows only. Import and activate `cdp_progress.json` manually until added to `sync-all-n8n.sh`.
+`make sync-n8n` pushes router + receivers via `scripts/n8n_publish.py` (REST). Set `CDP_PROGRESS_WORKFLOW_ID` to include progress workflow.
 
 ## Legacy docs (do not edit for workflow truth)
 

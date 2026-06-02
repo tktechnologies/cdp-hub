@@ -11,9 +11,13 @@ Canonical routing for AI work on **scrapers/**.
 | `memory/implementation-state.md` | Production snapshot pointers |
 | `boundaries/n8n.md` | What this service owns in n8n |
 | `prompts/agent-startup.md` | Fresh chat bootstrap |
+| `commands/` | Repeatable scraper recipes |
+| `sub-agents/` | Scoped delegation briefs |
 
 **Skills** live in `skills/` (this workspace). Do not duplicate skill bodies in platform `.agent/`.
 
 ## Platform context
 
 Router dispatch and dual pipeline: [../../docs/architecture/AGENT_ARCHITECTURE.md](../../docs/architecture/AGENT_ARCHITECTURE.md).
+
+Root service catalog: [../../.agent/knowledge/service-catalog.md](../../.agent/knowledge/service-catalog.md).

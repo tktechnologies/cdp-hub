@@ -574,7 +574,7 @@
         1440,
         2480
       ],
-      "notes": "All valid SKUs. Parallel router: [0] Scraper POST [1] confirm [2] API Diversos POST. batch_group_id shared."
+      "notes": "All valid SKUs. Parallel router: [0] API Diversos POST [1] Scraper POST [2] confirm. batch_group_id shared."
     },
     {
       "parameters": {
@@ -2057,17 +2057,17 @@
       "main": [
         [
           {
+            "node": "📤 Router: API Diversos",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "⚙️ Formatar Payload Scraper",
             "type": "main",
             "index": 0
           },
           {
             "node": "📋 Formatar Confirmação (Planilha)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "📤 Router: API Diversos",
             "type": "main",
             "index": 0
           }

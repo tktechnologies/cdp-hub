@@ -34,6 +34,7 @@ Tier 1 rules. Service-specific rules live in `scrapers/.agent/rules.md` and `muv
 - Platform truth: `docs/` at monorepo root.
 - Link instead of copying full architecture into service repos.
 - Behavior changes update specs/docs in the **owning** tier.
+- Keep project-owned agent guidance in `.agent` workspaces. Task-scoped rule summaries live in [rules/](rules/), and cross-service knowledge lives in [knowledge/](knowledge/).
 
 ## AIOX
 

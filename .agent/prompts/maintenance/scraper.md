@@ -28,6 +28,7 @@ Boundaries (do not cross):
 - No StokAPI code, Redis Streams worker, or muvstok paths in muvstok-api/
 - No inline edits to embedded jsCode in n8n JSON — router Code is n8n/src/ (platform)
 - Active sites: gm, ml, vw, eu, pecadireta; melibox optional. Archived: goparts, procurapecas, ebay
+- Proxy rollout: scrapers/docs/runbooks/iproyal-isp-proxy-setup.md (IPRoyal) → proxy-rollout workflow
 - Router always force_refresh: false — cache logic stays in worker
 
 Before done:

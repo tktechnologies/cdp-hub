@@ -4,11 +4,15 @@ on:
   pull_request:
     paths:
       - "contracts/**"
+      - "scrapers/tests/test_contracts/**"
+      - "muvstok-api/tests/test_contracts/**"
       - ".github/workflows/ci-contracts.yml"
   push:
     branches: [main]
     paths:
       - "contracts/**"
+      - "scrapers/tests/test_contracts/**"
+      - "muvstok-api/tests/test_contracts/**"
       - ".github/workflows/ci-contracts.yml"
 
 jobs:
@@ -27,3 +31,42 @@ jobs:
               json.loads(path.read_text(encoding="utf-8"))
               print(f"ok: {path.name}")
           PY
+
+  scraper-contract-tests:
+    name: Scraper contract tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scrapers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv python install 3.12
+      - run: uv sync --dev
+      - run: uv run pytest tests/test_contracts/ -v --tb=short
+
+  stokapi-contract-tests:
+    name: StokAPI contract tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: muvstok-api
+    env:
+      ENVIRONMENT: ci
+      API_KEYS: test-key
+      DATABASE_URL: postgresql+psycopg://cdp:cdp_pass@localhost:5432/muvstok_test
+      DATABASE_URL_SYNC: postgresql://cdp:cdp_pass@localhost:5432/muvstok_test
+      REDIS_URL: redis://localhost:6379/0
+      REDIS_JOB_STREAM: muvstok:jobs
+      REDIS_JOB_CONSUMER_GROUP: muvstok-workers
+      REDIS_DEAD_LETTER_STREAM: muvstok:jobs:dead-letter
+      REDIS_CONSUMER_NAME: ci-contract-1
+      MUVSTOK_BASE_URL: https://example.invalid/
+      MUVSTOK_LOGIN_PATH: https://example.invalid/login
+      AZURE_KEY_VAULT_URL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv python install 3.12
+      - run: uv sync --dev
+      - run: uv run pytest tests/test_contracts/ -v --tb=short

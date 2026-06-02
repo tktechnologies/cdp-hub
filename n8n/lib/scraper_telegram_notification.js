@@ -62,16 +62,34 @@ else if (notify !== 'telegram' && notify !== 'email' && replyEmail) notify = 'em
 
 const origem = notify === 'telegram' ? 'telegram' : notify === 'email' ? 'email' : 'auto';
 
+function numericPrice(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 function hasBestPrice(skuResult) {
   const best = skuResult.best_price;
-  return !!(best && best.price != null && Number(best.price) > 0);
+  return !!(best && numericPrice(best.price) !== null);
+}
+
+function hasAnyResult(skuResult) {
+  if (Number(skuResult.total_results || 0) > 0) return true;
+  const sites = Array.isArray(skuResult.site_results) ? skuResult.site_results : [];
+  return sites.some((siteResult) => {
+    const parts = Array.isArray(siteResult.results) ? siteResult.results : [];
+    const status = String(siteResult.status || '').toLowerCase();
+    return parts.length > 0 || status === 'success' || status === 'no_price';
+  });
 }
 
 const total = Number(payload.total_items || results.length || 0);
-const found = results.filter(hasBestPrice).length;
-const pct = total ? ((found / total) * 100).toFixed(1) : '0.0';
+const resultCount = results.filter(hasAnyResult).length;
+const bestPriceCount = results.filter(hasBestPrice).length;
+const pct = total ? ((resultCount / total) * 100).toFixed(1) : '0.0';
 const dur = Number(payload.duration_seconds ?? 0);
-const notFound = Math.max(0, total - found);
+const notFound = Math.max(0, total - resultCount);
+const noComparableBestPrice = Math.max(0, resultCount - bestPriceCount);
 const relUrl = reportUrl();
 
 const headerLines = [
@@ -79,8 +97,13 @@ const headerLines = [
   '',
   '✅ *Busca em sites concluída*',
   '',
-  '📊 *' + found + '* de *' + total + '* com melhor preço',
+  '📊 *' + resultCount + '* de *' + total + '* com resultado',
 ];
+if (bestPriceCount > 0) {
+  headerLines.push('💰 Melhor preço comparável: *' + bestPriceCount + '*');
+} else if (noComparableBestPrice > 0) {
+  headerLines.push('💰 Melhor preço comparável: *0* (ver moedas/preços no relatório)');
+}
 if (notFound > 0) headerLines.push('⚠️ Sem resultado: *' + notFound + '*');
 
 let telegramText = headerLines.join(NL);
@@ -95,10 +118,13 @@ const headerHtml =
   pecaLabel(total) +
   ' analisadas</li>' +
   '<li>' +
-  found +
-  ' com melhor preço (' +
+  resultCount +
+  ' com resultado (' +
   pct +
   '%)</li>' +
+  '<li>Melhor preço comparável: ' +
+  bestPriceCount +
+  '</li>' +
   '<li>Sem resultado: ' +
   notFound +
   '</li>' +
@@ -111,7 +137,7 @@ const headerHtml =
 
 const emailHtml =
   '<p>Olá,</p>' + headerHtml + '<p style="color:#718096;font-size:12px">— ' + ASSISTANT_NAME + '</p>';
-const emailSubject = ASSISTANT_NAME + ' — ' + found + '/' + total + ' peças com preço (' + pct + '%)';
+const emailSubject = ASSISTANT_NAME + ' — ' + resultCount + '/' + total + ' peças com resultado (' + pct + '%)';
 
 if (notify === 'telegram' && chatId) {
   return [

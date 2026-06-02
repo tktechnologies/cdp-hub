@@ -352,8 +352,8 @@ Current behavior:
   `R$` column even when the cell omits the currency prefix.
 - Adds source-specific per-SKU pacing through `MELIBOX_SKU_DELAY_MIN` and
   `MELIBOX_SKU_DELAY_MAX`.
-- When proxy rotation is enabled, can rotate the browser context between SKUs
-  through `MELIBOX_ROTATE_CONTEXT_PER_SKU=true`.
+- Keep `MELIBOX_ROTATE_CONTEXT_PER_SKU=false` for static ISP proxy rollout
+  unless a source-specific validation proves rotation is safe for the account.
 - Only exact SKU evidence in row/card text, title, or URL can produce success.
 
 Latest evidence:

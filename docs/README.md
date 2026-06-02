@@ -21,4 +21,6 @@
 
 **Agent workspaces:** [.agent/](../.agent/), [scrapers/.agent/](../scrapers/.agent/), [muvstok-api/.agent/](../muvstok-api/.agent/)
 
-**Cursor rules:** [.cursor/rules/](../.cursor/rules/) (platform, scraper, stokapi, n8n, python, contracts, infra)
+**Service catalog:** [.agent/knowledge/service-catalog.md](../.agent/knowledge/service-catalog.md)
+
+**Task-scoped agent rules:** [.agent/rules/](../.agent/rules/) (platform, scraper, stokapi, n8n, python, contracts, infra)

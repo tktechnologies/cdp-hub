@@ -19,16 +19,16 @@
 - `README.md`: service overview and CDP dual-pipeline context.
 - `specs/`: 12 planning specs defining contracts and constraints.
 - `docs/PRODUCTION_AUDIT.md`: live audit results and gap analysis.
-- `docs/CDP_DUAL_PIPELINE_ARCHITECTURE.md`: pointer to monorepo dual pipeline doc.
+- `../../docs/architecture/DUAL_PIPELINE.md`: canonical dual-pipeline behavior (monorepo).
 - `.agent/`: durable AI-agent workspace (rules, memory, skills, standards, commands).
 
 ## n8n
 
-- `n8n/workflows/cdp_stokapi.json`: **production** callback receiver (`muvstok-result`).
-- `n8n/sdk/`: TypeScript SDK sources for MCP deployment.
-- `n8n/settings/cdp_stokapi.json`: workflow metadata and env requirements.
-- `n8n/lib/`: shared helper functions (sheet formatting).
-- `n8n/docs/MUVSTOK_N8N_WORKFLOW_GUIDE.md`: receiver operations, sheets, callbacks.
+- `n8n/workflows/cdp_stokapi.json`: **production** callback receiver (`muvstok-result`) at monorepo root.
+- `n8n/sdk/`: TypeScript SDK sources for MCP deployment at monorepo root.
+- `n8n/settings/cdp_stokapi.json`: workflow metadata and env requirements at monorepo root.
+- `n8n/lib/`: shared helper functions (sheet formatting) at monorepo root.
+- `muvstok-api/n8n/docs/MUVSTOK_N8N_WORKFLOW_GUIDE.md`: receiver operations, sheets, callbacks.
 
 **Production dispatch** is in monorepo `cdp_router` (`n8n/workflows/`), Code source `n8n/src/router_stokapi.js`. Deprecated: `cdp_muvstok-api_starter`, removed `muvstok_job_*.json`.
 

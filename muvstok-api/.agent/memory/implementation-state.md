@@ -12,7 +12,7 @@ Last reviewed: 2026-05-27.
 
 Legacy `cdp_muvstok-api_starter` (`PXLHDzRbBVgs8Xl2`) — deprecated; dispatch only via router.
 
-Sync: `cdp-app/scripts/sync-all-n8n.sh` or `make -C .. sync-n8n` from monorepo root.
+Sync: monorepo `make sync-n8n` with user approval; includes `cdp_progress` when `CDP_PROGRESS_WORKFLOW_ID` is set.
 
 ## Router behaviour
 

@@ -35,7 +35,8 @@ Required:
 
 Optional but strongly recommended:
 
-- Proxy pool with three authenticated outbound proxy endpoints.
+- Brazilian ISP/static residential proxy egress first; a two- or three-node
+  Azure proxy pool can be added later if measured block rates justify it.
 - Azure Monitor alerts for failed jobs, blocked scraper rate, and worker crashes.
 
 ## Secret Rules
@@ -77,11 +78,12 @@ PLAYWRIGHT_HEADLESS=true
 MOCK_SCRAPERS=false
 LOG_LEVEL=INFO
 LOG_FORMAT=json
-MAX_CONCURRENT_SCRAPERS=3
-SCRAPE_DELAY_MIN=2.0
-SCRAPE_DELAY_MAX=6.0
-SCRAPER_ACTION_DELAY_MIN_MS=400
-SCRAPER_ACTION_DELAY_MAX_MS=1400
+SCRAPE_SITES_SEQUENTIAL=true
+MAX_CONCURRENT_SCRAPERS=1
+SCRAPE_DELAY_MIN=4.0
+SCRAPE_DELAY_MAX=10.0
+SCRAPER_ACTION_DELAY_MIN_MS=600
+SCRAPER_ACTION_DELAY_MAX_MS=1800
 MELIBOX_SKU_DELAY_MIN=3
 MELIBOX_SKU_DELAY_MAX=8
 CREDENTIAL_MELIBOX_USER=secretref:melibox-user
@@ -89,6 +91,9 @@ CREDENTIAL_MELIBOX_PASS=secretref:melibox-pass
 CREDENTIAL_MELIBOX_URL=https://app.melibox.com.br/advProductPosition
 PROXY_ROTATION_ENABLED=true
 PROXY_URLS=secretref:proxy-urls
+PROXY_FAIL_CLOSED=true
+PROXY_AFFINITY_ENABLED=true
+PROXY_STATE_PER_IDENTITY=true
 ```
 
 ## Celery Worker Environment
@@ -107,7 +112,7 @@ CELERY_WORKER_PREFETCH_MULTIPLIER=1
 CELERY_TASK_TIME_LIMIT_SECONDS=3600
 PLAYWRIGHT_HEADLESS=true
 MOCK_SCRAPERS=false
-MAX_CONCURRENT_SCRAPERS=2
+MAX_CONCURRENT_SCRAPERS=1
 ```
 
 Keep worker concurrency conservative because each job can launch Playwright
@@ -142,8 +147,10 @@ python scripts/production_scraper_curl_smoke.py \
 - Keep `MAX_CONCURRENT_SCRAPERS` low in production until real block rates are known.
 - Use jittered action delays, not only fixed waits.
 - Keep Melibox pacing at 8-20 seconds per SKU unless field data proves it can be lower.
-- Enable proxy rotation for marketplace-heavy batches.
-- Rotate browser context between Melibox SKUs when proxy rotation is enabled.
+- Enable the Brazilian ISP/static proxy with site affinity before restoring
+  blocked archived sources.
+- Do not rotate browser context between Melibox SKUs by default; enable
+  `MELIBOX_ROTATE_CONTEXT_PER_SKU=true` only after source-specific validation.
 - Return `blocked` honestly when access controls appear; do not mask blocks as
   `not_found`.
 - Add observability for status by site: success, no_price, not_found, blocked,
@@ -189,8 +196,8 @@ Still open:
 - Repair or replace the Mercado Livre production smoke SKU.
 - Resolve Melibox production login-entry `403` access block with an allowed
   outbound IP/proxy or account/IP access policy.
-- Configure production proxy URLs or disable proxy rotation until the proxy pool
-  exists; current logs warn that rotation is enabled with no proxy URLs.
+- Configure production proxy URLs with `PROXY_FAIL_CLOSED=true`, or disable
+  proxy rotation until the proxy is available.
 - Replace Celery Redis `ssl_cert_reqs=CERT_NONE` with certificate validation.
 - Add stuck-job/retry/dead-letter cleanup for older pending jobs created before
   the 2026-05-14 worker fix.

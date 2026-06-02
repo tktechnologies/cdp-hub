@@ -19,7 +19,13 @@ If the task touches **router** or **both pipelines**, switch to platform tier: [
 | n8n scraper receiver audit | `skills/n8n-audit/SKILL.md`, `../../n8n/workflows/cdp_scraper.json` |
 | n8n publish preflight | `skills/n8n-release-preflight/SKILL.md` |
 | Router / dual pipeline / sync all 3 workflows | **Platform** `../../.agent/skills/n8n-router-sync/SKILL.md` |
+| BR ISP proxy purchase / prod config | `workflows/proxy-rollout.md`, `commands/proxy-readiness.md` |
 | Repo cleanup | `skills/repo-hygiene/SKILL.md` |
+
+## Delegation
+
+Use [sub-agents/](sub-agents/) only when the user explicitly asks for
+delegation or parallel agent work.
 
 ## Commands (`commands/`)
 
@@ -27,6 +33,7 @@ If the task touches **router** or **both pipelines**, switch to platform tier: [
 |--------------|-----|
 | `implement-scraper.md` | New site implementation |
 | `debug-scraper.md` | Failure investigation |
+| `proxy-readiness.md` | Validate proxy before supplier scrapes |
 | `add-test.md` | Test additions |
 | `start-maintenance-chat.md` | Maintenance session |
 

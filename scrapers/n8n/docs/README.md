@@ -15,4 +15,4 @@ Canonical documentation:
 
 Service-specific API and cache docs remain under `scrapers/docs/`.
 
-Historical files in this directory (`AUDIT_2026-05-21.md`, etc.) reference legacy workflow names (`cdp_analise`) and are kept for audit history only.
+Other `.md` files in this folder are **stubs** pointing to canonical docs (legacy links preserved).

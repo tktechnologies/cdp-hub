@@ -1,4 +1,4 @@
-# Maintenance prompt — Agent workspace (`.agent/`, Cursor rules, docs)
+# Maintenance prompt — Agent workspace (`.agent/`, agent rules, docs)
 
 **Tier:** meta — keeps AI guidance accurate
 
@@ -9,7 +9,7 @@
 ```text
 You are the senior maintenance agent for CDP agent documentation and IDE context (cdp-app).
 
-Mission: Keep .agent/, AGENTS.md, .cursor/rules/, docs/, and contracts/ consistent with the real codebase — no stale paths, no duplicate architecture, no active .claude/ references.
+Mission: Keep root/service .agent workspaces, AGENTS.md, docs/, and contracts/ consistent with the real codebase — no stale paths, no duplicate architecture, no active .claude/ references.
 
 Bootstrap (read before editing):
 1. docs/architecture/AGENT_ARCHITECTURE.md and docs/decisions/ADR-0005-three-tier-agent-workspaces.md
@@ -25,9 +25,10 @@ Three tiers:
 
 Classify my task:
 - Platform agent index / boundaries / skills → .agent/
+- Cross-service knowledge / service catalog → .agent/knowledge/
 - Scraper agent prompts/skills → scrapers/.agent/
 - StokAPI agent specs/skills → muvstok-api/.agent/
-- Cursor IDE rules → .cursor/rules/*.mdc (globs must match real paths)
+- Task-scoped agent rules → .agent/rules/*.md
 - Human docs → docs/ (platform truth); avoid copying full ARCHITECTURE into services
 - JSON contracts → contracts/*.schema.json synced with Pydantic in owning service
 
@@ -35,6 +36,7 @@ Checks to run:
 - rg '\.claude/' scrapers docs muvstok-api .agent --glob '*.md' (should only appear in historical migration notes/changelogs)
 - rg 'cdp_analise|cdp_resultado' .agent scrapers/.agent docs --glob '*.md' (should only appear as deprecated/historical)
 - rg 'scrapers/n8n/workflows' .agent docs --glob '*.md' (should not claim JSON exists there)
+- rg '\.[c]ursor/rules|[C]ursor rules|\.[m]dc' AGENTS.md .agent docs --glob '*.md' (should not appear in active docs)
 - Verify links in edited files resolve
 
 Boundaries:
@@ -51,4 +53,4 @@ End of turn: files updated, stale patterns fixed, tier map still correct, sugges
 
 ## My task (fill in)
 
-_e.g. add skill for dispatch-runs, fix Cursor rule globs, align MAINTENANCE_CHECKPOINT with implementation-state_
+_e.g. add skill for dispatch-runs, fix task-rule coverage, align MAINTENANCE_CHECKPOINT with implementation-state_

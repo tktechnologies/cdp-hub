@@ -358,6 +358,7 @@ class GoPartsScraper(BaseScraper):
                 follow_redirects=True,
                 timeout=httpx.Timeout(8.0),
                 headers=headers,
+                proxy=self._httpx_proxy_url(),
             ) as client:
                 response = await client.get(url)
         except Exception as e:

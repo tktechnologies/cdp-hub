@@ -7,26 +7,19 @@
 
 ## Unified `.analisar` (2026-05-22)
 
-One Telegram/e-mail command runs **scraper (sites)** and **Muvstok (stock)** in parallel (5 SKUs per round). Diagrams and meeting deck: `docs/CDP_DUAL_ANALISE_ARCHITECTURE.md`, `docs/meetings/MEETING_DUAL_ANALISE_NOVA_ARQUITETURA.md`.
+> **Canonical (2026-06):** `.analisar` / `.sku` dispatch **all valid SKUs** by default (optional `CDP_DISPATCH_SAMPLE_SIZE` in router). Platform truth: [../../docs/architecture/DUAL_PIPELINE.md](../../docs/architecture/DUAL_PIPELINE.md).
 
-## Production status — 2026-05-21
+One Telegram/e-mail command runs **scraper (sites)** and **Muvstok (stock)** in parallel. Historical meeting deck: `docs/meetings/MEETING_DUAL_ANALISE_NOVA_ARQUITETURA.md` (may mention legacy 5-SKU sampling).
 
-See `docs/MAINTENANCE_CHECKPOINT.md` for the full handoff.
+## Production status
 
-Live Azure stack:
-- Resource group: `automation`
-- API image: `lookup-direct-20260521-1439` — cache-aware `/lookup` in API process
-- Worker image: `scrape-cache-ssl-20260521-1402` — Redis DB 1 scrape cache
-- API: `cdp-scrapers-api-prod`, healthy on `/api/v1/health`
-- Worker: `cdp-scrapers-worker-prod`, Celery + scrape cache
-- N8N: `cdp-n8n-prod`, `https://automacao.tktechnologies.com.br`
-- PostgreSQL: `cdp-scrapers-pg-prod`
+See `docs/MAINTENANCE_CHECKPOINT.md` (updated 2026-06-02) for the live handoff.
 
-Validation summary:
-- Scrape cache: 5/5 PASS on `/lookup` and `/jobs` (`docs/validation/latest_production_5sku_*`)
-- Curl smoke: GM, VW, EU, Peça Direta pass; ML smoke SKU `not_found`; Melibox `blocked`
-- Worker → n8n callback: **fails** (trailing `\r` in Key Vault secret; fix in `src/config.py`, not deployed)
-- Live n8n: `cdp_router` / `cdp_scraper` — see `../../docs/n8n/LIVE_WORKFLOWS.md` (historical audit: `n8n/docs/AUDIT_2026-05-21.md`)
+- Azure: `cdp-scrapers-api-prod`, `cdp-scrapers-worker-prod`, N8N `https://automacao.tktechnologies.com.br`
+- Scrape cache: validated on `/lookup` and `/jobs`
+- **P0:** Brazilian ISP proxy in Key Vault — `scripts/proxy_readiness_check.py`, `scripts/proxy_site_smoke.py`, `.agent/workflows/proxy-rollout.md`
+- Melibox: blocked on Azure egress without BR ISP; archived sites need per-site smoke before re-registry
+- Live n8n: `../../docs/n8n/LIVE_WORKFLOWS.md`
 
 Production queue note:
 - The Celery worker uses `NullPool` for async PostgreSQL sessions when

@@ -20,6 +20,7 @@ JSON Schema definitions for cross-service and n8n integration.
 1. Update Pydantic models in the owning service.
 2. Update the matching schema here.
 3. Update n8n receiver workflow if callback shape changes.
-4. Run service quality gates and document in PR.
+4. Run contract tests: `scrapers/tests/test_contracts/`, `muvstok-api/tests/test_contracts/` (CI: `.github/workflows/ci-contracts.yml`).
+5. Document in PR.
 
 Platform API notes: [.agent/standards/api-design.md](../.agent/standards/api-design.md).

@@ -29,9 +29,13 @@ Does the task touch n8n/src, cdp_router dispatch, or all 3 workflows?
 |------|----------------|
 | Edit router, inject, sync/publish n8n | [skills/n8n-router-sync/SKILL.md](skills/n8n-router-sync/SKILL.md) |
 | Change `.analisar` / `.sku` / dual behavior | [skills/dual-pipeline-change/SKILL.md](skills/dual-pipeline-change/SKILL.md) |
+| Understand n8n + API + scraper ownership | [knowledge/service-catalog.md](knowledge/service-catalog.md) |
+| Keep root and service `.agent` docs aligned | [knowledge/workspace-sync.md](knowledge/workspace-sync.md) |
+| Task-scoped rules (platform, n8n, Python, contracts, infra) | [rules/README.md](rules/README.md) |
 | Progress visibility (`.status`, `cdp_progress`, dispatch-runs API) | [memory/implementation-state.md](memory/implementation-state.md) |
 | n8n release checklist | [workflows/cdp/n8n-release-checklist.md](workflows/cdp/n8n-release-checklist.md) |
-| Fresh platform chat | [prompts/platform-startup.md](prompts/platform-startup.md) |
+| **New Cursor chat (copy-paste)** | [prompts/new-chat.md](prompts/new-chat.md) |
+| Fresh platform chat (agents) | [prompts/platform-startup.md](prompts/platform-startup.md) |
 | Maintenance prompts (by type) | [prompts/maintenance/README.md](prompts/maintenance/README.md) |
 | Service boundaries | [boundaries/services.md](boundaries/services.md) |
 

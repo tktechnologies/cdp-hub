@@ -57,11 +57,15 @@ console.log('JSON ok');
 
 ### 5. Push to n8n (user approval required)
 
+**Code-only changes** (after inject):
+
 ```bash
 make sync-n8n
 ```
 
-This regenerates SDKs and MCP-pushes all three workflows.
+This injects JSON, validates SDKs, pushes the full graph via n8n REST API (`scripts/n8n_publish.py`), and MCP-publishes. Set `CDP_PROGRESS_WORKFLOW_ID` to include `cdp_progress`.
+
+For surgical graph edits without full JSON replace, use MCP `update_workflow` `operations` + `publish_workflow` (see `docs/n8n/LIVE_WORKFLOWS.md`).
 
 ## After sync
 

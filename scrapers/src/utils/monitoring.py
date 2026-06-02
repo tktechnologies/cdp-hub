@@ -13,13 +13,13 @@ logger = structlog.get_logger()
 scrape_requests_total = Counter(
     "cdp_scrape_requests_total",
     "Total scrape requests",
-    ["site", "status"],
+    ["site", "status", "proxy_identity"],
 )
 
 scrape_duration_seconds = Histogram(
     "cdp_scrape_duration_seconds",
     "Time spent scraping per SKU per site",
-    ["site"],
+    ["site", "proxy_identity"],
     buckets=[1, 5, 10, 15, 30, 60, 120],
 )
 
@@ -67,16 +67,35 @@ def get_metrics() -> bytes:
     return generate_latest()
 
 
+def record_scrape_result(
+    site: str,
+    status: str,
+    duration_seconds: float,
+    proxy_identity: str | None = None,
+) -> None:
+    """Record one site scrape outcome with proxy-safe labels."""
+    proxy_label = proxy_identity or "direct"
+    scrape_requests_total.labels(
+        site=site,
+        status=status,
+        proxy_identity=proxy_label,
+    ).inc()
+    scrape_duration_seconds.labels(
+        site=site,
+        proxy_identity=proxy_label,
+    ).observe(max(0.0, duration_seconds))
+
+
 @asynccontextmanager
 async def track_scrape(site: str) -> AsyncGenerator[None, None]:
     """Context manager to track scrape duration and status."""
     start = time.monotonic()
     try:
         yield
-        scrape_requests_total.labels(site=site, status="success").inc()
+        scrape_requests_total.labels(site=site, status="success", proxy_identity="unknown").inc()
     except Exception:
-        scrape_requests_total.labels(site=site, status="error").inc()
+        scrape_requests_total.labels(site=site, status="error", proxy_identity="unknown").inc()
         raise
     finally:
         duration = time.monotonic() - start
-        scrape_duration_seconds.labels(site=site).observe(duration)
+        scrape_duration_seconds.labels(site=site, proxy_identity="unknown").observe(duration)
