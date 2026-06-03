@@ -1171,7 +1171,7 @@
           "name": "gcp sheets lucas@tktech"
         }
       },
-      "notes": "Updates NOTIFICADO=✅ Sim for all SKUs in this job by row_number. | v0.8.0: retry 5×/5s; no continueOnFail (retries work; fail loud if Sheets still errors).",
+      "notes": "Updates NOTIFICADO=✅ Sim for all SKUs in this job by row_number. | v0.8.0: retry 5x/5s; no continueOnFail (retries work; fail loud if Sheets still errors).",
       "continueOnFail": true
     },
     {

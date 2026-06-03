@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import sys
 import urllib.error
@@ -15,6 +16,25 @@ import urllib.request
 MCP_JSON = pathlib.Path.home() / ".cursor" / "mcp.json"
 MCP_URL = "https://automacao.tktechnologies.com.br/mcp-server/http"
 N8N_API_BASE = "https://automacao.tktechnologies.com.br/api/v1"
+
+# n8n REST PUT rejects some UI-only settings keys (e.g. binaryMode, availableInMCP).
+_SETTINGS_ALLOWED = frozenset(
+    {
+        "executionOrder",
+        "timezone",
+        "saveDataErrorExecution",
+        "saveDataSuccessExecution",
+        "saveManualExecutions",
+        "saveExecutionProgress",
+        "callerPolicy",
+        "errorWorkflow",
+    }
+)
+
+
+def _workflow_settings(local: dict, remote: dict) -> dict:
+    merged = {**(remote.get("settings") or {}), **(local.get("settings") or {})}
+    return {k: v for k, v in merged.items() if k in _SETTINGS_ALLOWED}
 
 
 def _mcp_servers() -> dict:
@@ -38,7 +58,7 @@ def n8n_api_key() -> str:
         api_key = env.get("N8N_API_KEY", "")
         if api_key:
             return api_key
-    return ""
+    return os.environ.get("N8N_API_KEY", "").strip()
 
 
 def mcp_call(tool: str, arguments: dict) -> dict:
@@ -128,7 +148,7 @@ def push_workflow_json(
         "name": local.get("name") or remote.get("name"),
         "nodes": local["nodes"],
         "connections": local["connections"],
-        "settings": local.get("settings") or remote.get("settings") or {},
+        "settings": _workflow_settings(local, remote),
     }
     if description:
         payload["description"] = description

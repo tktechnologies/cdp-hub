@@ -1,13 +1,13 @@
 # CDP n8n — Live workflows
 
-Last verified: 2026-06-01.
+Last verified: 2026-06-02.
 
 | Workflow | Live ID | Webhook / trigger | Role |
 |----------|---------|-------------------|------|
 | **cdp_router** | `6id6dkinK9xTLfsb` | Telegram, Gmail, schedule | Orchestrator: `.analisar` / `.sku` → Scraper + StokAPI |
 | **cdp_scraper** | `VfBSV3WU6on8BXm8` | `POST /webhook/scraper-result` | Scraper job callbacks → sheets + notify |
 | **cdp_stokapi** | `t160mzGPYYlJcrjZ` | `POST /webhook/muvstok-result` | Muvstok job callbacks → sheets + notify |
-| **cdp_progress** | set `CDP_PROGRESS_WORKFLOW_ID` after first import | Schedule (`CDP_PROGRESS_INTERVAL_MIN`, default 10) | Proactive Telegram progress while runs are active |
+| **cdp_progress** | `V9I6o32XDoPIRarz` | Schedule (`CDP_PROGRESS_INTERVAL_MIN`, default 10) | Proactive Telegram progress while runs are active |
 
 Deprecated: `cdp_muvstok-api_starter` (`PXLHDzRbBVgs8Xl2`) — use `cdp_router` for production dispatch.
 
@@ -21,7 +21,7 @@ Pipeline: inject `n8n/src` → patch receivers → validate SDK → **PUT full g
 
 For one-off structural patches that are awkward as full JSON replace, use MCP `update_workflow` `operations` + `publish_workflow`.
 
-Latest publish (2026-05-30): `cdp_router` active `b56caec9-3b80-4bd1-a756-89919a658ca5` dispatches API Diversos before the scraper branch; `cdp_scraper` active `dbb2cd30-cd00-4e67-900b-fadddf9ab770` reports scraper Telegram results by actual result evidence instead of only `best_price`.
+Latest publish (2026-06-02): `cdp_router` active `9a312497-3c02-49f6-857c-dfd176a176fc`; `cdp_scraper` active `acdfd664-3d85-4341-a28c-fe03b2a2afb5`; `cdp_stokapi` active `fdfa6140-a735-4442-8c4f-899109967c5d`; `cdp_progress` imported and active `V9I6o32XDoPIRarz` (set `CDP_PROGRESS_WORKFLOW_ID` for `make sync-n8n`).
 
 ## Local files
 

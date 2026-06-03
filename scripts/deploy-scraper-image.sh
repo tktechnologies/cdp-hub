@@ -25,7 +25,7 @@ az containerapp update -g "${RG}" -n "${API_APP}" --image "${IMAGE_REF}" --outpu
 az containerapp update -g "${RG}" -n "${WORKER_APP}" --image "${IMAGE_REF}" --output none
 
 echo "==> Health check"
-API_FQDN="$(az containerapp show -g "${RG}" -n "${API_APP}" --query properties.configuration.ingress.fqdn -o tsv)"
+API_FQDN="$(az containerapp show -g "${RG}" -n "${API_APP}" --query properties.configuration.ingress.fqdn -o tsv | tr -d '\r\n')"
 curl -fsS "https://${API_FQDN}/api/v1/health"
 echo
 echo "Deployed ${IMAGE_REF} to ${API_APP} and ${WORKER_APP}"

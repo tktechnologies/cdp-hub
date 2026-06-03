@@ -1,6 +1,6 @@
 # CDP Platform — API & Azure reference
 
-**Updated:** 2026-06-01
+**Updated:** 2026-06-02
 
 This file is the **deep reference** for endpoints, router Code files, progress env vars, and Azure names. For layout, dual pipeline, and agent tiers, read [ARCHITECTURE.md](ARCHITECTURE.md) first.
 
@@ -19,8 +19,9 @@ This file is the **deep reference** for endpoints, router Code files, progress e
 | Scraper | `scrapers/` | `cdp-scrapers-api-prod`, `cdp-scrapers-worker-prod` |
 | StokAPI (API Diversos) | `muvstok-api/` | `cdp-muv-api`, `cdp-muv-worker` |
 | n8n | `n8n/` | `cdp-n8n-prod` → `https://automacao.tktechnologies.com.br` |
+| Dev (scraper) | `scrapers/` | `cdp-scrapers-api-dev`, `cdp-scrapers-worker-dev`, KV `cdp-scrapers-kv-dev` |
 
-Shared: RG `automation`, Key Vault `cdp-scrapers-kv-prod`, ACR `cdpscraperprodacr.azurecr.io`. Database/Redis: [DATABASE.md](DATABASE.md).
+Shared prod: RG `automation`, Key Vault `cdp-scrapers-kv-prod`, ACR `cdpscraperprodacr.azurecr.io`. Dev/prod split: [decisions/ADR-0006-dev-production-environments.md](decisions/ADR-0006-dev-production-environments.md). Database/Redis: [DATABASE.md](DATABASE.md).
 
 ## n8n workflow IDs
 

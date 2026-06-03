@@ -37,10 +37,12 @@ def main() -> int:
 
     if args.publish:
         p = parse_structured(mcp_call("publish_workflow", {"workflowId": wf_id}))
-        if not p.get("success"):
-            print(f"publish failed: {p}", file=sys.stderr)
-            return 2
-        print(f"published version={p.get('activeVersionId')}", file=sys.stderr)
+        if p.get("success"):
+            print(f"published version={p.get('activeVersionId')}", file=sys.stderr)
+        else:
+            # New workflows may lack MCP access; activate via REST instead.
+            n8n_api_request("POST", f"/workflows/{wf_id}/activate")
+            print(f"MCP publish skipped; activated via REST ({p.get('error', 'unknown')})", file=sys.stderr)
 
     return 0
 

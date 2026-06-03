@@ -50,7 +50,7 @@ Task-scoped rules: .agent/rules/<domain>.md · Ownership: .agent/knowledge/servi
 - Structural workflow changes (nodes, connections): MCP update_workflow operations + publish_workflow — make sync-n8n alone may NOT update the live graph (see LIVE_WORKFLOWS.md).
 - cdp_progress: import once in n8n, set CDP_PROGRESS_WORKFLOW_ID, then included in make sync-n8n.
 
-Live IDs: cdp_router 6id6dkinK9xTLfsb · cdp_scraper VfBSV3WU6on8BXm8 · cdp_stokapi t160mzGPYYlJcrjZ
+Live IDs: cdp_router 6id6dkinK9xTLfsb · cdp_scraper VfBSV3WU6on8BXm8 · cdp_stokapi t160mzGPYYlJcrjZ · cdp_progress V9I6o32XDoPIRarz
 
 ## Quality gates (run what you touched)
 - Scraper: make -C scrapers test lint
