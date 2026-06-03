@@ -29,7 +29,7 @@ cdp-app/
 | StokAPI | `muvstok-api/` | Redis Streams | `cdp-muv-api`, `cdp-muv-worker` |
 | n8n | `n8n/` | — | `cdp-n8n-prod` |
 
-Shared: resource group `automation`, Key Vault `cdp-scrapers-kv-prod`, ACR `cdpscraperprodacr.azurecr.io`.
+Shared: resource group `automation`, Key Vault `cdp-scrapers-kv-prod`, ACR `cdpscraperprodacr.azurecr.io`. Development stack uses `*-dev` resources — see [decisions/ADR-0006-dev-production-environments.md](decisions/ADR-0006-dev-production-environments.md).
 
 ## Dual pipeline
 
