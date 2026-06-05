@@ -8,6 +8,9 @@ from src.models.schemas import (
     DispatchRunProgressUpdate,
     DispatchRunResponse,
     DispatchRunUpsertRequest,
+    FinalNotificationPatch,
+    PipelineResultRequest,
+    PipelineResultResponse,
 )
 from src.services import dispatch_runs
 
@@ -62,6 +65,49 @@ async def patch_dispatch_run(
 ) -> DispatchRunResponse:
     """Update progress notification state for a dispatch run."""
     result = await dispatch_runs.update_dispatch_run_progress(run_id, update)
+    if not result:
+        raise APIHTTPException(
+            status.HTTP_404_NOT_FOUND,
+            "not_found",
+            f"Dispatch run {run_id} not found",
+        )
+    return result
+
+
+@router.post(
+    "/dispatch-runs/by-batch/{batch_group_id}/pipeline-result",
+    response_model=PipelineResultResponse,
+    dependencies=[Depends(verify_api_key), Depends(get_request_id)],
+)
+async def post_pipeline_result(
+    batch_group_id: str,
+    request: PipelineResultRequest,
+) -> PipelineResultResponse:
+    """Record scraper or StokAPI completion summary; claim final notification when ready."""
+    return await dispatch_runs.record_pipeline_result(batch_group_id, request)
+
+
+@router.get(
+    "/dispatch-runs/final-notifications/ready",
+    response_model=list[DispatchRunResponse],
+    dependencies=[Depends(verify_api_key), Depends(get_request_id)],
+)
+async def list_ready_final_notifications() -> list[DispatchRunResponse]:
+    """Dispatch runs claimed for final notification (retry / ops)."""
+    return await dispatch_runs.list_ready_final_notifications()
+
+
+@router.patch(
+    "/dispatch-runs/{run_id}/final-notification",
+    response_model=DispatchRunResponse,
+    dependencies=[Depends(verify_api_key), Depends(get_request_id)],
+)
+async def patch_final_notification(
+    run_id: str,
+    patch: FinalNotificationPatch,
+) -> DispatchRunResponse:
+    """Mark final user notification outcome after cdp_notifier sends."""
+    result = await dispatch_runs.patch_final_notification(run_id, patch)
     if not result:
         raise APIHTTPException(
             status.HTTP_404_NOT_FOUND,

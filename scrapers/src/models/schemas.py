@@ -39,6 +39,56 @@ class JobStatus(StrEnum):
     PARTIAL = "partial"  # Some sites succeeded, some failed
 
 
+class SourceHealth(StrEnum):
+    """Canonical reporting source-health values written into callbacks/sheets."""
+
+    WORKING = "WORKING"
+    BLOCKED = "BLOCKED"
+    TIMEOUT = "TIMEOUT"
+    ERROR = "ERROR"
+    NOT_QUERIED = "NOT_QUERIED"
+
+
+class SKUResultStatus(StrEnum):
+    """Canonical reporting result status for a searched SKU/source."""
+
+    FOUND_PRICE = "FOUND_PRICE"
+    NO_PRICE = "NO_PRICE"
+    NOT_FOUND = "NOT_FOUND"
+    BLOCKED = "BLOCKED"
+    TIMEOUT = "TIMEOUT"
+    ERROR = "ERROR"
+    NOT_QUERIED = "NOT_QUERIED"
+
+
+def _is_out_of_stock_text(value: str) -> bool:
+    text = (value or "").lower()
+    return any(
+        phrase in text
+        for phrase in (
+            "fora de estoque",
+            "sem estoque",
+            "esgotado",
+            "indisponível",
+            "indisponivel",
+            "temporarily out",
+            "out of stock",
+            "unavailable",
+            "pausado",
+            "inativo",
+        )
+    )
+
+
+def _has_valid_price(result: "PartResult") -> bool:
+    return (
+        result.exact_match
+        and result.price is not None
+        and result.price > 0
+        and not _is_out_of_stock_text(result.availability)
+    )
+
+
 # ─── Request Models ───────────────────────────────────────────────
 
 class SKUItem(BaseModel):
@@ -136,6 +186,12 @@ class PartResult(BaseModel):
     condition: ItemCondition = ItemCondition.UNKNOWN
     availability: str = Field(default="unknown", description="In stock, out of stock, etc.")
     seller_name: str = ""
+    seller_uf: str = Field(default="", description="Brazilian UF for the seller when available")
+    seller_company_name: str = Field(
+        default="",
+        description="Seller company/legal name when available",
+    )
+    seller_cnpj: str = Field(default="", description="Seller company CNPJ digits when available")
     product_url: str = ""
     origin: str = Field(default="", description="Origin region: Brasil, Europa, EUA, China")
     scraped_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -150,6 +206,24 @@ class SiteResult(BaseModel):
     error_message: str = ""
     results: list[PartResult] = []
     search_time_ms: int = 0
+    source_health: SourceHealth = Field(
+        default=SourceHealth.WORKING,
+        description="Canonical source health for reporting: WORKING, BLOCKED, TIMEOUT, ERROR.",
+    )
+    sku_result: SKUResultStatus = Field(
+        default=SKUResultStatus.NOT_FOUND,
+        description="Canonical SKU result for reporting; row existence is not success.",
+    )
+    has_valid_price: bool = Field(
+        default=False,
+        description="True only when an exact match has a positive usable price.",
+    )
+    priced_result_count: int = Field(
+        default=0,
+        description="Exact-match result rows with a positive usable price.",
+    )
+    status_reason: str = Field(default="", description="Human-readable status reason.")
+    blocked_reason: str = Field(default="", description="Block/captcha/access reason when blocked.")
     from_cache: bool = Field(
         default=False,
         description="True when this site result was served from Redis or PostgreSQL cache",
@@ -158,6 +232,38 @@ class SiteResult(BaseModel):
         default=None,
         description="When the cached snapshot was originally scraped",
     )
+
+    def model_post_init(self, __context: object) -> None:
+        priced_count = sum(1 for result in self.results if _has_valid_price(result))
+        self.priced_result_count = priced_count
+        self.has_valid_price = priced_count > 0
+
+        status = str(self.status or "").strip().lower()
+        if status == "blocked":
+            self.source_health = SourceHealth.BLOCKED
+            self.sku_result = SKUResultStatus.BLOCKED
+            self.blocked_reason = self.blocked_reason or self.error_message
+        elif status == "timeout":
+            self.source_health = SourceHealth.TIMEOUT
+            self.sku_result = SKUResultStatus.TIMEOUT
+        elif status == "error":
+            self.source_health = SourceHealth.ERROR
+            self.sku_result = SKUResultStatus.ERROR
+        elif self.has_valid_price:
+            self.source_health = SourceHealth.WORKING
+            self.sku_result = SKUResultStatus.FOUND_PRICE
+        elif status == "no_price" or any(result.exact_match for result in self.results):
+            self.source_health = SourceHealth.WORKING
+            self.sku_result = SKUResultStatus.NO_PRICE
+        elif status == "not_queried":
+            self.source_health = SourceHealth.NOT_QUERIED
+            self.sku_result = SKUResultStatus.NOT_QUERIED
+        else:
+            self.source_health = SourceHealth.WORKING
+            self.sku_result = SKUResultStatus.NOT_FOUND
+
+        if not self.status_reason:
+            self.status_reason = self.error_message or self.sku_result.value
 
 
 class SKUResult(BaseModel):
@@ -169,6 +275,54 @@ class SKUResult(BaseModel):
     total_results: int = 0
     cache_hits: int = Field(default=0, description="Sites served from cache without live scrape")
     live_scrapes: int = Field(default=0, description="Sites that ran a live scraper this request")
+    sku_result: SKUResultStatus = Field(
+        default=SKUResultStatus.NOT_FOUND,
+        description="Overall canonical SKU result across searched sources.",
+    )
+    has_valid_price: bool = Field(
+        default=False,
+        description="True when any source found an exact usable positive price.",
+    )
+    has_priced_exact: bool = Field(default=False)
+    has_any_exact_evidence: bool = Field(default=False)
+    priced_result_count: int = Field(default=0)
+    no_price_site_count: int = Field(default=0)
+    blocked_site_count: int = Field(default=0)
+    error_site_count: int = Field(default=0)
+
+    def model_post_init(self, __context: object) -> None:
+        self.priced_result_count = sum(sr.priced_result_count for sr in self.site_results)
+        self.has_valid_price = self.priced_result_count > 0
+        self.has_priced_exact = self.has_valid_price
+        self.has_any_exact_evidence = self.has_valid_price or any(
+            sr.sku_result == SKUResultStatus.NO_PRICE
+            or any(part.exact_match for part in sr.results)
+            for sr in self.site_results
+        )
+        self.no_price_site_count = sum(
+            1 for sr in self.site_results if sr.sku_result == SKUResultStatus.NO_PRICE
+        )
+        self.blocked_site_count = sum(
+            1 for sr in self.site_results if sr.source_health == SourceHealth.BLOCKED
+        )
+        self.error_site_count = sum(
+            1
+            for sr in self.site_results
+            if sr.source_health in (SourceHealth.ERROR, SourceHealth.TIMEOUT)
+        )
+
+        if self.has_valid_price:
+            self.sku_result = SKUResultStatus.FOUND_PRICE
+        elif self.has_any_exact_evidence or self.no_price_site_count:
+            self.sku_result = SKUResultStatus.NO_PRICE
+        elif self.blocked_site_count:
+            self.sku_result = SKUResultStatus.BLOCKED
+        elif self.error_site_count:
+            self.sku_result = SKUResultStatus.ERROR
+        elif self.site_results:
+            self.sku_result = SKUResultStatus.NOT_FOUND
+        else:
+            self.sku_result = SKUResultStatus.NOT_QUERIED
 
 
 class ScrapeJobResponse(BaseModel):
@@ -228,6 +382,20 @@ class ScrapeJobResult(BaseModel):
     sku_any_hit_pct: float = 0
     all_sites_not_found_count: int = 0
     warning_messages: list[str] = []
+    priced_sku_count: int = Field(
+        default=0,
+        description="Unique requested SKUs with at least one exact usable price.",
+    )
+    any_evidence_sku_count: int = Field(
+        default=0,
+        description="SKUs with exact product evidence, with or without usable price.",
+    )
+    no_price_sku_count: int = Field(
+        default=0,
+        description="SKUs with exact evidence but no usable price.",
+    )
+    blocked_sku_count: int = Field(default=0)
+    error_sku_count: int = Field(default=0)
 
 
 # ─── Dispatch run registry (dual pipeline progress) ─────────────
@@ -243,6 +411,12 @@ class DispatchRunUpsertRequest(BaseModel):
     total_skus: int = 0
     estimated_seconds: int | None = None
     dispatched_at: datetime | None = None
+    reply_channel: str | None = None
+    reply_email: str | None = None
+    command_origin: str | None = None
+    progress_enabled: bool = True
+    delivery_mode: str = "legacy"
+    sheet_row_numbers: list[int] = Field(default_factory=list)
 
 
 class DispatchRunResponse(BaseModel):
@@ -263,6 +437,21 @@ class DispatchRunResponse(BaseModel):
     last_notified_at: datetime | None = None
     progress_message_count: int = 0
     completed_at: datetime | None = None
+    reply_channel: str | None = None
+    reply_email: str | None = None
+    command_origin: str | None = None
+    progress_enabled: bool = True
+    delivery_mode: str = "legacy"
+    sheet_row_numbers: list[int] = Field(default_factory=list)
+    scraper_summary: dict | None = None
+    stokapi_summary: dict | None = None
+    scraper_completed_at: datetime | None = None
+    stokapi_completed_at: datetime | None = None
+    final_notification_status: str | None = None
+    final_notified_at: datetime | None = None
+    final_notification_attempts: int = 0
+    final_channel: str | None = None
+    final_error: str | None = None
 
 
 class DispatchRunProgressUpdate(BaseModel):
@@ -273,6 +462,47 @@ class DispatchRunProgressUpdate(BaseModel):
     scraper_status: str | None = None
     stokapi_status: str | None = None
     completed_at: datetime | None = None
+
+
+class PipelineResultSummary(BaseModel):
+    """Compact per-pipeline totals for final user notification."""
+
+    with_price: int = 0
+    no_price: int = 0
+    not_found: int = 0
+    blocked: int = 0
+    errors: int = 0
+    duration_seconds: float | None = None
+    status: str = "completed"
+    failed_reason: str | None = None
+
+
+class PipelineResultRequest(BaseModel):
+    """Receiver handoff after Sheets writes."""
+
+    source: str
+    status: str
+    summary: PipelineResultSummary
+
+
+class PipelineResultResponse(BaseModel):
+    """Result of recording a pipeline handoff."""
+
+    run_id: str
+    batch_group_id: str
+    source_recorded: bool = True
+    both_terminal: bool = False
+    ready_for_final: bool = False
+    already_notified: bool = False
+    claim: dict | None = None
+
+
+class FinalNotificationPatch(BaseModel):
+    """Notifier outcome after send attempt."""
+
+    status: str
+    final_channel: str | None = None
+    final_error: str | None = None
 
 
 # ─── Health & Monitoring ──────────────────────────────────────────

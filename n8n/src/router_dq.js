@@ -1,9 +1,9 @@
-// cdp_router — validate sheet rows, keep duplicate SKUs as real work items.
-// Duplicate rows are intentionally preserved so every sheet row can receive data.
+// cdp_router — validate sheet rows, dedupe dispatch SKUs, preserve sheet rows.
 
 const raw = $input.all();
 const seen = new Set();
-const valid = [];
+const uniqueBySku = new Map();
+const sheetRows = [];
 const dqIssues = [];
 let skippedProcessado = 0;
 
@@ -17,10 +17,17 @@ function normalizeStatus(value) {
     .trim();
 }
 
+function normalizeSku(value) {
+  return String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[\s\-\.\\/]/g, '');
+}
+
 for (const item of raw) {
   const row = item.json;
   const rawSku = row.CODIGO ?? row.SKU ?? row.sku ?? row.codigo;
-  const sku = rawSku ? String(rawSku).trim().toUpperCase() : '';
+  const sku = normalizeSku(rawSku);
 
   const processado = normalizeStatus(row.PROCESSADO);
   if (processado === 'processado' || processado === 'sim' || processado === 'true') {
@@ -41,29 +48,45 @@ for (const item of raw) {
       issue: 'DUPLICATE_SKU',
       sku,
       row_number: row.row_number ?? null,
-      action: 'included',
+      action: 'deduped_dispatch_preserved_sheet_row',
     });
   }
   seen.add(sku);
 
-  valid.push({
+  const rowData = {
     sku,
+    sku_original: rawSku ? String(rawSku).trim() : '',
     brand: row.UNIDADE ? String(row.UNIDADE).trim() : '',
     description: row.ITEM ? String(row.ITEM).trim() : '',
     row_number: row.row_number ?? null,
     notify_email: row['E-MAIL'] ? String(row['E-MAIL']).trim() : '',
     notify_phone: row.CONTATO ? String(row.CONTATO).trim() : '',
-  });
+  };
+  sheetRows.push(rowData);
+
+  if (!uniqueBySku.has(sku)) {
+    uniqueBySku.set(sku, { ...rowData });
+  } else {
+    const existing = uniqueBySku.get(sku);
+    if (existing) {
+      if (!existing.brand && rowData.brand) existing.brand = rowData.brand;
+      if (!existing.description && rowData.description) existing.description = rowData.description;
+      if (!existing.notify_email && rowData.notify_email) existing.notify_email = rowData.notify_email;
+      if (!existing.notify_phone && rowData.notify_phone) existing.notify_phone = rowData.notify_phone;
+    }
+  }
 }
 
 const duplicateIssues = dqIssues.filter((i) => i.issue === 'DUPLICATE_SKU');
 const duplicateSkus = [...new Set(duplicateIssues.map((i) => i.sku).filter(Boolean))];
+const skus = [...uniqueBySku.values()];
 
 return [
   {
     json: {
       total_read: raw.length,
-      valid_skus: valid.length,
+      input_valid_skus: sheetRows.length,
+      valid_skus: skus.length,
       unique_skus: seen.size,
       skipped_processado: skippedProcessado,
       duplicates: duplicateIssues.length,
@@ -71,7 +94,8 @@ return [
       empty_skus: dqIssues.filter((i) => i.issue === 'EMPTY_SKU').length,
       short_skus: dqIssues.filter((i) => i.issue === 'SHORT_SKU').length,
       dq_issues: dqIssues,
-      skus: valid,
+      skus,
+      sheet_rows: sheetRows,
       dispatched_at: new Date().toISOString(),
     },
   },

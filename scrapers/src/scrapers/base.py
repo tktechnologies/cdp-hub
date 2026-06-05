@@ -5,6 +5,7 @@ import contextlib
 import random
 import re
 import time
+import unicodedata
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -587,6 +588,64 @@ class BaseScraper(ABC):
         clean_text = re.sub(r"[\s\-\.\/]", "", text or "").upper()
         clean_sku = re.sub(r"[\s\-\.\/]", "", searched_sku or "").upper()
         return bool(clean_sku and clean_sku in clean_text)
+
+    @staticmethod
+    def extract_brazil_uf(text: str) -> str:
+        """Extract a Brazilian UF from visible seller/location text."""
+        if not text:
+            return ""
+        normalized = unicodedata.normalize("NFD", str(text).upper())
+        normalized = "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
+        uf_codes = (
+            "AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|"
+            "RJ|RN|RS|RO|RR|SC|SP|SE|TO"
+        )
+        uf_match = re.search(rf"(?<![A-Z0-9])({uf_codes})(?![A-Z0-9])", normalized)
+        if uf_match:
+            return uf_match.group(1)
+        state_names = {
+            "ACRE": "AC",
+            "ALAGOAS": "AL",
+            "AMAPA": "AP",
+            "AMAZONAS": "AM",
+            "BAHIA": "BA",
+            "CEARA": "CE",
+            "DISTRITO FEDERAL": "DF",
+            "ESPIRITO SANTO": "ES",
+            "GOIAS": "GO",
+            "MARANHAO": "MA",
+            "MATO GROSSO DO SUL": "MS",
+            "MATO GROSSO": "MT",
+            "MINAS GERAIS": "MG",
+            "PARAIBA": "PB",
+            "PARANA": "PR",
+            "PERNAMBUCO": "PE",
+            "PIAUI": "PI",
+            "RIO DE JANEIRO": "RJ",
+            "RIO GRANDE DO NORTE": "RN",
+            "RIO GRANDE DO SUL": "RS",
+            "RONDONIA": "RO",
+            "RORAIMA": "RR",
+            "SANTA CATARINA": "SC",
+            "SAO PAULO": "SP",
+            "SERGIPE": "SE",
+            "TOCANTINS": "TO",
+            "PARA": "PA",
+        }
+        for state, uf in state_names.items():
+            if re.search(rf"(?<![A-Z0-9]){re.escape(state)}(?![A-Z0-9])", normalized):
+                return uf
+        return ""
+
+    @staticmethod
+    def extract_cnpj_digits(text: str) -> str:
+        """Return 14 CNPJ digits from formatted or plain visible text."""
+        if not text:
+            return ""
+        match = re.search(r"\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}", str(text))
+        if not match:
+            return ""
+        return re.sub(r"\D", "", match.group(0))
 
     @staticmethod
     def parse_brazilian_price(price_text: str) -> float | None:

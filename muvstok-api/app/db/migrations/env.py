@@ -65,8 +65,12 @@ def do_run_migrations(connection) -> None:  # type: ignore[no-untyped-def]
 
 
 def run_migrations_online() -> None:
+    sqlalchemy_url = config.get_main_option("sqlalchemy.url")
+    if sqlalchemy_url is None:
+        raise RuntimeError("Missing sqlalchemy.url for Alembic migrations")
+
     connectable = create_engine(
-        config.get_main_option("sqlalchemy.url"),
+        sqlalchemy_url,
         poolclass=pool.NullPool,
     )
 

@@ -12,6 +12,10 @@ from src.models.schemas import (
     DispatchRunProgressUpdate,
     DispatchRunResponse,
     DispatchRunUpsertRequest,
+    FinalNotificationPatch,
+    PipelineResultRequest,
+    PipelineResultResponse,
+    PipelineResultSummary,
 )
 
 CONTRACTS_DIR = Path(__file__).resolve().parents[3] / "contracts"
@@ -58,6 +62,27 @@ def test_dispatch_run_response_matches_schema() -> None:
     jsonschema.validate(
         response.model_dump(mode="json"),
         schema["$defs"]["DispatchRunResponse"],
+    )
+
+
+def test_pipeline_result_request_matches_schema() -> None:
+    schema = _load_schema()
+    request = PipelineResultRequest(
+        source="scraper",
+        status="completed",
+        summary=PipelineResultSummary(with_price=1, no_price=0),
+    )
+    payload = request.model_dump(mode="json")
+    validator = jsonschema.Draft202012Validator(schema)
+    validator.validate(payload, schema["$defs"]["PipelineResultRequest"])
+
+
+def test_final_notification_patch_matches_schema() -> None:
+    schema = _load_schema()
+    patch = FinalNotificationPatch(status="sent", final_channel="telegram")
+    jsonschema.validate(
+        patch.model_dump(mode="json"),
+        schema["$defs"]["FinalNotificationPatch"],
     )
 
 

@@ -1,6 +1,6 @@
 # StokAPI n8n — Workflow Guide
 
-**Updated:** 2026-05-26
+**Updated:** 2026-06-03
 
 ## Production model (CDP dual pipeline)
 
@@ -115,15 +115,37 @@ Aligned with `app/schemas/callbacks.py`:
   "submitted_sku_count": 10,
   "succeeded_sku_count": 8,
   "failed_sku_count": 2,
+  "found_sku_count": 4,
+  "no_price_sku_count": 1,
+  "not_found_sku_count": 3,
+  "blocked_sku_count": 1,
+  "error_sku_count": 1,
   "items": [
-    { "sku": "661003M6M00ZZ", "status": "succeeded", "snapshot_id": "uuid" }
+    {
+      "sku": "661003M6M00ZZ",
+      "status": "succeeded",
+      "sku_result": "FOUND_PRICE",
+      "source_health": "OK",
+      "has_valid_price": true,
+      "snapshot_id": "uuid"
+    }
   ],
   "metadata": { "source": "cdp_router" },
   "completed_at": "2026-05-21T12:05:00Z"
 }
 ```
 
-Extended payloads may include `results[]` with warehouse rows. The flatten node supports both shapes.
+Extended payloads may include `results[]` with warehouse rows. The flatten node
+supports both shapes. `status=succeeded` is worker lifecycle only; Sheets and
+notifications use `sku_result`, `source_health`, and `has_valid_price`.
+
+Canonical result values:
+
+- `sku_result`: `FOUND_PRICE`, `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`,
+  `ERROR`, `NOT_QUERIED`.
+- `source_health`: `OK`/`WORKING`, `BLOCKED`, `TIMEOUT`, `ERROR`,
+  `NOT_QUERIED`.
+- `has_valid_price`: true only for positive usable sale price.
 
 ### Flow
 
@@ -147,7 +169,7 @@ Extended payloads may include `results[]` with warehouse rows. The flatten node 
 |--------|-------------------|
 | `CODIGO` | SKU key |
 | `PROCESSADO` | `processando...` on dispatch; `processado` on callback |
-| `ENCONTRADO` | `✅ Encontrado` / `✗ Não encontrado` |
+| `ENCONTRADO` | `✅ Encontrado`, `⚠️ Sem preço`, `🚫 Bloqueado`, `⚠️ Erro`, or `❌ Não encontrado` from canonical result |
 
 ### Delivery — results (`cdp_resultados`)
 
@@ -157,8 +179,13 @@ Tabs: **Detalhado** (per listing), **Historico** (per job), **Resumo** (best pri
 
 Column mapping and price rules: see `docs/MUVSTOK_SHEETS_AUDIT.md`.
 
-**Detalhado:** `site` = `API Diversos`, `preco` = `valorPrecoVenda`, `preco-medio` = `valorCustoMedio`, `melibox_tipo` = stock code `0`–`4`, `vendedor` = branch, `url_produto` = empty.  
-**Resumo:** `MELHOR PREÇO` = lowest sale price (`valorPrecoVenda`); `LINK` = empty.
+**Detalhado:** `site` = `API Diversos`, `preco` = `valorPrecoVenda`,
+`preco-medio` = `valorCustoMedio`, `melibox_tipo` = stock code `0`–`4`,
+`vendedor` = branch, `uf` = normalized Brazilian UF, `empresa` = legal/company
+name fallback branch, `cnpj` = normalized 14 digits, `url_produto` = empty, and canonical
+`status_resultado`/`source_health`/`has_valid_price`.
+**Resumo:** `MELHOR PREÇO` = lowest sale price (`valorPrecoVenda`); `LINK` =
+empty; found status requires `FOUND_PRICE` + `has_valid_price`.
 
 ## Deployment checklist
 

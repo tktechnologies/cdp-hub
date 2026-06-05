@@ -14,8 +14,45 @@ function env(name, defaultVal) {
   return defaultVal;
 }
 
+function workflowName() {
+  try {
+    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {
+      return String($workflow.name).trim();
+    }
+  } catch (e) {}
+  return '';
+}
+
+function isDevWorkflow() {
+  return /^DEV\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV', ''));
+}
+
+function devEnvName(name) {
+  const map = {
+    CDP_PROGRESS_INTERVAL_MIN: 'CDP_DEV_PROGRESS_INTERVAL_MIN',
+    CDP_PROGRESS_MIN_SKUS: 'CDP_DEV_PROGRESS_MIN_SKUS',
+    CDP_PROGRESS_MIN_STEP_PCT: 'CDP_DEV_PROGRESS_MIN_STEP_PCT',
+    CDP_PROGRESS_MAX_MESSAGES: 'CDP_DEV_PROGRESS_MAX_MESSAGES',
+    CDP_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',
+    MUVSTOK_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',
+    CDP_MUVSTOK_API_BASE: 'CDP_DEV_MUVSTOK_API_BASE',
+    CDP_API_KEY: 'CDP_DEV_API_KEY',
+    MUVSTOK_API_KEY: 'CDP_DEV_API_KEY',
+    API_KEY: 'CDP_DEV_API_KEY',
+    CDP_MUVSTOK_API_KEY: 'CDP_DEV_MUVSTOK_API_KEY',
+  };
+  return map[name] || '';
+}
+
+function envFor(name, defaultVal) {
+  if (!isDevWorkflow()) return env(name, defaultVal);
+  const mapped = devEnvName(name);
+  const value = mapped ? env(mapped, '') : '';
+  return value || defaultVal;
+}
+
 function envInt(name, defaultVal) {
-  const raw = env(name, '');
+  const raw = envFor(name, '');
   if (!raw) return defaultVal;
   const n = parseInt(raw, 10);
   return Number.isFinite(n) ? n : defaultVal;
@@ -37,16 +74,16 @@ const minStepPct = envInt('CDP_PROGRESS_MIN_STEP_PCT', 10);
 const maxMessages = envInt('CDP_PROGRESS_MAX_MESSAGES', 6);
 
 const scraperBase = trimTrailingSlashes(
-  env('CDP_SCRAPER_API_BASE', env('MUVSTOK_SCRAPER_API_BASE', ''))
+  envFor('CDP_SCRAPER_API_BASE', envFor('MUVSTOK_SCRAPER_API_BASE', ''))
 );
 const stokapiBase = trimTrailingSlashes(
-  env(
+  envFor(
     'CDP_MUVSTOK_API_BASE',
-    'https://cdp-muv-api.bravecoast-b14d791e.eastus2.azurecontainerapps.io'
+    isDevWorkflow() ? '' : 'https://cdp-muv-api.bravecoast-b14d791e.eastus2.azurecontainerapps.io'
   )
 );
-const apiKey = env('CDP_API_KEY', env('MUVSTOK_API_KEY', env('API_KEY', '')));
-const stokapiKey = env('CDP_MUVSTOK_API_KEY', apiKey);
+const apiKey = envFor('CDP_API_KEY', envFor('MUVSTOK_API_KEY', envFor('API_KEY', '')));
+const stokapiKey = envFor('CDP_MUVSTOK_API_KEY', apiKey);
 
 const runsResp = $input.first().json;
 const runs = Array.isArray(runsResp) ? runsResp : runsResp.runs || [];
@@ -58,6 +95,7 @@ if (!runs.length) {
 const out = [];
 for (const run of runs) {
   if (!run || !run.chat_id) continue;
+  if (run.progress_enabled === false) continue;
   if (Number(run.total_skus || 0) < minSkus) continue;
   if (Number(run.progress_message_count || 0) >= maxMessages) continue;
 

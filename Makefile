@@ -3,7 +3,7 @@
 	test test-all test-scraper test-stokapi \
 	lint lint-all format-all check-muvstok \
 	setup clean \
-	inject-n8n sync-n8n-prep sync-n8n \
+	inject-n8n sync-n8n-prep sync-n8n n8n-dev-workflows sync-n8n-dev import-n8n-dev \
 	smoke-cache interview-demo \
 	migrate-scraper migrate-stokapi \
 	bicep-build bicep-what-if bicep-validate \
@@ -102,6 +102,31 @@ sync-n8n-prep: inject-n8n ## Prepare workflows locally (inject only)
 
 sync-n8n: ## Inject + push to live n8n (requires user approval)
 	bash $(ROOT)scripts/sync-all-n8n.sh
+
+n8n-dev-workflows: ## Generate DEV workflow JSON copies for shared n8n
+	python3 $(ROOT)scripts/sync_workflow_code_from_shared.py
+	python3 $(ROOT)scripts/build_cdp_notifier_workflow.py
+	python3 $(ROOT)scripts/patch_receiver_notifier_handoff.py
+	python3 $(ROOT)scrapers/scripts/patch_scraper_receiver_workflow.py
+	python3 $(ROOT)muvstok-api/scripts/patch_muvstok_receiver_workflow.py
+	python3 $(ROOT)scripts/generate_dev_n8n_workflows.py
+
+sync-n8n-dev: ## Push DEV workflow copies to shared n8n (requires DEV workflow IDs)
+	N8N_TARGET=dev bash $(ROOT)scripts/sync-all-n8n.sh
+
+import-n8n-dev: ## First import of DEV workflow copies; prints CDP_DEV_* IDs
+	python3 $(ROOT)scripts/sync_workflow_code_from_shared.py
+	python3 $(ROOT)scripts/build_cdp_notifier_workflow.py
+	python3 $(ROOT)scripts/patch_receiver_notifier_handoff.py
+	python3 $(ROOT)scrapers/scripts/patch_scraper_receiver_workflow.py
+	python3 $(ROOT)muvstok-api/scripts/patch_muvstok_receiver_workflow.py
+	python3 $(ROOT)scripts/generate_dev_n8n_workflows.py --require-telegram-credential
+	@echo "CDP_DEV_ROUTER_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_router.json --publish)"
+	@echo "CDP_DEV_SCRAPER_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_scraper.json --publish)"
+	@echo "CDP_DEV_STOKAPI_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_stokapi.json --publish)"
+	@echo "CDP_DEV_PROGRESS_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_progress.json --publish)"
+	@echo "CDP_DEV_NOTIFIER_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_notifier.json --publish)"
+	@echo "CDP_DEV_NOTIFIER_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_notifier.json --publish)"
 
 # ─── Integration smoke / demos ───────────────────────────────────────────────
 smoke-cache: ## Dual-pipeline smoke (production APIs)

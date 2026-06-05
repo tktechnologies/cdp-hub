@@ -42,10 +42,11 @@ async def test_set_uses_status_ttl():
         _settings(muvstok_cache_ttl_seconds=111, muvstok_cache_ttl_not_found_seconds=22),
         redis=redis,
     )
-    await cache.set("X", "succeeded", [{"a": 1}])
+    await cache.set("X", "FOUND_PRICE", [{"price": 1}])
+    await cache.set("Z", "NO_PRICE", [{"sku": "Z"}])
     await cache.set("Y", "not_found", [])
     ttls = [call.args[1] for call in redis.setex.await_args_list]
-    assert ttls == [111, 22]
+    assert ttls == [111, 111, 22]
 
 
 async def test_set_ignores_non_cacheable_status():

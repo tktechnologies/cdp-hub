@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "DispatchRunRegistry",
-  "description": "Scraper API dispatch-run registry for dual-pipeline progress. Source: scrapers/src/models/schemas.py",
+  "description": "Scraper API dispatch-run registry for dual-pipeline progress and final notification.",
   "$defs": {
     "DispatchRunUpsertRequest": {
       "type": "object",
@@ -18,7 +18,17 @@
         "stokapi_job_id": { "type": ["string", "null"] },
         "total_skus": { "type": "integer", "minimum": 0, "default": 0 },
         "estimated_seconds": { "type": ["integer", "null"] },
-        "dispatched_at": { "type": ["string", "null"], "format": "date-time" }
+        "dispatched_at": { "type": ["string", "null"], "format": "date-time" },
+        "reply_channel": { "type": ["string", "null"] },
+        "reply_email": { "type": ["string", "null"] },
+        "command_origin": { "type": ["string", "null"] },
+        "progress_enabled": { "type": "boolean", "default": true },
+        "delivery_mode": { "type": "string", "default": "legacy" },
+        "sheet_row_numbers": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "default": []
+        }
       }
     },
     "DispatchRunResponse": {
@@ -29,10 +39,7 @@
         "batch_group_id": { "type": "string" },
         "chat_id": { "type": ["string", "null"] },
         "command_route": { "type": ["string", "null"] },
-        "scraper_job_ids": {
-          "type": "array",
-          "items": { "type": "string" }
-        },
+        "scraper_job_ids": { "type": "array", "items": { "type": "string" } },
         "stokapi_job_id": { "type": ["string", "null"] },
         "total_skus": { "type": "integer" },
         "dispatched_at": { "type": "string", "format": "date-time" },
@@ -42,7 +49,22 @@
         "last_progress_pct": { "type": "number", "default": 0 },
         "last_notified_at": { "type": ["string", "null"], "format": "date-time" },
         "progress_message_count": { "type": "integer", "default": 0 },
-        "completed_at": { "type": ["string", "null"], "format": "date-time" }
+        "completed_at": { "type": ["string", "null"], "format": "date-time" },
+        "reply_channel": { "type": ["string", "null"] },
+        "reply_email": { "type": ["string", "null"] },
+        "command_origin": { "type": ["string", "null"] },
+        "progress_enabled": { "type": "boolean" },
+        "delivery_mode": { "type": "string" },
+        "sheet_row_numbers": { "type": "array", "items": { "type": "integer" } },
+        "scraper_summary": { "type": ["object", "null"] },
+        "stokapi_summary": { "type": ["object", "null"] },
+        "scraper_completed_at": { "type": ["string", "null"], "format": "date-time" },
+        "stokapi_completed_at": { "type": ["string", "null"], "format": "date-time" },
+        "final_notification_status": { "type": ["string", "null"] },
+        "final_notified_at": { "type": ["string", "null"], "format": "date-time" },
+        "final_notification_attempts": { "type": "integer" },
+        "final_channel": { "type": ["string", "null"] },
+        "final_error": { "type": ["string", "null"] }
       }
     },
     "DispatchRunProgressUpdate": {
@@ -53,6 +75,50 @@
         "scraper_status": { "type": ["string", "null"] },
         "stokapi_status": { "type": ["string", "null"] },
         "completed_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "PipelineResultSummary": {
+      "type": "object",
+      "properties": {
+        "with_price": { "type": "integer", "minimum": 0 },
+        "no_price": { "type": "integer", "minimum": 0 },
+        "not_found": { "type": "integer", "minimum": 0 },
+        "blocked": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "integer", "minimum": 0 },
+        "duration_seconds": { "type": ["number", "null"] },
+        "status": { "type": "string" },
+        "failed_reason": { "type": ["string", "null"] }
+      }
+    },
+    "PipelineResultRequest": {
+      "type": "object",
+      "required": ["source", "status", "summary"],
+      "properties": {
+        "source": { "type": "string", "enum": ["scraper", "stokapi"] },
+        "status": { "type": "string" },
+        "summary": { "$ref": "#/$defs/PipelineResultSummary" }
+      }
+    },
+    "PipelineResultResponse": {
+      "type": "object",
+      "required": ["run_id", "batch_group_id", "source_recorded"],
+      "properties": {
+        "run_id": { "type": "string" },
+        "batch_group_id": { "type": "string" },
+        "source_recorded": { "type": "boolean" },
+        "both_terminal": { "type": "boolean" },
+        "ready_for_final": { "type": "boolean" },
+        "already_notified": { "type": "boolean" },
+        "claim": { "type": ["object", "null"] }
+      }
+    },
+    "FinalNotificationPatch": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["sent", "failed", "skipped_no_target"] },
+        "final_channel": { "type": ["string", "null"] },
+        "final_error": { "type": ["string", "null"] }
       }
     }
   }

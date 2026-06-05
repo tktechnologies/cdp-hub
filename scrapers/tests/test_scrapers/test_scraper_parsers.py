@@ -35,6 +35,12 @@ def test_gm_parses_brazilian_price() -> None:
     assert GMScraper._parse_price("R$ 1.234,56") == 1234.56
 
 
+def test_base_scraper_extracts_brazil_uf_and_cnpj() -> None:
+    assert BaseScraper.extract_brazil_uf("Macapá - AP") == "AP"
+    assert BaseScraper.extract_brazil_uf("São Paulo") == "SP"
+    assert BaseScraper.extract_cnpj_digits("CNPJ 05.788.992/0001-87") == "05788992000187"
+
+
 def test_mercado_livre_filters_used_items() -> None:
     results = MercadoLivreScraper()._filter_new_only(
         [_ml_part(ItemCondition.NEW), _ml_part(ItemCondition.USED)]
@@ -138,6 +144,31 @@ def test_mercado_livre_parses_price_from_card_text_fallback() -> None:
     price = MercadoLivreScraper._parse_card_price("", "", "", "Oferta R$ 1.234,56 à vista")
 
     assert price == 1234.56
+
+
+class _FakeMLBlockedPage:
+    def __init__(self, body: str, *, has_challenge: bool = False) -> None:
+        self._body = body
+        self._has_challenge = has_challenge
+
+    async def inner_text(self, selector: str) -> str:
+        assert selector == "body"
+        return self._body
+
+    async def query_selector(self, selector: str):
+        return object() if self._has_challenge and "challenge" in selector else None
+
+
+async def test_mercado_livre_detects_security_verification_as_blocked() -> None:
+    page = _FakeMLBlockedPage("Verificação de segurança. Por favor, tente novamente.")
+
+    assert await MercadoLivreScraper()._detect_blocked(page) is True
+
+
+async def test_mercado_livre_detects_challenge_selector_as_blocked() -> None:
+    page = _FakeMLBlockedPage("", has_challenge=True)
+
+    assert await MercadoLivreScraper()._detect_blocked(page) is True
 
 
 class _FakeLocator:

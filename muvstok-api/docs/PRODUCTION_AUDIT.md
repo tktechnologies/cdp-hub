@@ -84,7 +84,7 @@ Polls job status, prints per-SKU results and callback state.
 | **DB — job** | `muvstok_jobs` status, counts, `callback_status` | `GET /jobs/{id}` or SQL |
 | **DB — items** | 1 row per SKU, status + `last_error_code` | `muvstok_job_items` |
 | **DB — raw** | `muvstok_raw_snapshots` for succeeded SKUs | count = succeeded count |
-| **DB — normalized** | `muvstok_api_data` per SKU | `response_status` succeeded / not_found / failed |
+| **DB — normalized** | `muvstok_api_data` per SKU | `response_status` canonical result (`FOUND_PRICE`, `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`) |
 | **Callback** | `x-webhook-secret`, payload shape | n8n receiver execution **success**; `callback_deliveries` |
 | **Sheets — source** | `PROCESSADO` → processing then `✅ Processado`; `ENCONTRADO` | Visual check on sampled rows |
 | **Sheets — results** | Rows in **Detalhado** / **Historico** | `cdp_resultados` spreadsheet |
@@ -164,7 +164,7 @@ Script/API probe (5 SKUs: 2 known + 3 fake for not_found path):
 - [ ] Errors in `muvstok_errors` with `error_code` / `retryable`
 - [ ] Idempotency prevents duplicate jobs from n8n retries
 - [ ] Sheet `PROCESSADO` states match job lifecycle (no stuck `processando...` after callback)
-- [ ] Results sheet rows traceable via `id_job` = `job_id`
+- [ ] Results sheet rows traceable via canonical `job_id`
 
 ---
 

@@ -4,7 +4,9 @@ Holds the rows returned for a SKU so repeated lookups — duplicate SKUs within 
 and the same SKU across jobs within the TTL window — reuse the stored result instead
 of hitting the upstream Muvstok API again. Mirrors the scraper's 24h scrape cache.
 
-Only cacheable outcomes are stored: ``succeeded`` (rows) and ``not_found`` (empty).
+Only cacheable outcomes are stored: ``FOUND_PRICE`` / ``NO_PRICE`` (rows) and
+``NOT_FOUND`` (empty). The legacy ``not_found`` cache status is still accepted
+for backward compatibility with older Redis entries.
 Transient failures (HTTP/timeout) are never cached so they get retried next time.
 All Redis access is best-effort: any error degrades to a cache miss/no-op.
 """
@@ -24,7 +26,7 @@ from app.core.config import Settings
 logger = logging.getLogger("muvstok.sku_cache")
 
 SKU_CACHE_PREFIX = "muvstok:sku:v1:"
-CACHEABLE_STATUSES = ("succeeded", "not_found")
+CACHEABLE_STATUSES = ("succeeded", "FOUND_PRICE", "NO_PRICE", "not_found", "NOT_FOUND")
 
 
 def normalize_cache_sku(sku: str) -> str:
@@ -57,9 +59,9 @@ class SkuCache:
         return self._enabled and self._redis is not None
 
     def _ttl_for_status(self, status: str) -> int | None:
-        if status == "succeeded":
+        if status in {"succeeded", "FOUND_PRICE", "NO_PRICE"}:
             return self._settings.muvstok_cache_ttl_seconds
-        if status == "not_found":
+        if status in {"not_found", "NOT_FOUND"}:
             return self._settings.muvstok_cache_ttl_not_found_seconds
         return None
 

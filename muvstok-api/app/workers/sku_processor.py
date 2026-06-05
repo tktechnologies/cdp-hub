@@ -8,6 +8,12 @@ import httpx
 from app.clients.muvstok_client import MuvstokClient
 from app.db.models import MuvstokJobItem
 from app.domain.muvstok_api import is_auth_failure
+from app.domain.sku_result_status import (
+    SkuResultStatus,
+    SourceHealth,
+    classify_failure,
+    classify_rows,
+)
 from app.repositories.error_repository import ErrorRepository
 from app.repositories.muvstok_api_data_repository import MuvstokApiDataRepository
 from app.repositories.snapshot_repository import SnapshotRepository
@@ -23,6 +29,9 @@ class SkuProcessResult:
     error_code: str | None
     rows: list[dict[str, Any]]
     snapshot_id: UUID | None
+    sku_result: str
+    source_health: str
+    has_valid_price: bool
     duration_ms: int = 0
     from_cache: bool = False
 
@@ -35,6 +44,9 @@ class _MemoEntry:
     error_code: str | None
     rows: list[dict[str, Any]]
     snapshot_id: UUID | None
+    sku_result: str
+    source_health: str
+    has_valid_price: bool
 
 
 class SkuProcessor:
@@ -99,23 +111,33 @@ class SkuProcessor:
             if status_code == 404 or not rows:
                 await self._persist_not_found(job_id, correlation_id, item)
                 self._job_memo[cache_key] = _MemoEntry(
-                    status="failed", error_code="not_found", rows=[], snapshot_id=None
+                    status="succeeded",
+                    error_code="not_found",
+                    rows=[],
+                    snapshot_id=None,
+                    sku_result=SkuResultStatus.NOT_FOUND.value,
+                    source_health=SourceHealth.WORKING.value,
+                    has_valid_price=False,
                 )
                 if self._sku_cache is not None:
-                    await self._sku_cache.set(sku, "not_found", [])
+                    await self._sku_cache.set(sku, SkuResultStatus.NOT_FOUND.value, [])
                 return (
                     _timed(
                         SkuProcessResult(
                             sku=sku,
-                            status="failed",
+                            status="succeeded",
                             error_code="not_found",
                             rows=[],
                             snapshot_id=None,
+                            sku_result=SkuResultStatus.NOT_FOUND.value,
+                            source_health=SourceHealth.WORKING.value,
+                            has_valid_price=False,
                         )
                     ),
                     token,
                 )
 
+            sku_result, source_health, has_valid_price = classify_rows(rows)
             governance_issues = self._governance.validate_listing_rows(sku, rows)
             snapshot = await self._snapshot_repository.save_snapshot(
                 job_id=job_id,
@@ -138,6 +160,9 @@ class SkuProcessor:
                     error_code=None,
                     rows=rows,
                     snapshot_id=snapshot.id,
+                    sku_result=sku_result.value,
+                    source_health=source_health.value,
+                    has_valid_price=has_valid_price,
                 )
             )
             await self._api_data_repository.save_result(
@@ -145,57 +170,74 @@ class SkuProcessor:
                 job_item_id=item.id,
                 correlation_id=correlation_id,
                 sku=sku,
-                response_status="succeeded",
+                response_status=sku_result.value,
                 muvstok_payload={"rows": rows},
                 response_metadata={
                     "row_count": len(rows),
                     "duration_ms": result.duration_ms,
+                    "source_health": source_health.value,
+                    "sku_result": sku_result.value,
+                    "has_valid_price": has_valid_price,
                 },
             )
             self._job_memo[cache_key] = _MemoEntry(
-                status="succeeded", error_code=None, rows=rows, snapshot_id=snapshot.id
+                status="succeeded",
+                error_code=None,
+                rows=rows,
+                snapshot_id=snapshot.id,
+                sku_result=sku_result.value,
+                source_health=source_health.value,
+                has_valid_price=has_valid_price,
             )
             if self._sku_cache is not None:
-                await self._sku_cache.set(sku, "succeeded", rows)
+                await self._sku_cache.set(sku, sku_result.value, rows)
             return (result, token)
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code in (401, 403):
-                raise
+            error_code = f"http_{exc.response.status_code}"
             await self._record_failure(
                 job_id=job_id,
                 correlation_id=correlation_id,
                 item=item,
-                error_code=f"http_{exc.response.status_code}",
+                error_code=error_code,
                 message=str(exc),
             )
+            sku_result, source_health = classify_failure(error_code)
             return (
                 _timed(
                     SkuProcessResult(
                         sku=sku,
                         status="failed",
-                        error_code=f"http_{exc.response.status_code}",
+                        error_code=error_code,
                         rows=[],
                         snapshot_id=None,
+                        sku_result=sku_result.value,
+                        source_health=source_health.value,
+                        has_valid_price=False,
                     )
                 ),
                 token,
             )
         except Exception as exc:
+            error_code = type(exc).__name__
             await self._record_failure(
                 job_id=job_id,
                 correlation_id=correlation_id,
                 item=item,
-                error_code=type(exc).__name__,
+                error_code=error_code,
                 message=str(exc),
             )
+            sku_result, source_health = classify_failure(error_code)
             return (
                 _timed(
                     SkuProcessResult(
                         sku=sku,
                         status="failed",
-                        error_code=type(exc).__name__,
+                        error_code=error_code,
                         rows=[],
                         snapshot_id=None,
+                        sku_result=sku_result.value,
+                        source_health=source_health.value,
+                        has_valid_price=False,
                     )
                 ),
                 token,
@@ -209,17 +251,38 @@ class SkuProcessor:
             error_code=memo.error_code,
             rows=list(memo.rows),
             snapshot_id=memo.snapshot_id,
+            sku_result=memo.sku_result,
+            source_health=memo.source_health,
+            has_valid_price=memo.has_valid_price,
             from_cache=from_cache,
         )
 
     @staticmethod
     def _memo_from_cache(cached: CachedSku) -> _MemoEntry:
-        if cached.status == "succeeded":
+        if cached.status in {
+            "succeeded",
+            SkuResultStatus.FOUND_PRICE.value,
+            SkuResultStatus.NO_PRICE.value,
+        }:
+            sku_result, source_health, has_valid_price = classify_rows(cached.rows)
             return _MemoEntry(
-                status="succeeded", error_code=None, rows=list(cached.rows), snapshot_id=None
+                status="succeeded",
+                error_code=None,
+                rows=list(cached.rows),
+                snapshot_id=None,
+                sku_result=sku_result.value,
+                source_health=source_health.value,
+                has_valid_price=has_valid_price,
             )
-        # "not_found" is surfaced as a failed result with a not_found error code.
-        return _MemoEntry(status="failed", error_code="not_found", rows=[], snapshot_id=None)
+        return _MemoEntry(
+            status="succeeded",
+            error_code="not_found",
+            rows=[],
+            snapshot_id=None,
+            sku_result=SkuResultStatus.NOT_FOUND.value,
+            source_health=SourceHealth.WORKING.value,
+            has_valid_price=False,
+        )
 
     async def _persist_cached_result(
         self,
@@ -235,9 +298,15 @@ class SkuProcessor:
                 job_item_id=item.id,
                 correlation_id=correlation_id,
                 sku=item.sku,
-                response_status="succeeded",
+                response_status=memo.sku_result,
                 muvstok_payload={"rows": memo.rows},
-                response_metadata={"row_count": len(memo.rows), "cache_hit": True},
+                response_metadata={
+                    "row_count": len(memo.rows),
+                    "cache_hit": True,
+                    "source_health": memo.source_health,
+                    "sku_result": memo.sku_result,
+                    "has_valid_price": memo.has_valid_price,
+                },
             )
         else:
             await self._api_data_repository.save_result(
@@ -245,9 +314,15 @@ class SkuProcessor:
                 job_item_id=item.id,
                 correlation_id=correlation_id,
                 sku=item.sku,
-                response_status="not_found",
+                response_status=memo.sku_result,
                 muvstok_payload={"rows": []},
-                response_metadata={"reason": "not_found", "cache_hit": True},
+                response_metadata={
+                    "reason": memo.error_code or memo.sku_result,
+                    "cache_hit": True,
+                    "source_health": memo.source_health,
+                    "sku_result": memo.sku_result,
+                    "has_valid_price": memo.has_valid_price,
+                },
             )
 
     async def _persist_not_found(
@@ -261,9 +336,14 @@ class SkuProcessor:
             job_item_id=item.id,
             correlation_id=correlation_id,
             sku=item.sku,
-            response_status="not_found",
+            response_status=SkuResultStatus.NOT_FOUND.value,
             muvstok_payload={"rows": []},
-            response_metadata={"reason": "not_found"},
+            response_metadata={
+                "reason": "not_found",
+                "source_health": SourceHealth.WORKING.value,
+                "sku_result": SkuResultStatus.NOT_FOUND.value,
+                "has_valid_price": False,
+            },
         )
 
     async def _record_failure(
@@ -285,12 +365,17 @@ class SkuProcessor:
             message=message,
             retryable=False,
         )
+        sku_result, source_health = classify_failure(error_code)
         await self._api_data_repository.save_result(
             job_id=job_id,
             job_item_id=item.id,
             correlation_id=correlation_id,
             sku=item.sku,
-            response_status="failed",
+            response_status=sku_result.value,
             muvstok_payload={"error_code": error_code, "message": message},
-            response_metadata={},
+            response_metadata={
+                "source_health": source_health.value,
+                "sku_result": sku_result.value,
+                "has_valid_price": False,
+            },
         )

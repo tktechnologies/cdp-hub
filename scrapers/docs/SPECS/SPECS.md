@@ -65,7 +65,7 @@ Every part result must preserve:
 - price and currency
 - condition
 - availability
-- seller name when available
+- seller name, seller UF (`seller_uf`), company/legal name, and CNPJ when available
 - product URL when available
 - origin region
 - scrape timestamp

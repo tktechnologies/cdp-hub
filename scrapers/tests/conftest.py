@@ -1,24 +1,25 @@
 """Test configuration and shared fixtures."""
 
 import os
-
-os.environ["JOB_EXECUTION_BACKEND"] = "local"
-os.environ.setdefault("SCRAPE_CACHE_ENABLED", "false")
-os.environ.setdefault(
-    "DATABASE_URL",
-    f"sqlite+aiosqlite:////tmp/cdp_scraper_pytest_{os.getpid()}.db",
-)
-os.environ.setdefault(
-    "DATABASE_URL_SYNC",
-    f"sqlite:////tmp/cdp_scraper_pytest_{os.getpid()}.db",
-)
-
 from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
 import uvloop
 
-from src.models.schemas import (
+os.environ["JOB_EXECUTION_BACKEND"] = "local"
+os.environ.setdefault("SCRAPE_CACHE_ENABLED", "false")
+_test_db_path = f"/tmp/cdp_scraper_pytest_{os.getpid()}_{uuid4().hex}.db"
+os.environ.setdefault(
+    "DATABASE_URL",
+    f"sqlite+aiosqlite:///{_test_db_path}",
+)
+os.environ.setdefault(
+    "DATABASE_URL_SYNC",
+    f"sqlite:///{_test_db_path}",
+)
+
+from src.models.schemas import (  # noqa: E402
     Currency,
     ItemCondition,
     PartResult,

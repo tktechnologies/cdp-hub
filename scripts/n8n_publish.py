@@ -44,6 +44,9 @@ def _mcp_servers() -> dict:
 
 
 def mcp_auth_header() -> str:
+    header = os.environ.get("N8N_MCP_AUTH_HEADER", "").strip()
+    if header:
+        return header
     for key in ("user-n8n-mcp", "n8n-mcp"):
         env = _mcp_servers().get(key, {}).get("env", {})
         header = env.get("N8N_MCP_AUTH_HEADER", "")
@@ -53,12 +56,23 @@ def mcp_auth_header() -> str:
 
 
 def n8n_api_key() -> str:
+    api_key = os.environ.get("N8N_API_KEY", "").strip()
+    if api_key:
+        return api_key
     for key in ("user-n8n-mcp", "n8n-mcp"):
         env = _mcp_servers().get(key, {}).get("env", {})
         api_key = env.get("N8N_API_KEY", "")
         if api_key:
             return api_key
-    return os.environ.get("N8N_API_KEY", "").strip()
+    return ""
+
+
+def mcp_url() -> str:
+    return os.environ.get("N8N_MCP_URL", MCP_URL).rstrip("/")
+
+
+def n8n_api_base() -> str:
+    return os.environ.get("N8N_API_BASE", N8N_API_BASE).rstrip("/")
 
 
 def mcp_call(tool: str, arguments: dict) -> dict:
@@ -66,7 +80,7 @@ def mcp_call(tool: str, arguments: dict) -> dict:
         {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": tool, "arguments": arguments}}
     ).encode()
     req = urllib.request.Request(
-        MCP_URL,
+        mcp_url(),
         data=body,
         method="POST",
         headers={
@@ -101,7 +115,7 @@ def parse_structured(data: dict) -> dict:
 
 
 def n8n_api_request(method: str, path: str, body: dict | None = None) -> dict:
-    url = f"{N8N_API_BASE}{path}"
+    url = f"{n8n_api_base()}{path}"
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(
         url,
@@ -115,6 +129,16 @@ def n8n_api_request(method: str, path: str, body: dict | None = None) -> dict:
     )
     with urllib.request.urlopen(req, timeout=120) as resp:
         return json.loads(resp.read().decode())
+
+
+def activate_via_rest(workflow_id: str) -> None:
+    try:
+        n8n_api_request("POST", f"/workflows/{workflow_id}/activate")
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode(errors="replace")
+        if exc.code == 400 and "already active" in body.lower():
+            return
+        raise
 
 
 def validate_sdk(sdk_path: pathlib.Path) -> dict:
@@ -164,8 +188,13 @@ def push_workflow_json(
         if p.get("success"):
             print(f"publish OK version={p.get('activeVersionId')}")
         else:
-            print(f"publish note: {p.get('error', p)}", file=sys.stderr)
-            return 3
+            error = str(p.get("error", p))
+            if "not available in MCP" in error:
+                activate_via_rest(workflow_id)
+                print(f"publish fallback: activated via REST ({error})")
+            else:
+                print(f"publish note: {error}", file=sys.stderr)
+                return 3
 
     return 0
 
@@ -181,10 +210,10 @@ def main() -> int:
     args = ap.parse_args()
 
     if not n8n_api_key():
-        print("Missing N8N_API_KEY in ~/.cursor/mcp.json (user-n8n-mcp or n8n-mcp)", file=sys.stderr)
+        print("Missing N8N_API_KEY in environment or ~/.cursor/mcp.json (user-n8n-mcp or n8n-mcp)", file=sys.stderr)
         return 1
     if not mcp_auth_header():
-        print("Missing N8N_MCP_AUTH_HEADER in ~/.cursor/mcp.json", file=sys.stderr)
+        print("Missing N8N_MCP_AUTH_HEADER in environment or ~/.cursor/mcp.json", file=sys.stderr)
         return 1
 
     do_publish = args.publish or not args.no_publish
