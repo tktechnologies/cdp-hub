@@ -1,6 +1,6 @@
 # CDP dual pipeline — Router + Scraper + StokAPI
 
-**Updated:** 2026-05-27
+**Updated:** 2026-06-03
 
 ## Workflows
 
@@ -10,6 +10,10 @@
 | **cdp_scraper** | `VfBSV3WU6on8BXm8` | Webhook `scraper-result` |
 | **cdp_stokapi** | `t160mzGPYYlJcrjZ` | Webhook `muvstok-result` |
 | **cdp_progress** | _(import)_ | Scheduled proactive progress (Telegram) |
+
+Router dispatch uses n8n HTTP Request nodes for both background APIs. Code nodes
+prepare payloads only; n8n Code nodes must not make outbound HTTP requests.
+Scraper and API Diversos jobs are correlated by `batch_group_id`.
 
 ## Scraper cache (24h) — anti-bot
 
@@ -27,14 +31,36 @@ Docs: `scrapers/docs/SPECS/SCRAPE_CACHE_SPEC.md`, `scrapers/docs/SCRAPE_CACHE_OP
 
 **n8n does not pre-filter sites** — every dispatch sends full site list; the API/worker applies cache.
 
-## StokAPI cache (24h) + duplicate SKUs (2026-05-29)
+## Unique dispatch + duplicate sheet rows (2026-06-03)
 
-Both pipelines follow the same contract: **N input SKUs → N results, duplicates served from cache (one upstream call per unique SKU).**
+Router DQ normalizes and deduplicates valid SKUs before dispatch. `skus` is the
+unique dispatch list; `sheet_rows` preserves every valid source row with
+`row_number`, so duplicate `CODIGO` rows can still be marked/updated.
 
-- **Scraper:** sequential per-row processing; the 2nd occurrence of a SKU hits the 24h Redis scrape cache.
-- **StokAPI:** ingestion keeps duplicates (no dedup); the worker reuses the first occurrence via an in-job memo and a Redis per-SKU cache (`muvstok:sku:v1:`, `MUVSTOK_CACHE_TTL_SECONDS=86400` success / 6h not_found). Returns one callback result per input row.
+- **Scraper:** receives unique SKUs; 24h Redis/PostgreSQL cache still applies per
+  SKU + site.
+- **API Diversos:** receives unique SKUs; the worker still has in-job/Redis
+  per-SKU cache (`muvstok:sku:v1:`, `MUVSTOK_CACHE_TTL_SECONDS=86400` success /
+  6h not_found).
 
 Sheet writeback (`cdp_stokapi` / `cdp_scraper`) maps each unique SKU result to **all** duplicate `CODIGO` rows by `row_number`.
+
+## Result semantics (Sheets and notifications)
+
+Both receiver callbacks preserve real result meaning:
+
+- `sku_result` / `status_resultado`: `FOUND_PRICE`, `NO_PRICE`, `NOT_FOUND`,
+  `BLOCKED`, `TIMEOUT`, `ERROR`, `NOT_QUERIED`.
+- `source_health`: `WORKING`, `BLOCKED`, `TIMEOUT`, `ERROR`, `NOT_QUERIED`.
+- `has_valid_price`: true only for a usable positive price.
+- `Detalhado` seller columns: `vendedor`, `uf`, `empresa`, `cnpj`. `uf` is the
+  canonical two-letter Brazilian state output; raw `estado` aliases normalize to
+  `uf` and are not written as a sheet column.
+
+Dashboards, Telegram/email summaries, and pivots count “found” only from
+`FOUND_PRICE` + `has_valid_price=true`. A row in `Detalhado` is not success by
+itself. Blocked/captcha/403 outcomes, including Mercado Livre protection pages,
+must remain `BLOCKED` and must not be collapsed into `NOT_FOUND`.
 
 ## Commands
 

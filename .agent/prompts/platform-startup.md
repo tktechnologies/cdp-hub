@@ -10,8 +10,10 @@
 2. Read `docs/n8n/LIVE_WORKFLOWS.md` (IDs + **publish reality**) and `docs/architecture/DUAL_PIPELINE.md`.
 3. Read `docs/architecture/AGENT_ARCHITECTURE.md`, `.agent/index.md`, `.agent/rules.md`.
 4. Read `.agent/memory/implementation-state.md` — **current snapshot** at top; ignore superseded version UUIDs in changelog.
-5. Use `docs/PLATFORM_OVERVIEW.md` only for API/Azure tables.
-6. `git status --short` — never revert user changes.
+5. For Sheets/callback/reporting work, read `.agent/rules/google-sheets.md` and `.agent/knowledge/google-sheets-reporting.md`: `FOUND_PRICE` + `has_valid_price=true` is the only found-price success; row existence in `Detalhado` is not success; blocked/captcha/403 is `BLOCKED`, not `NOT_FOUND`.
+   Detalhado seller metadata is `vendedor`, `uf`, `empresa`, `cnpj`; `estado` is input-alias only.
+6. Use `docs/PLATFORM_OVERVIEW.md` only for API/Azure tables.
+7. `git status --short` — never revert user changes.
 
 ## Classify the task
 
@@ -19,7 +21,7 @@
 |--------|------|
 | `n8n/src`, `.analisar`, sync all workflows | Platform → `n8n-router-sync` skill |
 | Playwright, scrape cache, Celery | Scraper → `scrapers/AGENTS.md` |
-| Muvstok jobs, Redis Streams worker | StokAPI → `muvstok-api/AGENTS.md` |
+| API Diversos/StokAPI jobs, Redis Streams worker | StokAPI → `muvstok-api/AGENTS.md` |
 | Only `cdp_scraper.json` flatten logic | Scraper service |
 | Only `cdp_stokapi.json` | StokAPI service |
 

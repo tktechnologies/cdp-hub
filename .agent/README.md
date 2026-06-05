@@ -11,6 +11,7 @@
 | [rules.md](rules.md) | Non-negotiable platform rules |
 | [rules/](rules/) | Task-scoped rule summaries for platform, services, n8n, Python, contracts, infra |
 | [knowledge/](knowledge/) | Cross-service ownership and workspace sync maps |
+| [knowledge/google-sheets-reporting.md](knowledge/google-sheets-reporting.md) | Sheets KPI definitions, formula rules, pivots, dashboard UX |
 | [memory/implementation-state.md](memory/implementation-state.md) | Live workflow IDs, cross-service snapshot |
 | [references/monorepo-map.md](references/monorepo-map.md) | Directory map |
 
@@ -34,6 +35,7 @@
 |-------|------|
 | [skills/n8n-router-sync/SKILL.md](skills/n8n-router-sync/SKILL.md) | Edit router, inject, `make sync-n8n` |
 | [skills/dual-pipeline-change/SKILL.md](skills/dual-pipeline-change/SKILL.md) | `.analisar` / `.sku` behavior |
+| [skills/google-sheets-dashboard/SKILL.md](skills/google-sheets-dashboard/SKILL.md) | Google Sheets dashboards, formulas, pivots, reports |
 
 ## Service workspaces (Tier 2)
 
@@ -53,3 +55,4 @@
 ## Prompts
 
 - [prompts/platform-startup.md](prompts/platform-startup.md) — monorepo / router sessions
+- [prompts/maintenance/google-sheets.md](prompts/maintenance/google-sheets.md) — Sheets reporting sessions

@@ -9,7 +9,7 @@ Does the task touch n8n/src, cdp_router dispatch, or all 3 workflows?
   YES → Stay here (platform tier)
   NO  → Is it scraper code/cache/Playwright?
           YES → scrapers/.agent/index.md
-          NO  → Is it StokAPI/worker/Muvstok?
+          NO  → Is it API Diversos/StokAPI worker or receiver work?
                   YES → muvstok-api/.agent/index.md
 ```
 
@@ -29,11 +29,14 @@ Does the task touch n8n/src, cdp_router dispatch, or all 3 workflows?
 |------|----------------|
 | Edit router, inject, sync/publish n8n | [skills/n8n-router-sync/SKILL.md](skills/n8n-router-sync/SKILL.md) |
 | Change `.analisar` / `.sku` / dual behavior | [skills/dual-pipeline-change/SKILL.md](skills/dual-pipeline-change/SKILL.md) |
+| Google Sheets dashboards, formulas, pivots, reports | [skills/google-sheets-dashboard/SKILL.md](skills/google-sheets-dashboard/SKILL.md) |
 | Understand n8n + API + scraper ownership | [knowledge/service-catalog.md](knowledge/service-catalog.md) |
 | Keep root and service `.agent` docs aligned | [knowledge/workspace-sync.md](knowledge/workspace-sync.md) |
 | Task-scoped rules (platform, n8n, Python, contracts, infra) | [rules/README.md](rules/README.md) |
 | Progress visibility (`.status`, `cdp_progress`, dispatch-runs API) | [memory/implementation-state.md](memory/implementation-state.md) |
 | n8n release checklist | [workflows/cdp/n8n-release-checklist.md](workflows/cdp/n8n-release-checklist.md) |
+| DEV vs PROD setup and daily workflow | [../docs/ENVIRONMENTS.md](../docs/ENVIRONMENTS.md) |
+| Promote DEV → production | [workflows/cdp/promote-dev-to-prod.md](workflows/cdp/promote-dev-to-prod.md) |
 | **New Cursor chat (copy-paste)** | [prompts/new-chat.md](prompts/new-chat.md) |
 | Fresh platform chat (agents) | [prompts/platform-startup.md](prompts/platform-startup.md) |
 | Maintenance prompts (by type) | [prompts/maintenance/README.md](prompts/maintenance/README.md) |

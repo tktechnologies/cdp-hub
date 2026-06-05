@@ -30,10 +30,13 @@ Use this skill to build the worker pipeline without losing resumability, durable
 4. Fetch or refresh token through the auth and Key Vault boundary.
 5. Call Muvstok through `MuvstokClient`.
 6. Persist raw snapshots before finalizing SKU success.
-7. Record normalized errors for failures.
-8. Derive final job status from SKU counts and callback outcome.
-9. Ack Redis only after durable terminal or resumable state.
-10. Update implementation state and known issues as placeholders become real.
+7. Classify result semantics separately from processing status:
+   `FOUND_PRICE`, `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`, or
+   `NOT_QUERIED`; set `has_valid_price=true` only for positive usable sale price.
+8. Record normalized errors for failures.
+9. Derive final job status from SKU counts and callback outcome.
+10. Ack Redis only after durable terminal or resumable state.
+11. Update implementation state and known issues as placeholders become real.
 
 ## Validation
 
@@ -46,4 +49,8 @@ Use this skill to build the worker pipeline without losing resumability, durable
 
 - Worker restart must be able to resume from PostgreSQL state.
 - Callback failure does not invalidate raw stored data.
+- `status=succeeded` is worker lifecycle only; callback/reporting success requires
+  `sku_result=FOUND_PRICE` and `has_valid_price=true`.
+- Receiver/sheet seller fields are `uf`, `empresa`, `cnpj` after `vendedor`;
+  normalize any upstream `estado` aliases to `uf`.
 - Do not expand to parallel SKU processing without explicit business approval.

@@ -3,13 +3,15 @@
 | Document | Purpose |
 |----------|---------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | **Canonical** platform design (services, dual pipeline, n8n, agents) |
+| [ENVIRONMENTS.md](ENVIRONMENTS.md) | **DEV vs PRODUCTION** — daily workflow, first-time DEV setup, checklists |
 | [SETUP.md](SETUP.md) | Local dev quick start |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Change workflow, gates, n8n rules |
 | [PLATFORM_OVERVIEW.md](PLATFORM_OVERVIEW.md) | Detailed reference (API tables, Azure, progress) |
 | [MAINTENANCE.md](MAINTENANCE.md) | Cross-service maintenance |
 | [architecture/AGENT_ARCHITECTURE.md](architecture/AGENT_ARCHITECTURE.md) | Three-tier AI agent model |
 | [architecture/DUAL_PIPELINE.md](architecture/DUAL_PIPELINE.md) | `.analisar` / `.sku` behavior |
-| [decisions/](decisions/) | Architecture decision records (ADR-0001 … ADR-0005) |
+| [decisions/](decisions/) | Architecture decision records (ADR-0001 … ADR-0006) |
+| [decisions/ADR-0006-dev-production-environments.md](decisions/ADR-0006-dev-production-environments.md) | DEV vs production environments (shared n8n, DEV workflow copies) |
 | [n8n/LIVE_WORKFLOWS.md](n8n/LIVE_WORKFLOWS.md) | Production workflow IDs |
 | [n8n/WORKFLOW_GUIDE.md](n8n/WORKFLOW_GUIDE.md) | Edit, sync, publish workflows |
 | [n8n/DATA_CONTRACTS.md](n8n/DATA_CONTRACTS.md) | Scraper result field semantics (Sheets) |

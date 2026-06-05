@@ -9,7 +9,7 @@ implementation guidance.
 |---------|------|-------------|------|-------|
 | n8n platform | `n8n/` | [n8n/AGENTS.md](../../n8n/AGENTS.md) -> [.agent/boundaries/n8n.md](../boundaries/n8n.md) | `cdp_router`, shared router Code, workflow sync/publish | `python3 scripts/sync_workflow_code_from_shared.py`; `make sync-n8n` only with approval |
 | Scraper | `scrapers/` | [scrapers/AGENTS.md](../../scrapers/AGENTS.md) -> [scrapers/.agent/index.md](../../scrapers/.agent/index.md) | FastAPI scrape jobs, Celery, Playwright, cache, `cdp_scraper` receiver | `make -C scrapers test lint` |
-| API Diversos | `muvstok-api/` | [muvstok-api/AGENTS.md](../../muvstok-api/AGENTS.md) -> [muvstok-api/.agent/index.md](../../muvstok-api/.agent/index.md) | Muvstok jobs, Redis Streams worker, PostgreSQL ingestion, `cdp_stokapi` receiver | `make check-muvstok`; service `uv` checks |
+| API Diversos | `muvstok-api/` | [muvstok-api/AGENTS.md](../../muvstok-api/AGENTS.md) -> [muvstok-api/.agent/index.md](../../muvstok-api/.agent/index.md) | StokAPI jobs, Redis Streams worker, PostgreSQL ingestion, `cdp_stokapi` receiver | `make check-muvstok`; service `uv` checks |
 
 ## Runtime Flow
 
@@ -20,7 +20,8 @@ Telegram/Gmail/Schedule
   -> API Diversos POST /api/v1/muvstok/jobs
   -> workers process independently
   -> callbacks to scraper-result and muvstok-result webhooks
-  -> sheets + Telegram/email notifications
+  -> receivers write sheets; POST handoff to cdp-notifier
+  -> cdp_notifier sends one aggregate final Telegram/email (delivery_mode: aggregate)
 ```
 
 ## Boundaries
@@ -34,12 +35,29 @@ Telegram/Gmail/Schedule
 - Live workflow IDs belong to [docs/n8n/LIVE_WORKFLOWS.md](../../docs/n8n/LIVE_WORKFLOWS.md)
   and [.agent/memory/implementation-state.md](../memory/implementation-state.md).
 
+## Reporting Contract
+
+- Both Scraper and API Diversos callbacks must distinguish:
+  `FOUND_PRICE`, `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`, and
+  `NOT_QUERIED`.
+- `has_valid_price` is the only price-found success flag for Sheets, Telegram,
+  dashboards, pivots, and reports.
+- Mercado Livre / protected-site captcha, anti-bot, 403, or access-denied pages
+  are `BLOCKED`, not `NOT_FOUND`.
+- Receivers write `status_resultado`, `source_health`, and `has_valid_price` into
+  `Detalhado`; formulas must not infer success from row existence.
+- `Detalhado` seller/location metadata is canonical as `vendedor`, `uf`,
+  `empresa`, `cnpj`. Never write `estado`; normalize raw `estado`/state-name
+  aliases into two-letter `uf`.
+
 ## Naming
 
 - "Scraper" means the public site scraping service in `scrapers/`.
 - "API Diversos" is the user-facing name for `muvstok-api/`.
-- "StokAPI" may still appear in internal file names, routes, tables, and
-  workflow IDs.
+- "StokAPI" is the technical service/API name for API Diversos.
+- "muvstok" is compatibility-only in routes, webhooks, env vars, Redis keys,
+  DB tables, file paths, and historical/deprecated identifiers. Do not use it in
+  Sheets dashboards, Telegram copy, legends, or business reports.
 
 ## Delegation
 

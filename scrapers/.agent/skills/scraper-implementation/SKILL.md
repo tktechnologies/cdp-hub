@@ -16,6 +16,8 @@ Use when adding a new supplier scraper or improving an existing one.
 3. Keep browser automation resilient: stable selectors, meaningful waits, no fixed sleeps except throttling.
 4. Credentials in `src/config.py`, never inline.
 5. Return complete `PartResult` objects.
+   - Populate `seller_uf`, `seller_company_name`, and `seller_cnpj` best-effort
+     when visible; use blank strings when unavailable.
 6. Apply business rules: exact SKU match, ML new-only, Mercedes EU transform, correct currency/origin.
 7. Register in `SCRAPER_REGISTRY` only when production-ready.
 8. Add tests: success, no result, failure/edge paths.
@@ -29,7 +31,11 @@ uv run pytest tests/test_scrapers/test_registry.py -v
 
 ## Done When
 
-- Scraper returns `success`, `not_found`, and `error` consistently.
+- Scraper returns canonical outcomes consistently:
+  `FOUND_PRICE`, `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`,
+  `NOT_QUERIED`.
+- `FOUND_PRICE` requires exact match and positive usable price; blocked/captcha
+  pages are `BLOCKED`, not `NOT_FOUND`.
 - Exact match tested.
 - Credentials configured through settings.
 - Registry and default site lists correct.

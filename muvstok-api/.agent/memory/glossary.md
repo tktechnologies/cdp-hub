@@ -10,5 +10,12 @@
 - Muvstok: upstream service queried for SKU data.
 - Queue message: lightweight Redis Stream record carrying job identifiers, not the full SKU list.
 - SKU item: one SKU within a job, tracked independently in PostgreSQL.
+- SKU result: business/search outcome for one SKU, separate from processing
+  lifecycle. Values: `FOUND_PRICE`, `NO_PRICE`, `NOT_FOUND`, `BLOCKED`,
+  `TIMEOUT`, `ERROR`, `NOT_QUERIED`.
+- Source health: source availability/quality outcome for one lookup. Values:
+  `OK`/`WORKING`, `BLOCKED`, `TIMEOUT`, `ERROR`, `NOT_QUERIED`.
+- Valid price: positive usable sale price. `has_valid_price=true` is required
+  for found-price reporting.
 - Snapshot: raw Muvstok JSONB response and related request/response metadata.
 - Worker: background process that consumes Redis job messages and processes SKUs.

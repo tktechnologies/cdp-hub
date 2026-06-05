@@ -13,6 +13,7 @@ For cross-service ownership, start with [../knowledge/service-catalog.md](../kno
 |------|------------|
 | [platform.md](platform.md) | Whole-monorepo and cross-service work |
 | [n8n.md](n8n.md) | `n8n/**`, router Code, workflow JSON |
+| [google-sheets.md](google-sheets.md) | Google Sheets, dashboards, formulas, reports, pivots, `.xlsx` exports |
 | [scraper.md](scraper.md) | `scrapers/**` |
 | [stokapi.md](stokapi.md) | `muvstok-api/**` |
 | [python.md](python.md) | Python service code |

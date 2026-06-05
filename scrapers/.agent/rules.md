@@ -19,6 +19,16 @@ Scraper Tier 2 rules. For platform-wide n8n rules see `../../.agent/boundaries/n
 - Public models: `src/models/schemas.py`; persistence: `src/models/database.py`.
 - Required result fields per `docs/SCRAPER_FIELD_GUIDE.md` and `src/models/schemas.py`.
 - Exact SKU match after normalization; EU/Mercedes trim; ML new items only.
+- Callback reporting fields are `sku_result`, `source_health`, and
+  `has_valid_price`.
+- Seller/location reporting fields are `seller_uf`, `seller_company_name`, and
+  `seller_cnpj`; Google Sheets output columns are `uf`, `empresa`, `cnpj`.
+  `estado` is not a canonical output field.
+- `FOUND_PRICE` requires exact SKU match plus positive usable price.
+  `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`, and `NOT_QUERIED`
+  remain separate outcomes and are not found-price successes.
+- Anti-bot/captcha/403/access-denied pages, especially Mercado Livre, are
+  `BLOCKED`, not `NOT_FOUND`.
 
 ## Engineering
 

@@ -1,6 +1,6 @@
 # Scraper implementation state
 
-Last reviewed: 2026-06-02. **Handoff source of truth:** `docs/MAINTENANCE_CHECKPOINT.md`.
+Last reviewed: 2026-06-03. **Handoff source of truth:** `docs/MAINTENANCE_CHECKPOINT.md`.
 
 ## Stack
 
@@ -44,6 +44,17 @@ Router Code source: monorepo `n8n/src/` (not `n8n/shared/dual_dispatch/`).
 ## Dual pipeline
 
 Router dispatches Scraper + StokAPI in parallel. Scraper arm uses `force_refresh: false`. Platform doc: `docs/architecture/DUAL_PIPELINE.md`.
+
+## Result semantics (2026-06-03)
+
+- Callback/reporting fields: `sku_result`, `source_health`, `has_valid_price`.
+- Seller fields: `seller_uf`, `seller_company_name`, `seller_cnpj`; receiver
+  output columns are `uf`, `empresa`, `cnpj` after `vendedor`.
+- `FOUND_PRICE` requires exact SKU match plus positive usable price.
+- `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`, and `NOT_QUERIED`
+  are not found-price successes.
+- Mercado Livre captcha/anti-bot/403/access-denied pages should be emitted as
+  `BLOCKED`, not `NOT_FOUND`.
 
 ## Before deploy
 

@@ -73,7 +73,8 @@ Details: [architecture/DUAL_PIPELINE.md](architecture/DUAL_PIPELINE.md).
 | `cdp_router` | `6id6dkinK9xTLfsb` | `n8n/workflows/cdp_router.json` | Triggers |
 | `cdp_scraper` | `VfBSV3WU6on8BXm8` | `n8n/workflows/cdp_scraper.json` | `scraper-result` |
 | `cdp_stokapi` | `t160mzGPYYlJcrjZ` | `n8n/workflows/cdp_stokapi.json` | `muvstok-result` |
-| `cdp_progress` | _(import)_ | `n8n/workflows/cdp_progress.json` | Schedule |
+| `cdp_progress` | `V9I6o32XDoPIRarz` | `n8n/workflows/cdp_progress.json` | Schedule |
+| `cdp_notifier` | `ennI9nKin9ruPaLO` | `n8n/workflows/cdp_notifier.json` | `cdp-notifier` (aggregate final notification) |
 
 Sync: `python3 scripts/sync_workflow_code_from_shared.py` → `make sync-n8n` (user approval for publish). Live IDs: [n8n/LIVE_WORKFLOWS.md](n8n/LIVE_WORKFLOWS.md).
 
