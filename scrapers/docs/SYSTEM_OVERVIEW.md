@@ -251,6 +251,9 @@ erDiagram
     string condition
     string availability
     string seller_name
+    string seller_uf
+    string seller_company_name
+    string seller_cnpj
     text product_url
     string origin
     text raw_title

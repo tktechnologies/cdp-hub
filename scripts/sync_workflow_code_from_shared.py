@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
+import uuid
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SHARED = ROOT / "n8n" / "src"
@@ -18,6 +19,7 @@ NODE_FILES = {
     "📤 Router: Muvstok": "router_stokapi.js",
     "📤 Router: StokAPI": "router_stokapi.js",
     "📤 Router: API Diversos": "router_stokapi.js",
+    "❌ Formatar Erro de Despacho": "router_error_scraper.js",
     "📋 Formatar erro Muvstok": "router_error_stokapi.js",
     "📋 Formatar erro StokAPI": "router_error_stokapi.js",
     "📋 Formatar erro API Diversos": "router_error_stokapi.js",
@@ -29,6 +31,7 @@ NODE_FILES = {
     "📊 Formatar Status": "router_status.js",
     "📊 Progress: preparar runs": "progress_poll.js",
     "📊 Progress: formatar": "progress_format.js",
+    "💾 Salvar Contexto do Solicitante": "router_save_context.js",
 }
 
 RENAME_NODES = {
@@ -51,6 +54,16 @@ PARAMETER_PATCHES = {
     "🚀 POST → Scraper API (/jobs)": {
         "url": "={{ $json.api_jobs_url }}",
         "header:X-API-Key": "={{ $json.api_key }}",
+        "jsonBody": (
+            "={{ JSON.stringify({ items: $json.items, sites: $json.sites, "
+            "callback_url: $json.callback_url, priority: $json.priority || 5, "
+            "force_refresh: $json.force_refresh === true, "
+            "batch_group_id: $json.batch_group_id, "
+            "chat_id: $json.reply_channel === 'telegram' ? $json.chat_id : undefined, "
+            "command_route: $json.command_route, metadata: $json.metadata, "
+            "reply_channel: $json.reply_channel, command_origin: $json.command_origin, "
+            "reply_email: $json.reply_email, notify: $json.notify }) }}"
+        ),
     },
     "🚀 POST API Diversos": {
         "header:X-API-Key": "={{ $json.api_key }}",
@@ -67,6 +80,9 @@ PARAMETER_PATCHES = {
     },
     "📧 Enviar Alerta de Erro": {
         "sendTo": "={{ $json.email_from || '' }}",
+    },
+    "📧 Confirmar Planilha (Email)": {
+        "options": {"appendAttribution": False},
     },
 }
 
@@ -116,6 +132,121 @@ def patch_router_processado_node(node: dict) -> None:
     )
 
 
+def new_id() -> str:
+    return str(uuid.uuid4())
+
+
+def find_node(nodes: list[dict], name: str) -> dict | None:
+    return next((node for node in nodes if node.get("name") == name), None)
+
+
+def ensure_code_node(nodes: list[dict], name: str, position: list[int], notes: str) -> None:
+    node = find_node(nodes, name)
+    if node is None:
+        nodes.append(
+            {
+                "parameters": {"jsCode": "", "mode": "runOnceForAllItems"},
+                "id": new_id(),
+                "name": name,
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": position,
+                "notes": notes,
+            }
+        )
+        return
+    node["type"] = "n8n-nodes-base.code"
+    node["typeVersion"] = node.get("typeVersion", 2)
+    node.setdefault("parameters", {})["mode"] = "runOnceForAllItems"
+    node["position"] = node.get("position") or position
+    node["notes"] = notes
+
+
+def ensure_post_dispatch_runs_node(nodes: list[dict]) -> None:
+    name = "📋 POST dispatch-runs"
+    node = find_node(nodes, name)
+    if node is None:
+        node = {
+            "parameters": {},
+            "id": new_id(),
+            "name": name,
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [2448, 2528],
+            "continueOnFail": True,
+        }
+        nodes.append(node)
+    node["parameters"] = {
+        "method": "POST",
+        "url": "={{ $json.dispatch_runs_url }}",
+        "sendHeaders": True,
+        "headerParameters": {
+            "parameters": [
+                {"name": "Content-Type", "value": "application/json"},
+                {"name": "X-API-Key", "value": "={{ $json.dispatch_runs_api_key }}"},
+            ]
+        },
+        "sendBody": True,
+        "specifyBody": "json",
+        "jsonBody": (
+            "={{ JSON.stringify({ batch_group_id: $json.batch_group_id, "
+            "chat_id: $json.chat_id, command_route: $json.command_route, "
+            "scraper_job_ids: $json.scraper_job_ids, stokapi_job_id: $json.stokapi_job_id, "
+            "total_skus: $json.total_skus, estimated_seconds: $json.estimated_seconds, "
+            "dispatched_at: $json.dispatched_at, reply_channel: $json.reply_channel, "
+            "reply_email: $json.reply_email, command_origin: $json.command_origin, "
+            "progress_enabled: $json.progress_enabled, delivery_mode: $json.delivery_mode, "
+            "sheet_row_numbers: $json.sheet_row_numbers }) }}"
+        ),
+        "options": {"timeout": 15000},
+    }
+    node["continueOnFail"] = True
+
+
+def link(node: str, index: int = 0) -> dict:
+    return {"node": node, "type": "main", "index": index}
+
+
+def patch_router_http_dispatch(wf: dict, workflow_name: str) -> None:
+    if workflow_name != "cdp_router":
+        return
+
+    nodes = wf.setdefault("nodes", [])
+    conns = wf.setdefault("connections", {})
+
+    wf["nodes"] = [node for node in nodes if node.get("name") != "🚀 Dispatch paralelo"]
+    nodes = wf["nodes"]
+    ensure_post_dispatch_runs_node(nodes)
+
+    conns["🎲 Limitar SKUs"] = {
+        "main": [
+            [
+                link("📤 Router: API Diversos"),
+                link("⚙️ Formatar Payload Scraper"),
+                link("📋 Formatar Confirmação (Planilha)"),
+            ]
+        ]
+    }
+    conns.pop("🚀 Dispatch paralelo", None)
+    conns["✅ API OK?"] = {
+        "main": [[link("🔗 Emparelhar SKUs → PROCESSADO"), link("📊 Registrar Execução")], [link("❌ Formatar Erro de Despacho")]]
+    }
+    conns["📦 API Diversos job aceito?"] = {
+        "main": [[link("📊 Registrar Execução")], [link("📋 Formatar erro API Diversos")]]
+    }
+    conns["📊 Registrar Execução"] = {
+        "main": [[link("📋 POST dispatch-runs")]]
+    }
+
+    for node in nodes:
+        if node.get("name") in {
+            "🚀 POST → Scraper API (/jobs)",
+            "🚀 POST API Diversos",
+            "📧 Enviar Alerta de Erro",
+        }:
+            node["continueOnFail"] = True
+
+
 def set_header_value(parameters: dict, header_name: str, value: str) -> None:
     headers = parameters.setdefault("headerParameters", {}).setdefault("parameters", [])
     for header in headers:
@@ -146,6 +277,8 @@ def patch_workflow(path: pathlib.Path) -> None:
         old_name = node.get("name", "")
         if old_name in name_map:
             node["name"] = name_map[old_name]
+
+    patch_router_http_dispatch(wf, workflow_name)
 
     for node in wf.get("nodes", []):
         name = node.get("name", "")

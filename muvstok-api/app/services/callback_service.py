@@ -8,6 +8,7 @@ import httpx
 from app.clients.callback_client import CallbackClient
 from app.core.config import Settings
 from app.domain.job_status import CallbackStatus, JobStatus
+from app.domain.sku_result_status import SkuResultStatus
 from app.repositories.callback_repository import CallbackRepository
 from app.schemas.callbacks import CallbackJobItem, MuvstokCallbackPayload
 from app.services.governance_service import GovernanceService
@@ -152,12 +153,24 @@ class CallbackService:
     ) -> MuvstokCallbackPayload:
         succeeded = sum(1 for row in sku_results if row.status == "succeeded")
         failed = sum(1 for row in sku_results if row.status != "succeeded")
+        found = sum(1 for row in sku_results if row.sku_result == SkuResultStatus.FOUND_PRICE.value)
+        no_price = sum(1 for row in sku_results if row.sku_result == SkuResultStatus.NO_PRICE.value)
+        not_found = sum(1 for row in sku_results if row.sku_result == SkuResultStatus.NOT_FOUND.value)
+        blocked = sum(1 for row in sku_results if row.sku_result == SkuResultStatus.BLOCKED.value)
+        error = sum(
+            1
+            for row in sku_results
+            if row.sku_result in {SkuResultStatus.ERROR.value, SkuResultStatus.TIMEOUT.value}
+        )
         items = [
             CallbackJobItem(
                 sku=row.sku,
                 status=row.status,
                 snapshot_id=row.snapshot_id,
                 error_code=row.error_code,
+                sku_result=row.sku_result,
+                source_health=row.source_health,
+                has_valid_price=row.has_valid_price,
             )
             for row in sku_results
         ]
@@ -165,8 +178,12 @@ class CallbackService:
             {
                 "sku": row.sku,
                 "status": row.status,
+                "sku_result": row.sku_result,
+                "source_health": row.source_health,
+                "has_valid_price": row.has_valid_price,
                 "rows": row.rows or [],
                 "duration_ms": row.duration_ms,
+                "error_code": row.error_code,
             }
             for row in sku_results
         ]
@@ -181,6 +198,11 @@ class CallbackService:
             submitted_sku_count=submitted_sku_count,
             succeeded_sku_count=succeeded,
             failed_sku_count=failed,
+            found_sku_count=found,
+            no_price_sku_count=no_price,
+            not_found_sku_count=not_found,
+            blocked_sku_count=blocked,
+            error_sku_count=error,
             items=items,
             results=results,
             metadata=metadata,

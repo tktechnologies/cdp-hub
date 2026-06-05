@@ -7,7 +7,7 @@ const CDP_SITE_LABEL = 'API Diversos';
 const CDP_ORIGEM_LABEL = 'API Diversos';
 
 /**
- * tipoEstoque codes written to sheet column melibox_tipo (and titulo_bruto suffix).
+ * tipoEstoque codes used in titulo_bruto suffix.
  * NEW=0, VIVO=1, DORMENTE=2, MORTO=3, ESCRAPE=4
  */
 const STOCK_TYPE_CODE_BY_NAME = {
@@ -152,6 +152,142 @@ function branchLabel(row) {
   ).trim();
 }
 
+function companyLabel(row) {
+  return String(
+    pickField(
+      row,
+      'razaoSocial',
+      'razaosocial',
+      'razao_social',
+      'nomeEmpresa',
+      'nomeempresa',
+      'empresa',
+      'company_name',
+      'seller_company_name',
+      'nomeFornecedor',
+      'nomefornecedor',
+      'fornecedor',
+      'nomeLoja',
+      'nomeloja',
+      'loja',
+      'nomeFilial',
+      'nomefilial',
+      'branch_name',
+      'apelidoFilial',
+      'apelidofilial'
+    ) || ''
+  ).trim();
+}
+
+const BRAZIL_STATE_UF = {
+  acre: 'AC',
+  alagoas: 'AL',
+  amapa: 'AP',
+  amazonas: 'AM',
+  bahia: 'BA',
+  ceara: 'CE',
+  'distrito federal': 'DF',
+  'espirito santo': 'ES',
+  goias: 'GO',
+  maranhao: 'MA',
+  'mato grosso': 'MT',
+  'mato grosso do sul': 'MS',
+  'minas gerais': 'MG',
+  para: 'PA',
+  paraiba: 'PB',
+  parana: 'PR',
+  pernambuco: 'PE',
+  piaui: 'PI',
+  'rio de janeiro': 'RJ',
+  'rio grande do norte': 'RN',
+  'rio grande do sul': 'RS',
+  rondonia: 'RO',
+  roraima: 'RR',
+  'santa catarina': 'SC',
+  'sao paulo': 'SP',
+  sergipe: 'SE',
+  tocantins: 'TO',
+};
+const BRAZIL_UFS = new Set(Object.values(BRAZIL_STATE_UF));
+
+function normalizeTextKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function normalizeUf(value) {
+  const text = String(value || '').trim().toUpperCase();
+  if (BRAZIL_UFS.has(text)) return text;
+  const normalized = normalizeTextKey(value);
+  if (BRAZIL_STATE_UF[normalized]) return BRAZIL_STATE_UF[normalized];
+  const match = normalized
+    .toUpperCase()
+    .match(/\b(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/);
+  if (match) return match[1];
+  for (const [state, uf] of Object.entries(BRAZIL_STATE_UF)) {
+    if (normalized.includes(state)) return uf;
+  }
+  return '';
+}
+
+function sellerUf(row) {
+  return normalizeUf(
+    pickField(
+      row,
+      'uf',
+      'UF',
+      'estado',
+      'Estado',
+      'seller_uf',
+      'seller_state',
+      'state',
+      'ufFilial',
+      'uffilial',
+      'estadoFilial',
+      'estadofilial',
+      'localizacao',
+      'localização',
+      'location',
+      'cidade',
+      'municipio',
+      'município',
+      'endereco',
+      'endereço'
+    ) || ''
+  );
+}
+
+function normalizeCnpj(value) {
+  const text = String(value || '');
+  const match = text.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+  if (!match) return '';
+  const digits = match[0].replace(/\D/g, '');
+  return digits.length === 14 ? digits : '';
+}
+
+function cnpjFromRow(row) {
+  return normalizeCnpj(
+    pickField(
+      row,
+      'cnpj',
+      'CNPJ',
+      'seller_cnpj',
+      'cnpjFilial',
+      'cnpjfilial',
+      'cnpjEmpresa',
+      'cnpjempresa',
+      'cnpjFornecedor',
+      'cnpjfornecedor',
+      'documento',
+      'document',
+      'tax_id'
+    ) || ''
+  );
+}
+
 function brandLabel(row) {
   return String(
     pickField(row, 'fabricante', 'montadora', 'automaker', 'marca', 'brand') || ''
@@ -237,4 +373,93 @@ function bestOfferFromListings(listings) {
     }
   }
   return { bestPrice, bestSite };
+}
+
+function normalizeResultStatus(value, rows) {
+  const raw = String(value || '').trim().toUpperCase();
+  if (
+    raw === 'FOUND_PRICE' ||
+    raw === 'NO_PRICE' ||
+    raw === 'NOT_FOUND' ||
+    raw === 'BLOCKED' ||
+    raw === 'TIMEOUT' ||
+    raw === 'ERROR' ||
+    raw === 'NOT_QUERIED'
+  ) {
+    return raw;
+  }
+  const lower = String(value || '').trim().toLowerCase();
+  if (lower.includes('blocked') || lower.includes('captcha') || lower.includes('403')) return 'BLOCKED';
+  if (lower.includes('timeout')) return 'TIMEOUT';
+  if (lower.includes('error') || lower.includes('failed') || lower.includes('http_')) return 'ERROR';
+  if (lower.includes('not_found') || lower.includes('not found') || lower.includes('no_results')) return 'NOT_FOUND';
+  if (lower.includes('no_price') || lower.includes('sem_preco')) return 'NO_PRICE';
+  const arr = Array.isArray(rows) ? rows : [];
+  if (!arr.length) return 'NOT_FOUND';
+  return hasValidPrice(rows) ? 'FOUND_PRICE' : 'NO_PRICE';
+}
+
+function normalizeSourceHealth(value, skuResult) {
+  const raw = String(value || skuResult?.source_health || '').trim().toUpperCase();
+  if (raw === 'OK' || raw === 'WORKING') return 'WORKING';
+  if (raw === 'BLOCKED' || raw === 'TIMEOUT' || raw === 'ERROR' || raw === 'NOT_QUERIED') return raw;
+  const result = normalizeResultStatus(skuResult?.sku_result || skuResult?.status || '', skuResult?.rows);
+  if (result === 'BLOCKED' || result === 'TIMEOUT' || result === 'ERROR' || result === 'NOT_QUERIED') {
+    return result;
+  }
+  return 'WORKING';
+}
+
+function hasValidPrice(rows) {
+  return rowsForPricing(rows).some((row) => salePriceFromRow(row) !== null);
+}
+
+function sheetStatusForResult(resultStatus, hasPrice) {
+  const raw = String(resultStatus || '').trim().toUpperCase();
+  const lower = String(resultStatus || '').trim().toLowerCase();
+  const status = normalizeResultStatus(resultStatus, []);
+  const explicitNegative =
+    raw === 'NO_PRICE' ||
+    raw === 'NOT_FOUND' ||
+    raw === 'BLOCKED' ||
+    raw === 'TIMEOUT' ||
+    raw === 'ERROR' ||
+    raw === 'NOT_QUERIED' ||
+    lower.includes('no_price') ||
+    lower.includes('sem_preco') ||
+    lower.includes('not_found') ||
+    lower.includes('not found') ||
+    lower.includes('blocked') ||
+    lower.includes('captcha') ||
+    lower.includes('timeout') ||
+    lower.includes('error') ||
+    lower.includes('failed') ||
+    lower.includes('http_');
+  if (status === 'FOUND_PRICE' || (hasPrice && !explicitNegative)) return '✅ Encontrado';
+  if (status === 'NO_PRICE') return '⚠️ Sem preço';
+  if (status === 'BLOCKED') return '🚫 Bloqueado';
+  if (status === 'TIMEOUT' || status === 'ERROR') return '⚠️ Erro';
+  return '❌ Não encontrado';
+}
+
+function availabilityForResult(resultStatus, stock) {
+  const status = normalizeResultStatus(resultStatus, []);
+  if (status === 'FOUND_PRICE') return toAvailabilityPt(stock);
+  if (status === 'NO_PRICE') return 'sem_preco';
+  if (status === 'BLOCKED') return 'bloqueado';
+  if (status === 'TIMEOUT') return 'timeout';
+  if (status === 'ERROR') return 'erro';
+  if (status === 'NOT_QUERIED') return 'sem_resultados';
+  return 'nao_encontrado';
+}
+
+function rawTitleForResult(resultStatus, fallback) {
+  const status = normalizeResultStatus(resultStatus, []);
+  const message = String(fallback || status || '').trim();
+  if (status === 'BLOCKED') return 'BLOQUEADO: ' + (message || 'API Diversos bloqueado');
+  if (status === 'TIMEOUT') return 'TIMEOUT: ' + (message || 'API Diversos timeout');
+  if (status === 'ERROR') return 'ERRO: ' + (message || 'API Diversos erro');
+  if (status === 'NO_PRICE') return 'SEM_PRECO: ' + (message || 'API Diversos sem preço');
+  if (status === 'NOT_FOUND') return 'NOT_FOUND';
+  return message || status;
 }

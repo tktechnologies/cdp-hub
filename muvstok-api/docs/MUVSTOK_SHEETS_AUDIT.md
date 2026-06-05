@@ -1,6 +1,6 @@
 # API Diversos Google Sheets audit
 
-**Updated:** 2026-05-26
+**Updated:** 2026-06-03
 
 Spreadsheet: [cdp_resultados](https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit)
 
@@ -25,7 +25,7 @@ Filter API Diversos rows: `codigo_site = api-diversos` or `origem = API Diversos
 
 | Sheet column | Source | Notes |
 |--------------|--------|--------|
-| `id_job` | callback `job_id` | |
+| `job_id` | callback `job_id` | canonical sheet column; legacy `id_job` normalizes here |
 | `sku_pesquisado` | requested SKU | uppercase |
 | `sku_encontrado` | row `sku` / `skuSemCaractereEspecial` | |
 | `correspondencia_exata` | SIM/NAO | |
@@ -35,6 +35,9 @@ Filter API Diversos rows: `codigo_site = api-diversos` or `origem = API Diversos
 | `moeda` | `BRL` | |
 | `disponibilidade` | `em_estoque` / `fora_de_estoque` | `qtdeEstoque` (+ aliases) |
 | `vendedor` | `nomeFilial` / `apelidoFilial` | |
+| `uf` | `uf`, raw `estado`, state name, or location aliases | two-letter Brazilian UF; canonical output column |
+| `empresa` | `razaoSocial`, `nomeEmpresa`, company aliases; fallback `nomeFilial` | |
+| `cnpj` | `cnpj`, `cnpjFilial`, company/document aliases | normalized 14 digits; blank when unavailable |
 | `url_produto` | *(empty)* | API Diversos has no public product URL |
 | `origem` | `Brasil` | |
 | `titulo_bruto` | `produto` + `[tipo code]` | see stock type codes below |
@@ -44,10 +47,22 @@ Filter API Diversos rows: `codigo_site = api-diversos` or `origem = API Diversos
 | `duracao_job_s` | `duration_seconds` or timestamp fallback | |
 | `marca` | `fabricante` / `montadora` | |
 | `codigo_site` | `api-diversos` | filter key |
-| `melibox_tipo` | **stock type code** (0–4) | was text `vivo`/`morto`; see below |
-| `melibox_*` (other) | `N/A` | schema parity with scraper tab |
+| `status_resultado` | callback `sku_result` | `FOUND_PRICE`, `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`, `NOT_QUERIED` |
+| `source_health` | callback `source_health` | `WORKING`/`OK`, `BLOCKED`, `TIMEOUT`, `ERROR`, `NOT_QUERIED` |
+| `has_valid_price` | normalized price classifier | `TRUE` only when a positive usable sale price exists |
 
-## Stock type codes (`melibox_tipo` / `titulo_bruto`)
+## Result semantics (2026-06-03)
+
+- `status=succeeded` means the worker completed the SKU lookup; it is not a
+  found-price result by itself.
+- `FOUND_PRICE` + `has_valid_price = TRUE` is the only success signal for
+  dashboards, Telegram, and report metrics.
+- `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`, `NOT_QUERIED`, `N/A`,
+  and `SEM_DADOS` are never counted as found.
+- `BLOCKED` is separate from `NOT_FOUND`. Keep block/access failures visible in
+  `source_health` and `status_resultado`.
+
+## Stock type codes in `titulo_bruto`
 
 | Code | Meaning |
 |------|---------|
@@ -57,14 +72,16 @@ Filter API Diversos rows: `codigo_site = api-diversos` or `origem = API Diversos
 | `3` | MORTO |
 | `4` | ESCRAPE |
 
-API may send numeric codes or names (`Vivo`, `Morto`, …); n8n normalizes to `0`–`4`.
+API may send numeric codes or names (`Vivo`, `Morto`, …). n8n may append the
+normalized `0`–`4` code to `titulo_bruto`, but it does not write separate
+`melibox_*` columns to **Detalhado**.
 
 ## Column mapping (Resumo)
 
 | Sheet column | Source |
 |--------------|--------|
 | `CODIGO` | SKU |
-| `STATUS` | ✅ / ⚠️ / ❌ from listings + sale price |
+| `STATUS` | ✅ / ⚠️ / ❌ from canonical `sku_result` + `has_valid_price` |
 | `MELHOR PREÇO` | lowest `valorPrecoVenda` across in-stock rows |
 | `SITE` | branch of best offer |
 | `LINK` | *(empty)* |
@@ -76,16 +93,33 @@ API may send numeric codes or names (`Vivo`, `Morto`, …); n8n normalizes to `0
 - **Detalhado:** both `preco` (venda) and `preco-medio` (custo médio) on every row when API returns values.
 - **Resumo:** `MELHOR PREÇO` = minimum **sale** price (`valorPrecoVenda`) only.
 - Rows need `qtdeEstoque >= 1` for in-stock filter; `rowsForPricing` may include rows with either price when nothing is in stock.
+- Price metrics and found counts must filter `has_valid_price = TRUE`.
 
 ## Sheet schema migration
 
-Add header `preco-medio` on **Detalhado** (after `preco`):
+Ensure the **Detalhado** header row matches receiver output:
+`job_id`, `preco-medio`, `vendedor`, `uf`, `empresa`, `cnpj`, `url_produto`,
+`codigo_site`, `status_resultado`, `source_health`, and `has_valid_price`.
+
+The schema helper inserts missing columns structurally so existing data shifts
+with its original headers. It normalizes legacy `id_job` to `job_id` and legacy
+`estado` to `uf`; if both canonical and legacy headers exist, the legacy header
+is renamed with a `_legacy` suffix instead of being deleted. Legacy `melibox_*`
+columns are removed because they are not part of the clean reporting schema.
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
-pip install google-api-python-client google-auth
-python3 scripts/ensure_google_sheets_schema.py --dry-run
-python3 scripts/ensure_google_sheets_schema.py
+uv run --with google-api-python-client --with google-auth \
+  python scripts/ensure_google_sheets_schema.py --dry-run
+uv run --with google-api-python-client --with google-auth \
+  python scripts/ensure_google_sheets_schema.py
+```
+
+For the local exported workbook:
+
+```bash
+python3 scripts/migrate_cdp_resultados_xlsx.py --dry-run
+python3 scripts/migrate_cdp_resultados_xlsx.py
 ```
 
 Legacy branding (`muvstok` labels):

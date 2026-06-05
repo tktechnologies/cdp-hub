@@ -17,10 +17,68 @@
         "properties": {
           "sku": { "type": "string" },
           "brand": { "type": "string" },
-          "site_results": { "type": "array" },
+          "site_results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "site": { "type": "string" },
+                "site_name": { "type": "string" },
+                "status": { "type": "string" },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "sku_searched": { "type": "string" },
+                      "sku_found": { "type": "string" },
+                      "exact_match": { "type": "boolean" },
+                      "site": { "type": "string" },
+                      "site_name": { "type": "string" },
+                      "price": { "type": ["number", "null"] },
+                      "currency": { "type": "string" },
+                      "condition": { "type": "string" },
+                      "availability": { "type": "string" },
+                      "seller_name": { "type": "string" },
+                      "seller_uf": { "type": "string" },
+                      "seller_company_name": { "type": "string" },
+                      "seller_cnpj": { "type": "string" },
+                      "product_url": { "type": "string" },
+                      "origin": { "type": "string" },
+                      "raw_title": { "type": "string" },
+                      "scraped_at": { "type": "string", "format": "date-time" }
+                    },
+                    "additionalProperties": true
+                  }
+                },
+                "search_time_ms": { "type": "integer", "minimum": 0 },
+                "cache_hit": { "type": "boolean" }
+              },
+              "additionalProperties": true
+            }
+          },
           "total_results": { "type": "integer", "minimum": 0 },
           "cache_hits": { "type": "integer", "minimum": 0 },
-          "live_scrapes": { "type": "integer", "minimum": 0 }
+          "live_scrapes": { "type": "integer", "minimum": 0 },
+          "sku_result": {
+            "type": "string",
+            "enum": [
+              "FOUND_PRICE",
+              "NO_PRICE",
+              "NOT_FOUND",
+              "BLOCKED",
+              "TIMEOUT",
+              "ERROR",
+              "NOT_QUERIED"
+            ]
+          },
+          "has_valid_price": { "type": "boolean" },
+          "has_priced_exact": { "type": "boolean" },
+          "has_any_exact_evidence": { "type": "boolean" },
+          "priced_result_count": { "type": "integer", "minimum": 0 },
+          "no_price_site_count": { "type": "integer", "minimum": 0 },
+          "blocked_site_count": { "type": "integer", "minimum": 0 },
+          "error_site_count": { "type": "integer", "minimum": 0 }
         }
       }
     },
@@ -37,7 +95,12 @@
     "sku_success_count": { "type": "integer", "minimum": 0 },
     "sku_any_hit_pct": { "type": "number", "minimum": 0 },
     "all_sites_not_found_count": { "type": "integer", "minimum": 0 },
-    "warning_messages": { "type": "array", "items": { "type": "string" } }
+    "warning_messages": { "type": "array", "items": { "type": "string" } },
+    "priced_sku_count": { "type": "integer", "minimum": 0 },
+    "any_evidence_sku_count": { "type": "integer", "minimum": 0 },
+    "no_price_sku_count": { "type": "integer", "minimum": 0 },
+    "blocked_sku_count": { "type": "integer", "minimum": 0 },
+    "error_sku_count": { "type": "integer", "minimum": 0 }
   },
   "additionalProperties": true
 }

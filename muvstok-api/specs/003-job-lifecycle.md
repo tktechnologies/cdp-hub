@@ -19,6 +19,28 @@
 - `retrying`
 - `skipped`
 
+`succeeded` is a processing lifecycle state. It does not mean the SKU had a
+price. Price/result semantics live in the canonical result fields:
+
+- `sku_result`: `FOUND_PRICE`, `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`,
+  `ERROR`, `NOT_QUERIED`.
+- `source_health`: `OK`/`WORKING`, `BLOCKED`, `TIMEOUT`, `ERROR`,
+  `NOT_QUERIED`.
+- `has_valid_price`: true only for a positive usable sale price.
+
+Examples:
+
+- Upstream returns rows with sale price -> item `status=succeeded`,
+  `sku_result=FOUND_PRICE`, `has_valid_price=true`.
+- Upstream returns rows/evidence without sale price -> item `status=succeeded`,
+  `sku_result=NO_PRICE`, `has_valid_price=false`.
+- Upstream returns 404/no rows -> item `status=succeeded`,
+  `sku_result=NOT_FOUND`, `has_valid_price=false`.
+- Upstream blocks/denies access -> item `status=failed` or callback error item,
+  `sku_result=BLOCKED`, `source_health=BLOCKED`.
+- Sheet receivers write seller metadata as `vendedor`, `uf`, `empresa`, `cnpj`.
+  Raw `estado` aliases are accepted only to normalize into `uf`.
+
 ## Rules
 
 - Workers process SKUs sequentially inside a job.

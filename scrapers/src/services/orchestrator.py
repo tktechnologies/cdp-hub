@@ -20,6 +20,8 @@ from src.models.schemas import (
     SiteResult,
     SKUItem,
     SKUResult,
+    SKUResultStatus,
+    SourceHealth,
 )
 from src.scrapers import get_scraper
 from src.services.result_formatter import _find_best_price
@@ -49,14 +51,30 @@ class Orchestrator:
         total = job.total_items or len(job.results)
 
         def has_result_evidence(result: SKUResult) -> bool:
-            if result.total_results > 0:
-                return True
-            return any(
-                site_result.status.lower() in {"success", "no_price"}
-                for site_result in result.site_results
-            )
+            return result.has_any_exact_evidence
 
-        successful = sum(1 for result in job.results if has_result_evidence(result))
+        def has_priced_result(result: SKUResult) -> bool:
+            return result.has_valid_price
+
+        priced = sum(1 for result in job.results if has_priced_result(result))
+        evidence = sum(1 for result in job.results if has_result_evidence(result))
+        no_price = sum(
+            1
+            for result in job.results
+            if result.sku_result == SKUResultStatus.NO_PRICE
+        )
+        blocked = sum(
+            1
+            for result in job.results
+            if result.blocked_site_count > 0
+            and result.sku_result != SKUResultStatus.FOUND_PRICE
+        )
+        errored = sum(
+            1
+            for result in job.results
+            if result.error_site_count > 0
+            and result.sku_result not in (SKUResultStatus.FOUND_PRICE, SKUResultStatus.NO_PRICE)
+        )
         all_sites_not_found = 0
         warning_messages: list[str] = []
 
@@ -70,16 +88,27 @@ class Orchestrator:
 
             for site_result in site_results:
                 status = site_result.status.lower()
-                if status in {"blocked", "timeout", "error"}:
+                if site_result.source_health in {
+                    SourceHealth.BLOCKED,
+                    SourceHealth.TIMEOUT,
+                    SourceHealth.ERROR,
+                }:
                     message = site_result.error_message or status
                     warning_messages.append(
                         f"{result.sku} / {site_result.site_name}: {message}"
                     )
 
-        job.sku_success_count = successful
-        job.sku_any_hit_pct = (successful / total * 100) if total else 0
+        # Legacy fields stay populated for existing progress consumers. New reporting
+        # fields below are the source of truth for "found price" dashboards.
+        job.sku_success_count = evidence
+        job.sku_any_hit_pct = (evidence / total * 100) if total else 0
         job.all_sites_not_found_count = all_sites_not_found
         job.warning_messages = warning_messages
+        job.priced_sku_count = priced
+        job.any_evidence_sku_count = evidence
+        job.no_price_sku_count = no_price
+        job.blocked_sku_count = blocked
+        job.error_sku_count = errored
 
     async def submit_job(self, request: ScrapeJobRequest) -> ScrapeJobResponse:
         """Create and queue a new scraping job."""
@@ -323,6 +352,9 @@ class Orchestrator:
                                 condition=part.condition.value,
                                 availability=part.availability,
                                 seller_name=part.seller_name,
+                                seller_uf=part.seller_uf,
+                                seller_company_name=part.seller_company_name,
+                                seller_cnpj=part.seller_cnpj,
                                 product_url=part.product_url,
                                 origin=part.origin,
                                 raw_title=part.raw_title,
@@ -551,6 +583,9 @@ class Orchestrator:
                     condition=ItemCondition(db_part.condition),
                     availability=db_part.availability,
                     seller_name=db_part.seller_name,
+                    seller_uf=db_part.seller_uf or "",
+                    seller_company_name=db_part.seller_company_name or "",
+                    seller_cnpj=db_part.seller_cnpj or "",
                     product_url=db_part.product_url,
                     origin=db_part.origin,
                     scraped_at=db_part.scraped_at,

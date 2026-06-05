@@ -101,7 +101,8 @@ Every scraper must return `SiteResult` containing `PartResult` records with:
 - `sku_searched`, `sku_found`, and `exact_match`
 - `site`, `site_name`, `price`, `currency`
 - `condition`, `availability`, `origin`
-- `seller_name`, `product_url`, `raw_title`, `scraped_at`
+- `seller_name`, `seller_uf`, `seller_company_name`, `seller_cnpj`,
+  `product_url`, `raw_title`, `scraped_at`
 
 Exact SKU matching is the spine of the system. If a marketplace gives a nice
 price but the title does not contain the exact normalized SKU, keep it visible
@@ -302,7 +303,9 @@ Latest demo:
 
 Agent moves:
 - Build fixtures from known positive marketplace cards.
-- Preserve seller/location when present; they matter for operations.
+- Preserve seller/location when present; they matter for operations. Use
+  `seller_uf` for the two-letter Brazilian UF, not `seller_state`; Sheets
+  flatten this to `uf` after `vendedor`.
 - Do not default unknown condition to new.
 - Only follow same-site `/produto/` links. Never treat pagination, social,
   WhatsApp, or footer links as product pages.

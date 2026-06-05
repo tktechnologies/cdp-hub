@@ -334,6 +334,9 @@ class GMScraper(BaseScraper):
                     condition=ItemCondition.NEW,
                     availability=dealer.get("availability", availability),
                     seller_name=dealer.get("name", "Chevrolet (official)"),
+                    seller_uf=dealer.get("uf", ""),
+                    seller_company_name=dealer.get("company_name", ""),
+                    seller_cnpj=dealer.get("cnpj", ""),
                     product_url=product_url,
                     origin="Brasil",
                     raw_title=title,
@@ -353,6 +356,7 @@ class GMScraper(BaseScraper):
                 condition=ItemCondition.NEW,
                 availability=availability,
                 seller_name="Chevrolet (official)",
+                seller_company_name="Chevrolet (official)",
                 product_url=product_url,
                 origin="Brasil",
                 raw_title=title,
@@ -383,6 +387,9 @@ class GMScraper(BaseScraper):
                 const priceText = priceEl ? priceEl.textContent.trim() : '';
                 const fallbackPrice = text.match(/Preço\\s*\\(R\\$\\)\\s*:\\s*([\\d.,]+)/i);
                 if (!priceText && !fallbackPrice) continue;
+                const cnpjMatch = text.match(
+                    /\\d{2}\\.?\\d{3}\\.?\\d{3}\\/?\\d{4}-?\\d{2}/
+                );
 
                 dealers.push({
                     name: nameEl ? nameEl.textContent.trim() : '',
@@ -390,6 +397,7 @@ class GMScraper(BaseScraper):
                     distance: distanceEl ? distanceEl.textContent.trim() : '',
                     price: priceText || fallbackPrice[1],
                     availability: text.includes('COMPRAR') ? 'Disponível' : 'unknown',
+                    cnpj: cnpjMatch ? cnpjMatch[0] : '',
                 });
             }
 
@@ -427,11 +435,15 @@ class GMScraper(BaseScraper):
                         '[class*="stock"], [class*="availability"], [class*="estoque"]'
                     );
                     const availability = availEl ? availEl.textContent.trim() : 'unknown';
+                    const cnpjMatch = text.match(
+                        /\\d{2}\\.?\\d{3}\\.?\\d{3}\\/?\\d{4}-?\\d{2}/
+                    );
 
                     dealers.push({
                         name: name.substring(0, 200),
                         price: priceMatch[1],
                         availability: availability.substring(0, 100),
+                        cnpj: cnpjMatch ? cnpjMatch[0] : '',
                     });
                 }
                 if (dealers.length > 0) break;  // Use first matching strategy
@@ -452,10 +464,14 @@ class GMScraper(BaseScraper):
                     const nameMatch = parentText.match(
                         /(?:vendido por|loja|seller|concession[áa]ria)[:\\s]*([^\\n]{3,50})/i
                     );
+                    const cnpjMatch = parentText.match(
+                        /\\d{2}\\.?\\d{3}\\.?\\d{3}\\/?\\d{4}-?\\d{2}/
+                    );
                     dealers.push({
                         name: nameMatch ? nameMatch[1].trim() : '',
                         price: priceMatch[1],
                         availability: 'unknown',
+                        cnpj: cnpjMatch ? cnpjMatch[0] : '',
                     });
                 }
             }
@@ -472,8 +488,12 @@ class GMScraper(BaseScraper):
                     d.get("city", ""),
                     d.get("distance", ""),
                 ]
+                location_text = " ".join(part for part in name_parts if part)
                 parsed.append({
                     "name": " - ".join(part for part in name_parts if part),
+                    "company_name": d.get("name", ""),
+                    "uf": self.extract_brazil_uf(location_text),
+                    "cnpj": self.extract_cnpj_digits(d.get("cnpj", "")),
                     "price": price,
                     "availability": d.get("availability", "unknown"),
                 })

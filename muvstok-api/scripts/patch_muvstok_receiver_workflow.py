@@ -19,11 +19,14 @@ LISTING_ROW_FN = r"""function listingRow(sku, row, statusItem, searchTimeMs) {
   const skuFound = na(pickField(row, 'sku', 'SKU', 'skuSemCaractereEspecial') || sku);
   const stock = pickField(row, 'qtdeEstoque', 'qtdEstoque', 'stock_quantity');
   const filial = branchLabel(row);
+  const empresa = companyLabel(row) || filial || 'N/A';
   const saleStr = naSalePriceFromRow(row);
   const costStr = naCostPriceFromRow(row);
-  const tipoCode = stockTypeCode(row);
   const ms = Number(searchTimeMs);
-  const encontrado = saleStr ? '✅ Encontrado' : '⚠️ Sem preço';
+  const resultStatus = saleStr ? 'FOUND_PRICE' : normalizeResultStatus(statusItem || 'NO_PRICE', [row]);
+  const health = normalizeSourceHealth('', { sku_result: resultStatus });
+  const hasPrice = saleStr !== '';
+  const encontrado = sheetStatusForResult(resultStatus, hasPrice);
   return {
     job_id: jobId,
     sku_searched: skuSearched,
@@ -33,23 +36,23 @@ LISTING_ROW_FN = r"""function listingRow(sku, row, statusItem, searchTimeMs) {
     price: saleStr,
     preco_medio: costStr,
     currency: 'BRL',
-    availability: toAvailabilityPt(stock),
+    availability: availabilityForResult(resultStatus, stock),
     seller: filial || 'N/A',
+    uf: sellerUf(row),
+    empresa: empresa,
+    cnpj: cnpjFromRow(row),
     product_url: productUrlForSheet(skuSearched, row),
     origin: 'Brasil',
-    raw_title: productTitle(row) || na(statusItem),
+    raw_title: productTitle(row) || rawTitleForResult(resultStatus, statusItem),
     scraped_at: completedAt,
     search_time_ms: String(Number.isFinite(ms) && ms >= 0 ? Math.round(ms) : 0),
     condition: 'novo',
     job_duration_s: String(jobDuration),
     brand: brandLabel(row) || 'N/A',
     site_code: CDP_SITE_CODE,
-    melibox_posicao: 'N/A',
-    melibox_tipo: tipoCode !== '' ? tipoCode : 'N/A',
-    melibox_oferta_pct: 'N/A',
-    melibox_envio: 'N/A',
-    melibox_frete: 'N/A',
-    melibox_pagina: 'N/A',
+    status_resultado: resultStatus,
+    source_health: health,
+    has_valid_price: hasPrice,
     _encontrado: encontrado,
   };
 }"""
@@ -119,7 +122,7 @@ DETALHADO_PATCHES: list[tuple[str, str]] = [
     ),
     (
         "site: 'API Diversos',\n        price: 'N/A',\n        currency: 'BRL',\n        availability: 'nao_encontrado',\n        seller: 'N/A',\n        product_url: buildDemandUrl(sku),",
-        "site: CDP_SITE_LABEL,\n        price: 'N/A',\n        currency: 'BRL',\n        availability: 'nao_encontrado',\n        seller: 'N/A',\n        product_url: productUrlForSheet(sku, null),",
+        "site: CDP_SITE_LABEL,\n        price: 'N/A',\n        currency: 'BRL',\n        availability: 'nao_encontrado',\n        seller: 'N/A',\n        uf: '',\n        empresa: 'N/A',\n        cnpj: '',\n        product_url: productUrlForSheet(sku, null),",
     ),
     (
         "product_url: buildContactInfo(skuSearched, row),",
@@ -148,6 +151,39 @@ DETALHADO_PATCHES: list[tuple[str, str]] = [
     ),
 ]
 
+DETALHADO_COLUMN_EXPRESSIONS: dict[str, str] = {
+    "job_id": "={{ $json.job_id }}",
+    "sku_pesquisado": "={{ $json.sku_searched }}",
+    "sku_encontrado": "={{ $json.sku_found }}",
+    "correspondencia_exata": "={{ $json.exact_match }}",
+    "site": "={{ $json.site }}",
+    "preco": "={{ $json.price }}",
+    "preco-medio": "={{ $json.preco_medio }}",
+    "moeda": "={{ $json.currency }}",
+    "disponibilidade": "={{ $json.availability }}",
+    "vendedor": "={{ $json.seller }}",
+    "uf": "={{ $json.uf }}",
+    "empresa": "={{ $json.empresa }}",
+    "cnpj": "={{ $json.cnpj }}",
+    "url_produto": "={{ $json.product_url }}",
+    "origem": "={{ $json.origin }}",
+    "titulo_bruto": "={{ $json.raw_title }}",
+    "coletado_em": "={{ $json.scraped_at }}",
+    "tempo_busca_ms": "={{ $json.search_time_ms }}",
+    "condicao": "={{ $json.condition }}",
+    "duracao_job_s": "={{ $json.job_duration_s }}",
+    "marca": "={{ $json.brand }}",
+    "codigo_site": "={{ $json.site_code }}",
+    "status_resultado": "={{ $json.status_resultado }}",
+    "source_health": "={{ $json.source_health }}",
+    "has_valid_price": "={{ $json.has_valid_price }}",
+}
+
+DETALHADO_COLUMN_ALIASES = {
+    "id_job": "job_id",
+    "estado": "uf",
+}
+
 RESUMO_PATCHES: list[tuple[str, str]] = [
     ("LINK: 'N/A',", "LINK: '',"),
     (
@@ -162,20 +198,17 @@ RESUMO_PUSH_FN = r"""function pushResumo(out, sku, listings, st, skuResult) {
   const offer = bestOfferFromListings(listings);
   const bestPrice = offer.bestPrice;
   const bestSite = offer.bestSite;
-  const statusLower = String(st || '').toLowerCase();
-  const apiOk = statusLower === 'succeeded' || statusLower === 'success';
-  const hasListings = rowsForPricing(listings).length > 0;
-  const found = hasListings || apiOk;
-  let status = '❌ Não encontrado';
-  if (found && bestPrice !== null) status = '✅ Encontrado';
-  else if (found) status = '⚠️ Sem preço';
+  const resultStatus = normalizeResultStatus(skuResult?.sku_result || st, listings);
+  const hasPrice = Boolean(skuResult?.has_valid_price) || bestPrice !== null;
+  const status = sheetStatusForResult(resultStatus, hasPrice);
   const melhor = formatResumoPreco(bestPrice);
+  const foundOrNoPrice = resultStatus === 'FOUND_PRICE' || resultStatus === 'NO_PRICE';
   out.push({
     json: {
       CODIGO: skuStr,
       STATUS: status,
       MELHOR_PRECO: melhor,
-      SITE: bestSite || (found ? CDP_SITE_LABEL : 'N/A'),
+      SITE: bestSite || (foundOrNoPrice ? CDP_SITE_LABEL : 'N/A'),
       LINK: '',
       DATA: new Date().toLocaleDateString('pt-BR'),
     },
@@ -193,6 +226,10 @@ MAPEAR_ID = "2576a2a9-eed8-4b69-a4aa-bc81e629aeb4"
 HISTORICO_NAME = "📊 Construir Historico API Diversos"
 ATUALIZAR_NAME = "✅ Atualizar CDP_SKUs"
 SKUS_PARA_ATUALIZAR_NAME = "📋 SKUs para atualizar"
+FORMATAR_NOTIFICACAO_NAME = "📣 Formatar Telegram"
+ENVIAR_TELEGRAM_IF_NAME = "Enviar Telegram?"
+ENVIAR_EMAIL_IF_NAME = "Enviar Email?"
+EMAIL_NODE_NAME = "📧 Email API Diversos"
 
 LER_LINHAS_NOTES = (
     "Reads SKUs rows (CODIGO + row_number) so duplicate CODIGO rows can each be marked "
@@ -258,6 +295,10 @@ def _clone(obj):
     return json.loads(json.dumps(obj))
 
 
+def _link(node: str, index: int = 0) -> dict:
+    return {"node": node, "type": "main", "index": index}
+
+
 def patch_rownum_pipeline(wf: dict) -> None:
     """Insert read → remap nodes between Historico and ✅ Atualizar CDP_SKUs (idempotent)."""
     nodes = wf["nodes"]
@@ -313,6 +354,101 @@ def patch_rownum_pipeline(wf: dict) -> None:
 
     conns[LER_LINHAS_NAME] = {"main": [[{"node": MAPEAR_NAME, "type": "main", "index": 0}]]}
     conns[MAPEAR_NAME] = {"main": [[{"node": ATUALIZAR_NAME, "type": "main", "index": 0}]]}
+
+
+def patch_same_channel_notification(wf: dict) -> None:
+    nodes = wf["nodes"]
+    by_name = {n["name"]: n for n in nodes}
+
+    tg_if = by_name.get(ENVIAR_TELEGRAM_IF_NAME)
+    if tg_if:
+        tg_if["parameters"] = {
+            "conditions": {
+                "options": {
+                    "caseSensitive": True,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 1,
+                },
+                "conditions": [
+                    {
+                        "id": "send-tg",
+                        "leftValue": (
+                            "={{ $json.notify === 'telegram' && !$json.skip && "
+                            "!!$json.telegram_chat_id }}"
+                        ),
+                        "rightValue": True,
+                        "operator": {"type": "boolean", "operation": "true"},
+                    }
+                ],
+                "combinator": "and",
+            },
+            "options": {},
+        }
+
+    email_if = {
+        "id": "5bd70964-cd6c-41b8-9f35-api-email-if",
+        "name": ENVIAR_EMAIL_IF_NAME,
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [624, 720],
+        "parameters": {
+            "conditions": {
+                "options": {
+                    "caseSensitive": True,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 1,
+                },
+                "conditions": [
+                    {
+                        "id": "send-email",
+                        "leftValue": (
+                            "={{ $json.notify === 'email' && !$json.skip && "
+                            "!!$json.email_to }}"
+                        ),
+                        "rightValue": True,
+                        "operator": {"type": "boolean", "operation": "true"},
+                    }
+                ],
+                "combinator": "and",
+            },
+            "options": {},
+        },
+    }
+    email_node = {
+        "id": "f52ddaa8-0f28-4fc1-api-diversos-email",
+        "name": EMAIL_NODE_NAME,
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.2,
+        "position": [848, 720],
+        "parameters": {
+            "sendTo": "={{ $json.email_to }}",
+            "subject": "={{ $json.email_subject }}",
+            "message": "={{ $json.email_html }}",
+            "options": {"appendAttribution": False},
+        },
+        "credentials": {
+            "gmailOAuth2": {
+                "id": "rQesNRyarukVs0N4",
+                "name": "gmail lucas@tktech",
+            }
+        },
+        "continueOnFail": True,
+    }
+
+    for new_node in (email_if, email_node):
+        if new_node["name"] in by_name:
+            nodes[nodes.index(by_name[new_node["name"]])] = new_node
+        else:
+            nodes.append(new_node)
+
+    conns = wf["connections"]
+    conns[FORMATAR_NOTIFICACAO_NAME] = {
+        "main": [[_link(ENVIAR_TELEGRAM_IF_NAME), _link(ENVIAR_EMAIL_IF_NAME)]]
+    }
+    conns[ENVIAR_TELEGRAM_IF_NAME] = {"main": [[_link("📱 Telegram")], []]}
+    conns[ENVIAR_EMAIL_IF_NAME] = {"main": [[_link(EMAIL_NODE_NAME)], []]}
 
 
 # Inline duplicates injected before patch cleanup — shadow pickField-based helpers.
@@ -375,6 +511,37 @@ def replace_function(code: str, name: str, new_body: str) -> str:
 def patch_detalhado(code: str, helpers: str) -> str:
     code = inject_helpers(code, helpers)
     code = strip_shadowed_helpers(code)
+    code = code.replace(
+        "const chatId = String(meta.chat_id || q.chat_id || readEnv('TELEGRAM_DEFAULT_CHAT_ID') || '').trim();\n"
+        "const notify = String(meta.notify || q.notify || (chatId ? 'telegram' : 'none')).toLowerCase();",
+        "let chatId = String(meta.chat_id || q.chat_id || '').trim();\n"
+        "let replyEmail = String(meta.reply_email || q.reply_email || '').trim();\n"
+        "let replyChannel = String(meta.reply_channel || q.reply_channel || meta.command_origin || q.command_origin || '').trim().toLowerCase();\n"
+        "let commandOrigin = String(meta.command_origin || q.command_origin || '').trim().toLowerCase();\n"
+        "let notify = String(meta.notify || q.notify || '').trim().toLowerCase();\n"
+        "if (!replyChannel) {\n"
+        "  if (notify === 'email' || replyEmail) replyChannel = 'email';\n"
+        "  else if (notify === 'telegram' || chatId) replyChannel = 'telegram';\n"
+        "}\n"
+        "if (!commandOrigin && replyChannel) commandOrigin = replyChannel;\n"
+        "if (replyChannel === 'email') {\n"
+        "  notify = 'email';\n"
+        "  commandOrigin = 'email';\n"
+        "  chatId = '';\n"
+        "} else if (replyChannel === 'telegram') {\n"
+        "  notify = 'telegram';\n"
+        "  commandOrigin = 'telegram';\n"
+        "  replyEmail = '';\n"
+        "} else if (!chatId && !replyEmail) {\n"
+        "  chatId = readEnv('TELEGRAM_DEFAULT_CHAT_ID');\n"
+        "  if (chatId) {\n"
+        "    notify = 'telegram';\n"
+        "    replyChannel = 'telegram';\n"
+        "    commandOrigin = commandOrigin || 'telegram';\n"
+        "  }\n"
+        "}\n"
+        "if (!notify) notify = chatId ? 'telegram' : replyEmail ? 'email' : 'none';",
+    )
     code = replace_function(code, "listingRow", LISTING_ROW_FN)
     code = replace_function(code, "markSku", MARK_SKU_FN)
     code = code.replace("markSku(sku, false);", "markSku(sku, '❌ Não encontrado');")
@@ -383,21 +550,115 @@ def patch_detalhado(code: str, helpers: str) -> str:
         "const detail = listingRow(sku, row, 'succeeded', skuSearchTimeMs(skuResult));\n      markSku(sku, detail._encontrado);\n      pushDetalhado(detail);",
     )
     code = code.replace(
+        "const listings = filterInStock(rawListings);",
+        "const resultStatus = normalizeResultStatus(skuResult.sku_result || skuResult.status, rawListings);\n    const sourceHealth = normalizeSourceHealth(skuResult.source_health, skuResult);\n    const listings = rowsForPricing(rawListings);",
+    )
+    code = code.replace(
+        "markSku(sku, '❌ Não encontrado');\n      pushDetalhado({",
+        "const sheetStatus = sheetStatusForResult(resultStatus, false);\n      markSku(sku, sheetStatus);\n      pushDetalhado({",
+    )
+    code = code.replace(
+        "availability: 'nao_encontrado',",
+        "availability: availabilityForResult(resultStatus, 0),",
+    )
+    code = code.replace(
+        "raw_title: na(skuResult.status || 'not_found').toUpperCase(),",
+        "raw_title: rawTitleForResult(resultStatus, na(skuResult.error_code || skuResult.status || 'not_found')),",
+    )
+    code = code.replace(
+        "_encontrado: '❌ Não encontrado',",
+        "status_resultado: resultStatus,\n        source_health: sourceHealth,\n        has_valid_price: false,\n        _encontrado: sheetStatus,",
+        1,
+    )
+    code = code.replace(
+        "const detail = listingRow(sku, row, 'succeeded', skuSearchTimeMs(skuResult));",
+        "const detail = listingRow(sku, row, resultStatus, skuSearchTimeMs(skuResult));",
+    )
+    code = code.replace(
         "markSku(sku, found);",
         "markSku(sku, found ? '✅ Encontrado' : '❌ Não encontrado');",
     )
+    code = code.replace(
+        "const found = st === 'succeeded' || st === 'success';\n    markSku(sku, found ? '✅ Encontrado' : '❌ Não encontrado');",
+        "const itemHasPrice = Boolean(item.has_valid_price);\n    const resultStatus = normalizeResultStatus(item.sku_result || item.error_code || st, itemHasPrice ? [{ valorPrecoVenda: 1, qtdeEstoque: 1 }] : []);\n    const sourceHealth = normalizeSourceHealth(item.source_health, item);\n    const found = resultStatus === 'FOUND_PRICE';\n    const sheetStatus = sheetStatusForResult(resultStatus, found);\n    markSku(sku, sheetStatus);",
+    )
+    code = code.replace(
+        "const resultStatus = normalizeResultStatus(item.sku_result || item.error_code || st, []);\n    const sourceHealth = normalizeSourceHealth(item.source_health, item);\n    const found = resultStatus === 'FOUND_PRICE';\n    const sheetStatus = sheetStatusForResult(resultStatus, Boolean(item.has_valid_price));\n    markSku(sku, sheetStatus);",
+        "const itemHasPrice = Boolean(item.has_valid_price);\n    const resultStatus = normalizeResultStatus(item.sku_result || item.error_code || st, itemHasPrice ? [{ valorPrecoVenda: 1, qtdeEstoque: 1 }] : []);\n    const sourceHealth = normalizeSourceHealth(item.source_health, item);\n    const found = resultStatus === 'FOUND_PRICE';\n    const sheetStatus = sheetStatusForResult(resultStatus, found);\n    markSku(sku, sheetStatus);",
+    )
+    code = code.replace(
+        "sku_found: found ? sku : 'N/A',\n      exact_match: toBoolPt(found),",
+        "sku_found: found ? sku : 'N/A',\n      exact_match: toBoolPt(found),",
+    )
+    code = code.replace(
+        "availability: found ? 'desconhecido' : 'nao_encontrado',",
+        "availability: availabilityForResult(resultStatus, 0),",
+    )
+    code = code.replace(
+        "raw_title: found ? 'API_DIVERSOS_OK' : na(item.error_code || st).toUpperCase(),",
+        "raw_title: rawTitleForResult(resultStatus, na(item.error_code || st)),",
+    )
+    code = code.replace(
+        "_encontrado: found ? '✅ Encontrado' : '❌ Não encontrado',",
+        "status_resultado: resultStatus,\n      source_health: sourceHealth,\n      has_valid_price: found,\n      _encontrado: sheetStatus,",
+    )
+    code = code.replace(
+        "status_resultado: resultStatus,\n      source_health: sourceHealth,\n      has_valid_price: Boolean(item.has_valid_price),\n      _encontrado: sheetStatus,",
+        "status_resultado: resultStatus,\n      source_health: sourceHealth,\n      has_valid_price: found,\n      _encontrado: sheetStatus,",
+    )
+    code = code.replace(
+        "_encontrado: '❌ Não encontrado',\n  });\n}",
+        "status_resultado: 'NOT_QUERIED',\n    source_health: 'NOT_QUERIED',\n    has_valid_price: false,\n    _encontrado: '❌ Não encontrado',\n  });\n}",
+    )
+    code = code.replace(
+        "status_resultado: 'NOT_QUERIED',\n    source_health: 'NOT_QUERIED',\n    has_valid_price: false,\n    status_resultado: resultStatus,\n        source_health: sourceHealth,\n        has_valid_price: false,\n        _encontrado: sheetStatus,",
+        "status_resultado: 'NOT_QUERIED',\n    source_health: 'NOT_QUERIED',\n    has_valid_price: false,\n    _encontrado: '❌ Não encontrado',",
+    )
+    code = code.replace(
+        "seller: 'N/A',\n        product_url: productUrlForSheet",
+        "seller: 'N/A',\n        uf: '',\n        empresa: 'N/A',\n        cnpj: '',\n        product_url: productUrlForSheet",
+    )
+    code = code.replace(
+        "seller: 'N/A',\n      product_url: productUrlForSheet",
+        "seller: 'N/A',\n      uf: '',\n      empresa: 'N/A',\n      cnpj: '',\n      product_url: productUrlForSheet",
+    )
+    code = code.replace("        estado: '',\n        empresa:", "        uf: '',\n        empresa:")
+    code = code.replace("      estado: '',\n      empresa:", "      uf: '',\n      empresa:")
+    code = re.sub(r"\n\s+melibox_[a-z_]+: [^,\n]+,", "", code)
     code = code.replace("'✗ Não encontrado'", "'❌ Não encontrado'")
     code = code.replace("PROCESSADO: 'processado'", "PROCESSADO: '✅ Processado'")
+    code = code.replace(
+        "const skuHitPct = submitted > 0 ? ((succeeded / submitted) * 100).toFixed(1) + '%' : '0.0%';",
+        "const foundPriceCount = Number(payload.found_sku_count ?? Object.values(skuSummaries).filter((s) => String(s.encontrado || '').includes('Encontrado')).length);\nconst noPriceCount = Number(payload.no_price_sku_count || 0);\nconst notFoundCount = Number(payload.not_found_sku_count || 0);\nconst blockedCount = Number(payload.blocked_sku_count || 0);\nconst errorCount = Number(payload.error_sku_count || 0);\nconst skuHitPct = submitted > 0 ? ((foundPriceCount / submitted) * 100).toFixed(1) + '%' : '0.0%';",
+    )
+    code = code.replace(
+        "skus_encontrados: succeeded,\n  skus_falhos: failed,",
+        "skus_encontrados: foundPriceCount,\n  skus_falhos: notFoundCount + blockedCount + errorCount,",
+    )
+    code = code.replace(
+        "solicitante: chatId || '—',",
+        "solicitante: chatId || replyEmail || '—',",
+    )
+    code = code.replace(
+        "resumo_sites: JSON.stringify({ [CDP_SITE_CODE]: skuHitPct }),",
+        "resumo_sites: JSON.stringify({ [CDP_SITE_CODE]: skuHitPct, no_price: noPriceCount, not_found: notFoundCount, blocked: blockedCount, error: errorCount }),",
+    )
+    code = code.replace(
+        "failed_sku_count: failed,\n    detail_rows: rows.length,",
+        "failed_sku_count: failed,\n    found_sku_count: foundPriceCount,\n    no_price_sku_count: noPriceCount,\n    not_found_sku_count: notFoundCount,\n    blocked_sku_count: blockedCount,\n    error_sku_count: errorCount,\n    reply_channel: replyChannel || notify,\n    command_origin: commandOrigin || replyChannel || notify,\n    reply_email: replyEmail,\n    detail_rows: rows.length,",
+    )
+    code = code.replace(
+        "error_sku_count: errorCount,\n    detail_rows: rows.length,",
+        "error_sku_count: errorCount,\n    reply_channel: replyChannel || notify,\n    command_origin: commandOrigin || replyChannel || notify,\n    reply_email: replyEmail,\n    detail_rows: rows.length,",
+    )
     code = code.replace(
         "ENCONTRADO: s.found ? '✅ Encontrado' : '❌ Não encontrado'",
         "ENCONTRADO: s.encontrado || (s.found ? '✅ Encontrado' : '❌ Não encontrado')",
     )
     for old, new in DETALHADO_PATCHES:
-        if new in code:
-            continue
         if old not in code:
             continue
-        code = code.replace(old, new, 1)
+        code = code.replace(old, new)
     return code
 
 
@@ -414,11 +675,9 @@ def patch_resumo(code: str, helpers: str) -> str:
         "pushResumo(out, item.sku, [], item.status, item);",
     )
     for old, new in RESUMO_PATCHES:
-        if new in code:
-            continue
         if old not in code:
             continue
-        code = code.replace(old, new, 1)
+        code = code.replace(old, new)
     return code
 
 
@@ -426,15 +685,21 @@ def patch_detalhado_sheet_columns(wf: dict) -> None:
     node = next(n for n in wf["nodes"] if n["name"] == "📊 Salvar → CDP_Resultados (Detalhado)")
     cols = node["parameters"]["columns"]
     value = dict(cols.get("value") or {})
-    if "preco-medio" not in value:
-        ordered: dict[str, str] = {}
-        for key, expr in value.items():
+    normalized: dict[str, str] = {}
+    for key, expr in value.items():
+        canonical = DETALHADO_COLUMN_ALIASES.get(key, key)
+        normalized.setdefault(canonical, expr)
+
+    ordered = {
+        key: normalized.get(key, expr)
+        for key, expr in DETALHADO_COLUMN_EXPRESSIONS.items()
+    }
+    for key, expr in normalized.items():
+        if key.startswith("melibox_"):
+            continue
+        if key not in ordered:
             ordered[key] = expr
-            if key == "preco":
-                ordered["preco-medio"] = "={{ $json.preco_medio }}"
-        if "preco-medio" not in ordered:
-            ordered["preco-medio"] = "={{ $json.preco_medio }}"
-        cols["value"] = ordered
+    cols["value"] = ordered
 
 
 def patch_cdp_skus_node(wf: dict) -> None:
@@ -496,6 +761,7 @@ def main() -> None:
     patch_rownum_pipeline(wf)
     patch_cdp_skus_node(wf)
     patch_detalhado_sheet_columns(wf)
+    patch_same_channel_notification(wf)
     if TELEGRAM_FMT_PATH.is_file():
         tg_code = TELEGRAM_FMT_PATH.read_text(encoding="utf-8")
         for node in wf["nodes"]:

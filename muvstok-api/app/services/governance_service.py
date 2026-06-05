@@ -84,11 +84,12 @@ class GovernanceService:
                     continue
                 sku = str(entry.get("sku") or "")
                 rows = entry.get("rows") if isinstance(entry.get("rows"), list) else []
-                if entry.get("status") in ("succeeded", "success") and not rows:
+                sku_result = str(entry.get("sku_result") or "").upper()
+                if sku_result == "FOUND_PRICE" and not rows:
                     issues.append(
                         GovernanceIssue(
                             code="succeeded_without_rows",
-                            message=f"SKU {sku} marked succeeded but results rows empty",
+                            message=f"SKU {sku} marked FOUND_PRICE but results rows empty",
                             severity="error",
                         )
                     )

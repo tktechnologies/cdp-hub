@@ -1,4 +1,6 @@
 // Runs after 🎲 Limitar SKUs — Assistente CDP (PT-BR). Single confirmation message.
+const WEBSCRAPERS_LABEL = 'WEBSCRAPERS';
+const ESTOQUE_LABEL = 'ESTOQUE ONLINE';
 const dq = $input.first().json;
 const total = dq.valid_skus || 0;
 const sheetTotal = Number(dq.dispatch_total_before_sample || dq.total_read || 0);
@@ -62,37 +64,78 @@ if (skuPreview) {
   skuLine += '\n🔢 ' + skuPreview + skuExtra;
 }
 
-let origem = 'auto';
-let chatId = String(dq.telegram_chat_id || dq.chat_id || dq.notify || '').trim();
+function looksLikeEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+}
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+let origem = String(dq.origem || '').trim().toLowerCase() || 'auto';
+let chatId = String(dq.telegram_chat_id || dq.chat_id || '').trim();
 let emailFrom = String(dq.email_from || '').trim();
+const notify = String(dq.notify || '').trim();
+let commandOrigin = String(dq.command_origin || origem || '').trim().toLowerCase();
+let replyChannel = String(dq.reply_channel || '').trim().toLowerCase();
+
+if (!emailFrom && looksLikeEmail(notify)) emailFrom = notify;
+if (!chatId && notify && !looksLikeEmail(notify)) chatId = notify;
+if (looksLikeEmail(chatId)) {
+  if (!emailFrom) emailFrom = chatId;
+  chatId = '';
+}
+if (!replyChannel) {
+  if (commandOrigin === 'email' || emailFrom) replyChannel = 'email';
+  else if (commandOrigin === 'telegram' || chatId) replyChannel = 'telegram';
+}
 
 try {
   if (typeof $getWorkflowStaticData === 'function') {
     const sd = $getWorkflowStaticData('global');
     const ctx = sd.cdp_sheet_requester;
     if (ctx) {
-      if (!chatId) chatId = String(ctx.chat_id || '').trim();
+      if (!replyChannel && ctx.reply_channel) {
+        replyChannel = String(ctx.reply_channel).trim().toLowerCase();
+      }
+      if (!commandOrigin && ctx.command_origin) {
+        commandOrigin = String(ctx.command_origin).trim().toLowerCase();
+      }
       if (!emailFrom) emailFrom = String(ctx.email_from || '').trim();
-      if (chatId) origem = 'telegram';
-      else if (emailFrom) origem = 'email';
+      const inputIsEmail = commandOrigin === 'email' || replyChannel === 'email' || emailFrom;
+      if (!inputIsEmail && !chatId) chatId = String(ctx.chat_id || '').trim();
+      if (looksLikeEmail(chatId)) {
+        if (!emailFrom) emailFrom = chatId;
+        chatId = '';
+      }
     }
   }
 } catch (e) {}
 
 try {
   const r = $('📧 Roteador de Comando').first().json;
-  if (r && r.route === 'analisar') {
+  if (r && r.origem === 'email') {
     origem = 'email';
+    commandOrigin = 'email';
+    replyChannel = 'email';
     emailFrom = String(r.email_from || r.notify || '').trim();
+    chatId = '';
   }
 } catch (e) {}
 
 if (origem !== 'email') {
   try {
     const em = $('🔀 Switch Comando (Email)').first().json;
-    if (em && em.route === 'analisar') {
+    if (em && em.origem === 'email') {
       origem = 'email';
+      commandOrigin = 'email';
+      replyChannel = 'email';
       emailFrom = String(em.email_from || '').trim();
+      chatId = '';
     }
   } catch (e) {}
 }
@@ -103,6 +146,9 @@ if (!emailFrom) {
     if (gm?.from?.value?.[0]?.address) {
       emailFrom = String(gm.from.value[0].address).trim();
       origem = 'email';
+      commandOrigin = 'email';
+      replyChannel = 'email';
+      chatId = '';
     }
   } catch (e) {}
 }
@@ -112,15 +158,33 @@ if (origem !== 'email') {
     const tg = $('🔀 Switch Comando (Telegram)').first().json;
     const route = String(tg?.route || '');
     const cid = String(tg?.chat_id || tg?.notify || '').trim();
-    if (cid) {
+    if (cid && !looksLikeEmail(cid)) {
       chatId = chatId || cid;
       origem = 'telegram';
+      commandOrigin = 'telegram';
+      replyChannel = 'telegram';
     }
-    if (route === 'analisar') origem = 'telegram';
+    if (route === 'analisar') {
+      origem = 'telegram';
+      commandOrigin = 'telegram';
+      replyChannel = 'telegram';
+    }
   } catch (e) {}
 }
 
-if (origem === 'telegram' && !chatId && emailFrom) origem = 'email';
+if (!replyChannel) {
+  if (emailFrom) replyChannel = 'email';
+  else if (chatId) replyChannel = 'telegram';
+}
+if (replyChannel === 'email') {
+  origem = 'email';
+  commandOrigin = 'email';
+  chatId = '';
+} else if (replyChannel === 'telegram') {
+  origem = 'telegram';
+  commandOrigin = 'telegram';
+  emailFrom = '';
+}
 
 const triggered = !!(chatId || emailFrom);
 const tempo = mins === 1 ? '~1 minuto' : '~' + mins + ' minutos';
@@ -146,22 +210,69 @@ const msgTelegram = [
   skuLine,
   '⏱️ Previsão: *' + tempo + '* (sites e estoque em paralelo)',
   '',
-  'Você receberá dois avisos quando terminar (sites e estoque). ✨',
+  'Quando *' +
+    WEBSCRAPERS_LABEL +
+    '* e *' +
+    ESTOQUE_LABEL +
+    '* terminarem, você receberá *um único resultado final* com o link do relatório. ✨',
 ].join('\n');
 
+const statusTone = total > 1 ? 'Consultas em andamento' : 'Consulta em andamento';
+const safeCommand = escapeHtml(commandLabel);
+const safeSkuPreview = escapeHtml(skuPreview);
+const safeSkuEmail = escapeHtml(skuEmail);
+const safeTempo = escapeHtml(tempo);
 const msgEmailHtml =
-  '<h2>Assistente CDP</h2><p>Recebemos seu <strong>' +
-  commandLabel +
-  '</strong> — busca em <strong>sites e estoque</strong> iniciada.</p>' +
-  '<p><strong>Peças na fila:</strong> ' +
-  skuEmail +
-  '</p>' +
-  (skuPreview ? '<p><strong>Códigos:</strong> ' + skuPreview + '</p>' : '') +
-  '<p><strong>Previsão:</strong> ' +
-  tempo +
-  ' (sites e estoque em paralelo)</p>' +
-  '<p>Você receberá dois e-mails de conclusão (sites + estoque).</p>' +
-  '<p style="color:#718096;font-size:12px">— Assistente CDP (TKTech)</p>';
+  '<div style="margin:0;padding:0;background:#f6f8fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937">' +
+  '<div style="max-width:640px;margin:0 auto;padding:28px 18px">' +
+  '<div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">' +
+  '<div style="padding:22px 24px;border-bottom:1px solid #eef2f7">' +
+  '<div style="font-size:12px;text-transform:uppercase;letter-spacing:0;color:#64748b;font-weight:700">' +
+  escapeHtml(statusTone) +
+  '</div>' +
+  '<h1 style="font-size:24px;line-height:1.25;margin:8px 0 0;color:#111827">Consulta CDP iniciada</h1>' +
+  '</div>' +
+  '<div style="padding:22px 24px">' +
+  '<p style="font-size:15px;line-height:1.6;margin:0 0 18px">Recebemos o comando <strong>' +
+  safeCommand +
+  '</strong>. A busca em sites e estoque já está em andamento.</p>' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px">' +
+  '<tr>' +
+  '<td style="padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px">' +
+  '<div style="font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700">Peças na fila</div>' +
+  '<div style="font-size:26px;font-weight:700;color:#111827;margin-top:4px">' +
+  safeSkuEmail +
+  '</div>' +
+  '</td>' +
+  '<td width="12"></td>' +
+  '<td style="padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px">' +
+  '<div style="font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700">Previsão</div>' +
+  '<div style="font-size:26px;font-weight:700;color:#111827;margin-top:4px">' +
+  safeTempo +
+  '</div>' +
+  '</td>' +
+  '</tr>' +
+  '</table>' +
+  '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;margin:0 0 20px">' +
+  '<div style="font-size:12px;color:#1d4ed8;text-transform:uppercase;font-weight:700;margin-bottom:6px">Resultado final</div>' +
+  '<div style="font-size:14px;line-height:1.6;color:#1e3a8a">Quando <strong>' +
+  escapeHtml(WEBSCRAPERS_LABEL) +
+  '</strong> e <strong>' +
+  escapeHtml(ESTOQUE_LABEL) +
+  '</strong> terminarem, enviaremos <strong>um único e-mail</strong> com o resumo consolidado e o link do relatório.</div>' +
+  '</div>' +
+  (skuPreview
+    ? '<div style="font-size:13px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:6px">Códigos</div>' +
+      '<div style="font-size:14px;line-height:1.5;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;color:#111827">' +
+      safeSkuPreview +
+      '</div>'
+    : '') +
+  '<p style="font-size:14px;line-height:1.6;color:#475569;margin:20px 0 0">Aguarde o e-mail final antes de considerar a rodada encerrada.</p>' +
+  '</div>' +
+  '</div>' +
+  '<div style="font-size:12px;line-height:1.5;color:#94a3b8;text-align:center;padding:14px 0 0">Mensagem automática do Assistente CDP.</div>' +
+  '</div>' +
+  '</div>';
 
 return [
   {
@@ -169,13 +280,15 @@ return [
       total,
       mins,
       origem,
+      command_origin: commandOrigin || origem,
+      reply_channel: replyChannel || origem,
       triggered,
       chat_id: chatId,
       email_from: emailFrom,
-      notify: chatId || emailFrom,
+      notify: replyChannel === 'telegram' ? chatId : replyChannel === 'email' ? emailFrom : '',
       msg_telegram: msgTelegram,
       msg_email_html: msgEmailHtml,
-      msg_email_subject: 'Assistente CDP — consulta iniciada (' + total + ' peças)',
+      msg_email_subject: 'Consulta CDP iniciada — resultado final após sites e estoque (' + peca(total) + ')',
     },
   },
 ];

@@ -16,6 +16,34 @@ function env(name) {
   } catch (e) {}
   return '';
 }
+function workflowName() {
+  try {
+    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {
+      return String($workflow.name).trim();
+    }
+  } catch (e) {}
+  return '';
+}
+function isDevWorkflow() {
+  return /^DEV\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));
+}
+function devEnvName(name) {
+  const map = {
+    CDP_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',
+    MUVSTOK_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',
+    CDP_MUVSTOK_API_BASE: 'CDP_DEV_MUVSTOK_API_BASE',
+    CDP_API_KEY: 'CDP_DEV_API_KEY',
+    MUVSTOK_API_KEY: 'CDP_DEV_API_KEY',
+    API_KEY: 'CDP_DEV_API_KEY',
+    CDP_MUVSTOK_API_KEY: 'CDP_DEV_MUVSTOK_API_KEY',
+  };
+  return map[name] || '';
+}
+function envFor(name) {
+  if (!isDevWorkflow()) return env(name);
+  const mapped = devEnvName(name);
+  return mapped ? env(mapped) : '';
+}
 
 function trimTrailingSlashes(value) {
   let out = String(value || '').trim();
@@ -85,14 +113,16 @@ if (chatId && run.chat_id && chatId !== String(run.chat_id).trim()) {
 }
 
 const scraperBase = trimTrailingSlashes(
-  env('CDP_SCRAPER_API_BASE') || env('MUVSTOK_SCRAPER_API_BASE') || DEFAULT_SCRAPER_API_BASE
+  envFor('CDP_SCRAPER_API_BASE') ||
+    envFor('MUVSTOK_SCRAPER_API_BASE') ||
+    (isDevWorkflow() ? '' : DEFAULT_SCRAPER_API_BASE)
 );
 const stokapiBase = trimTrailingSlashes(
-  env('CDP_MUVSTOK_API_BASE') ||
-    'https://cdp-muv-api.bravecoast-b14d791e.eastus2.azurecontainerapps.io'
+  envFor('CDP_MUVSTOK_API_BASE') ||
+    (isDevWorkflow() ? '' : 'https://cdp-muv-api.bravecoast-b14d791e.eastus2.azurecontainerapps.io')
 );
-const apiKey = env('CDP_API_KEY') || env('MUVSTOK_API_KEY') || env('API_KEY');
-const stokapiKey = env('CDP_MUVSTOK_API_KEY') || apiKey;
+const apiKey = envFor('CDP_API_KEY') || envFor('MUVSTOK_API_KEY') || envFor('API_KEY');
+const stokapiKey = envFor('CDP_MUVSTOK_API_KEY') || apiKey;
 
 const scraperJobIds = Array.isArray(run.scraper_job_ids) ? run.scraper_job_ids : [];
 const primaryScraperJobId = scraperJobIds[0] || '';

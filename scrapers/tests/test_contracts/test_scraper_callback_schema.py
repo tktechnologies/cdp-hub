@@ -54,6 +54,10 @@ def test_scrape_job_callback_payload_matches_schema() -> None:
         currency=Currency.BRL,
         condition=ItemCondition.NEW,
         availability="in_stock",
+        seller_name="Dealer Center",
+        seller_uf="PR",
+        seller_company_name="Dealer Center Ltda",
+        seller_cnpj="05788992000187",
         origin="Brasil",
     )
     site_result = SiteResult(

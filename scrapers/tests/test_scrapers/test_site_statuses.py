@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from src.models.schemas import Currency, ItemCondition, PartResult, SiteId
+from src.models.schemas import (
+    Currency,
+    ItemCondition,
+    PartResult,
+    SiteId,
+    SKUResultStatus,
+    SourceHealth,
+)
 from src.scrapers.base import BaseScraper
 
 
@@ -48,6 +55,9 @@ def test_success_requires_exact_match_with_positive_price() -> None:
 
     assert result.status == "success"
     assert result.results[0].price == 123.45
+    assert result.sku_result == SKUResultStatus.FOUND_PRICE
+    assert result.source_health == SourceHealth.WORKING
+    assert result.has_valid_price is True
 
 
 def test_no_price_when_exact_product_has_no_positive_price() -> None:
@@ -58,6 +68,8 @@ def test_no_price_when_exact_product_has_no_positive_price() -> None:
 
     assert result.status == "no_price"
     assert len(result.results) == 2
+    assert result.sku_result == SKUResultStatus.NO_PRICE
+    assert result.has_valid_price is False
 
 
 def test_no_price_when_exact_product_is_out_of_stock() -> None:
@@ -68,6 +80,7 @@ def test_no_price_when_exact_product_is_out_of_stock() -> None:
 
     assert result.status == "no_price"
     assert result.results[0].availability == "Fora de estoque"
+    assert result.sku_result == SKUResultStatus.NO_PRICE
 
 
 def test_not_found_when_only_non_exact_candidates_are_returned() -> None:
@@ -78,6 +91,8 @@ def test_not_found_when_only_non_exact_candidates_are_returned() -> None:
 
     assert result.status == "not_found"
     assert result.results == []
+    assert result.sku_result == SKUResultStatus.NOT_FOUND
+    assert result.has_valid_price is False
 
 
 def test_not_found_when_no_results_are_returned() -> None:
@@ -85,6 +100,7 @@ def test_not_found_when_no_results_are_returned() -> None:
 
     assert result.status == "not_found"
     assert result.results == []
+    assert result.sku_result == SKUResultStatus.NOT_FOUND
 
 
 class FakeBlockedPage:

@@ -20,6 +20,11 @@
     "submitted_sku_count": { "type": "integer", "minimum": 0 },
     "succeeded_sku_count": { "type": "integer", "minimum": 0 },
     "failed_sku_count": { "type": "integer", "minimum": 0 },
+    "found_sku_count": { "type": "integer", "minimum": 0 },
+    "no_price_sku_count": { "type": "integer", "minimum": 0 },
+    "not_found_sku_count": { "type": "integer", "minimum": 0 },
+    "blocked_sku_count": { "type": "integer", "minimum": 0 },
+    "error_sku_count": { "type": "integer", "minimum": 0 },
     "items": {
       "type": "array",
       "items": {
@@ -29,7 +34,25 @@
           "sku": { "type": "string" },
           "status": { "type": "string" },
           "snapshot_id": { "type": ["string", "null"], "format": "uuid" },
-          "error_code": { "type": ["string", "null"] }
+          "error_code": { "type": ["string", "null"] },
+          "sku_result": {
+            "type": "string",
+            "enum": [
+              "",
+              "FOUND_PRICE",
+              "NO_PRICE",
+              "NOT_FOUND",
+              "BLOCKED",
+              "TIMEOUT",
+              "ERROR",
+              "NOT_QUERIED"
+            ]
+          },
+          "source_health": {
+            "type": "string",
+            "enum": ["", "WORKING", "BLOCKED", "TIMEOUT", "ERROR", "NOT_QUERIED"]
+          },
+          "has_valid_price": { "type": "boolean" }
         },
         "additionalProperties": false
       }

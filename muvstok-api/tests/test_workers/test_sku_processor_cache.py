@@ -60,6 +60,7 @@ async def test_duplicate_sku_reused_from_in_job_memo(deps):
     assert client.fetch_sku.await_count == 1  # duplicate not re-requested upstream
     assert r1.status == "succeeded" and r2.status == "succeeded"
     assert r1.rows == r2.rows == [{"sku": "ABC", "price": 10}]
+    assert r1.sku_result == "FOUND_PRICE" and r1.has_valid_price is True
     assert r1.from_cache is False and r2.from_cache is True
     assert api_data_repo.save_result.await_count == 2  # both rows persisted (N results)
 
@@ -93,15 +94,17 @@ async def test_not_found_duplicate_reused(deps):
     )
 
     assert client.fetch_sku.await_count == 1
-    assert r1.status == "failed" and r1.error_code == "not_found"
-    assert r2.status == "failed" and r2.error_code == "not_found" and r2.from_cache is True
+    assert r1.status == "succeeded" and r1.error_code == "not_found"
+    assert r1.sku_result == "NOT_FOUND" and r1.has_valid_price is False
+    assert r2.status == "succeeded" and r2.error_code == "not_found" and r2.from_cache is True
+    assert r2.sku_result == "NOT_FOUND"
 
 
 async def test_redis_cache_hit_skips_upstream(deps):
     _, client, _, _, _ = deps
     client.fetch_sku = AsyncMock()
     cache = AsyncMock()
-    cache.get = AsyncMock(return_value=CachedSku(status="succeeded", rows=[{"a": 1}]))
+    cache.get = AsyncMock(return_value=CachedSku(status="succeeded", rows=[{"price": 1}]))
     processor = _build(deps, sku_cache=cache)
 
     result, _ = await processor.process_item(
@@ -109,12 +112,13 @@ async def test_redis_cache_hit_skips_upstream(deps):
     )
 
     client.fetch_sku.assert_not_called()
-    assert result.status == "succeeded" and result.rows == [{"a": 1}] and result.from_cache is True
+    assert result.status == "succeeded" and result.rows == [{"price": 1}] and result.from_cache is True
+    assert result.sku_result == "FOUND_PRICE"
 
 
 async def test_live_fetch_populates_cache(deps):
     _, client, _, _, _ = deps
-    client.fetch_sku = AsyncMock(return_value=([{"a": 1}], 200))
+    client.fetch_sku = AsyncMock(return_value=([{"price": 1}], 200))
     cache = AsyncMock()
     cache.get = AsyncMock(return_value=None)
     cache.set = AsyncMock()
@@ -126,4 +130,19 @@ async def test_live_fetch_populates_cache(deps):
 
     cache.set.assert_awaited_once()
     args = cache.set.await_args.args
-    assert args[0] == "FRESH" and args[1] == "succeeded" and args[2] == [{"a": 1}]
+    assert args[0] == "FRESH" and args[1] == "FOUND_PRICE" and args[2] == [{"price": 1}]
+
+
+async def test_nonempty_rows_without_positive_sale_price_are_no_price(deps):
+    _, client, _, _, _ = deps
+    client.fetch_sku = AsyncMock(return_value=([{"sku": "NOP", "valorPrecoVenda": 0}], 200))
+    processor = _build(deps, sku_cache=None)
+
+    result, _ = await processor.process_item(
+        job_id=uuid4(), correlation_id="c", item=_make_item("NOP"), token="t"
+    )
+
+    assert result.status == "succeeded"
+    assert result.sku_result == "NO_PRICE"
+    assert result.source_health == "WORKING"
+    assert result.has_valid_price is False

@@ -37,6 +37,36 @@ ML_DETAIL_CHECK_LIMIT = 0
 # Exact SKU matches often appear after sponsored/related cards (typically index 10+).
 # Scan every card on the results page — do not stop after the first priced hit.
 ML_MAX_CARDS_TO_SCAN = 120
+ML_BLOCKED_TEXT_INDICATORS = (
+    "captcha",
+    "recaptcha",
+    "turnstile",
+    "verificação de segurança",
+    "verificacao de seguranca",
+    "access denied",
+    "acesso negado",
+    "too many requests",
+    "rate limit",
+    "por favor, tente novamente",
+    "verify you are human",
+    "please verify you are a human",
+    "checking your browser",
+    "just a moment",
+    "cloudflare",
+    "anti-bot",
+    "robot",
+    "robô",
+    "robo",
+    "desafio de segurança",
+    "desafio de seguranca",
+    "identidade",
+)
+ML_BLOCKED_SELECTOR = (
+    "#challenge-running, #challenge-form, "
+    "iframe[src*='captcha'], iframe[src*='recaptcha'], iframe[src*='challenge'], "
+    "iframe[src*='turnstile'], input[name='cf-turnstile-response'], "
+    "div[class*='captcha'], div[class*='challenge'], div[class*='security']"
+)
 
 
 class MercadoLivreScraper(BaseScraper):
@@ -229,18 +259,32 @@ class MercadoLivreScraper(BaseScraper):
 
     async def _check_blocked(self, page: Page) -> bool:
         """Check if ML blocked our request (CAPTCHA, rate limit, etc.)."""
+        return await self._detect_ml_blocked(page)
+
+    async def _detect_blocked(self, page: Page) -> bool:
+        """Detect shared and Mercado Livre-specific anti-bot/security blocks."""
+        if await super()._detect_blocked(page):
+            return True
+        return await self._detect_ml_blocked(page)
+
+    async def _detect_ml_blocked(self, page: Page) -> bool:
+        """Check Mercado Livre-specific CAPTCHA/security/rate-limit signals."""
         try:
-            page_text = await page.inner_text("body")
-            blocked_indicators = [
-                "captcha",
-                "verificação de segurança",
-                "access denied",
-                "too many requests",
-                "por favor, tente novamente",
-            ]
-            return any(indicator in page_text.lower() for indicator in blocked_indicators)
+            page_text = (await page.inner_text("body")).lower()
+        except Exception:
+            page_text = ""
+
+        if any(indicator in page_text for indicator in ML_BLOCKED_TEXT_INDICATORS):
+            return True
+
+        try:
+            challenge = await page.query_selector(ML_BLOCKED_SELECTOR)
+            if challenge:
+                return True
         except Exception:
             return False
+
+        return False
 
     async def _extract_results_via_dom(self, page: Page, searched_sku: str) -> list[PartResult]:
         """Extract listing rows in one DOM pass (faster and matches current poly layout)."""

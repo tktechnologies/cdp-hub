@@ -22,6 +22,7 @@ function envInt(name, defaultVal) {
 
 const data = $input.first().json;
 const all = Array.isArray(data.skus) ? data.skus : [];
+const allSheetRows = Array.isArray(data.sheet_rows) ? data.sheet_rows : all;
 const maxSkus = envInt('CDP_DISPATCH_SAMPLE_SIZE', 0);
 let skus = all;
 let sampled = false;
@@ -36,6 +37,13 @@ if (maxSkus > 0 && all.length > maxSkus) {
   skus = copy.slice(0, maxSkus);
   sampled = true;
 }
+const sampledSkuSet = new Set(
+  skus.map((row) => String(row?.sku || row?.SKU || row).trim().toUpperCase()).filter(Boolean)
+);
+const sheetRows = allSheetRows.filter((row) => {
+  const sku = String(row?.sku || row?.SKU || row).trim().toUpperCase();
+  return sampledSkuSet.has(sku);
+});
 
 const batchGroupId = 'bg-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
 try {
@@ -62,10 +70,13 @@ return [
     json: {
       ...data,
       skus,
+      sheet_rows: sheetRows,
       valid_skus: skus.length,
+      input_valid_skus: sheetRows.length,
       dispatch_sampled: sampled,
       dispatch_sample_limit: maxSkus,
       dispatch_total_before_sample: all.length,
+      dispatch_sheet_rows_before_sample: allSheetRows.length,
       batch_group_id: batchGroupId,
       command_route: commandRoute,
     },

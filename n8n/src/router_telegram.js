@@ -20,9 +20,43 @@ function envValue(name) {
   }
   return '';
 }
+function workflowName() {
+  try {
+    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {
+      return String($workflow.name).trim();
+    }
+  } catch (e) {}
+  return '';
+}
+function isDevWorkflow() {
+  return /^DEV\s*-/i.test(workflowName()) || /^dev$/i.test(envValue('CDP_ENV'));
+}
+function devEnvName(name) {
+  const map = {
+    CDP_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',
+    MUVSTOK_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',
+    CDP_API_KEY: 'CDP_DEV_API_KEY',
+    MUVSTOK_API_KEY: 'CDP_DEV_API_KEY',
+    API_KEY: 'CDP_DEV_API_KEY',
+    TELEGRAM_ALLOWED_CHAT_IDS: 'TELEGRAM_DEV_ALLOWED_CHAT_IDS',
+    TELEGRAM_BOT_TOKEN: 'TELEGRAM_DEV_BOT_TOKEN',
+    TELEGRAM_TOKEN: 'TELEGRAM_DEV_BOT_TOKEN',
+    TELEGRAM_API_TOKEN: 'TELEGRAM_DEV_BOT_TOKEN',
+    CDP_STATUS_COMMANDS: 'CDP_DEV_STATUS_COMMANDS',
+  };
+  return map[name] || '';
+}
+function envFor(name) {
+  if (!isDevWorkflow()) return envValue(name);
+  const mapped = devEnvName(name);
+  const value = mapped ? envValue(mapped) : '';
+  if (value) return value;
+  if (name === 'CDP_STATUS_COMMANDS') return envValue(name);
+  return '';
+}
 
 function envList(name) {
-  const raw = envValue(name);
+  const raw = envFor(name);
   return raw ? raw.split(',').map((s) => s.trim()).filter(Boolean) : [];
 }
 
@@ -40,21 +74,21 @@ function trimTrailingSlashes(value) {
 
 function scraperApiBase() {
   return trimTrailingSlashes(
-    envValue('CDP_SCRAPER_API_BASE') ||
-      envValue('MUVSTOK_SCRAPER_API_BASE') ||
-      DEFAULT_SCRAPER_API_BASE
+    envFor('CDP_SCRAPER_API_BASE') ||
+      envFor('MUVSTOK_SCRAPER_API_BASE') ||
+      (isDevWorkflow() ? '' : DEFAULT_SCRAPER_API_BASE)
   );
 }
 
 function cdpApiKey() {
-  return envValue('CDP_API_KEY') || envValue('MUVSTOK_API_KEY') || envValue('API_KEY');
+  return envFor('CDP_API_KEY') || envFor('MUVSTOK_API_KEY') || envFor('API_KEY');
 }
 
 function telegramBotToken() {
   return (
-    envValue('TELEGRAM_BOT_TOKEN') ||
-    envValue('TELEGRAM_TOKEN') ||
-    envValue('TELEGRAM_API_TOKEN')
+    envFor('TELEGRAM_BOT_TOKEN') ||
+    envFor('TELEGRAM_TOKEN') ||
+    envFor('TELEGRAM_API_TOKEN')
   );
 }
 

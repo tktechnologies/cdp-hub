@@ -44,6 +44,10 @@ def sample_site_result() -> SiteResult:
                 currency=Currency.BRL,
                 condition=ItemCondition.NEW,
                 availability="in_stock",
+                seller_name="Dealer Center",
+                seller_uf="PR",
+                seller_company_name="Dealer Center Ltda",
+                seller_cnpj="05788992000187",
                 origin="Brasil",
             )
         ],
@@ -108,6 +112,9 @@ class TestScrapeCacheService:
         assert cached.search_time_ms == 0
         assert cached.status == "success"
         assert cached.results[0].price == 150.0
+        assert cached.results[0].seller_uf == "PR"
+        assert cached.results[0].seller_company_name == "Dealer Center Ltda"
+        assert cached.results[0].seller_cnpj == "05788992000187"
         mock_redis.setex.assert_called_once()
 
     @pytest.mark.asyncio

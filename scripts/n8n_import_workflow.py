@@ -18,7 +18,7 @@ def main() -> int:
     args = ap.parse_args()
 
     if not n8n_api_key() or not mcp_auth_header():
-        print("Configure N8N_API_KEY and N8N_MCP_AUTH_HEADER in ~/.cursor/mcp.json", file=sys.stderr)
+        print("Configure N8N_API_KEY and N8N_MCP_AUTH_HEADER in env or ~/.cursor/mcp.json", file=sys.stderr)
         return 1
 
     local = json.loads(args.json.read_text(encoding="utf-8"))

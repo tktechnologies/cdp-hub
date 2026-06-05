@@ -398,11 +398,15 @@ class PecaDiretaScraper(BaseScraper):
                         '[class*="stock"], [class*="disponib"], [class*="pronta"]'
                     );
                     const availability = availEl ? availEl.textContent.trim() : 'unknown';
+                    const cnpjMatch = text.match(
+                        /\\d{2}\\.?\\d{3}\\.?\\d{3}\\/?\\d{4}-?\\d{2}/
+                    );
 
                     info.sellers.push({
                         name: name.substring(0, 200),
                         price: priceMatch[1],
                         location: location.substring(0, 100),
+                        cnpj: cnpjMatch ? cnpjMatch[0] : '',
                         availability: availability.substring(0, 100),
                     });
                 }
@@ -476,6 +480,9 @@ class PecaDiretaScraper(BaseScraper):
                         condition=condition,
                         availability=seller.get("availability", "unknown"),
                         seller_name=seller.get("name", ""),
+                        seller_uf=self.extract_brazil_uf(seller.get("location", "")),
+                        seller_company_name=seller.get("name", ""),
+                        seller_cnpj=self.extract_cnpj_digits(seller.get("cnpj", "")),
                         product_url=product_url,
                         origin="Brasil",
                         raw_title=title,
@@ -534,6 +541,14 @@ class PecaDiretaScraper(BaseScraper):
                     '[class*="seller"], [class*="vendor"], [class*="loja"]'
                 );
                 const seller = sellerEl ? sellerEl.textContent.trim() : '';
+                const locationEl = card.querySelector(
+                    '[class*="city"], [class*="local"], [class*="estado"], [class*="cidade"]'
+                );
+                const location = locationEl ? locationEl.textContent.trim() : '';
+                const cnpjMatch = text.match(
+                    /\\d{2}\\.?\\d{3}\\.?\\d{3}\\/?\\d{4}-?\\d{2}/
+                );
+                const cnpj = cnpjMatch ? cnpjMatch[0] : '';
 
                 const condText = text.toLowerCase();
                 let condition = 'unknown';
@@ -561,6 +576,8 @@ class PecaDiretaScraper(BaseScraper):
                     title: title.substring(0, 200),
                     url: href,
                     seller: seller.substring(0, 100),
+                    location: location.substring(0, 100),
+                    cnpj: cnpj,
                     condition: condition,
                     availability: availability,
                 });
@@ -607,6 +624,9 @@ class PecaDiretaScraper(BaseScraper):
                     condition=condition,
                     availability=item.get("availability", "unknown"),
                     seller_name=item.get("seller", ""),
+                    seller_uf=self.extract_brazil_uf(item.get("location", "")),
+                    seller_company_name=item.get("seller", ""),
+                    seller_cnpj=self.extract_cnpj_digits(item.get("cnpj", "")),
                     product_url=product_url or str(page.url),
                     origin="Brasil",
                     raw_title=raw_title,
