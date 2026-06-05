@@ -1,0 +1,1978 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dev-scraper-result",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "cab90891-65cf-462e-8f4e-7f2ad12221a4",
+      "name": "🔔 Webhook: Receber Resultados",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        464
+      ],
+      "webhookId": "dev-scraper-result"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "verify-secret",
+              "leftValue": "={{ ($json.headers['x-webhook-secret'] || '').trim() }}",
+              "rightValue": "={{ ($env.CDP_CALLBACK_WEBHOOK_SECRET || $env.CALLBACK_WEBHOOK_SECRET || $env.N8N_WEBHOOK_SECRET || '').trim() }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "ae2e5b91-d40d-4080-a996-9e2295b8a267",
+      "name": "🔐 Verificar Webhook Secret",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Espalha no tempo callbacks: escolhe **um** de 10, 20, 30, 40, 50 ou 60 s (uniforme entre estes 6).\nconst src = $input.first().json;\nconst tiers = [10, 20, 30, 40, 50, 60];\nconst sec = tiers[Math.floor(Math.random() * tiers.length)];\nreturn [{ json: { ...src, _sheetStaggerSec: sec } }];"
+      },
+      "id": "4adb72cd-e392-4f71-b1ab-5c525d19c7b5",
+      "name": "🎲 Atraso aleatório 10–60s (Sheets)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        464
+      ],
+      "notes": "Define _sheetStaggerSec ∈ {10,20,30,40,50,60} (1 valor aleatório por execução) antes do Wait; v0.8.2 passo fixo 10s."
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json._sheetStaggerSec }}"
+      },
+      "id": "503921dc-7ed3-45e2-870b-45c0c0244a2a",
+      "name": "⏳ Esperar N s (rate limit Sheets)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        464
+      ],
+      "webhookId": "91d65f3f-e821-406b-8497-f25511c10e18",
+      "notes": "Duração = _sheetStaggerSec (10, 20, … ou 60 **segundos**, ver 🎲 Atraso). Encadeamento Sheets reduz concorrência na API."
+    },
+    {
+      "parameters": {
+        "jsCode": "// CDP result flattener v1.1 — canonical result semantics.\n// body may be a JSON string because the webhook uses rawBody.\nlet payload = $json.body;\nif (typeof payload === 'string') {\n  try { payload = JSON.parse(payload); } catch (e) { payload = {}; }\n}\nif (!payload || typeof payload !== 'object') payload = {};\n\nconst q = $json.query || {};\nconst jmeta = typeof payload.job_metadata === 'object' && payload.job_metadata !== null ? payload.job_metadata : {};\nconst skipEncontrado = String(jmeta.ad_hoc || q.ad_hoc || '').toLowerCase() === 'true';\n\nconst jobId = payload.job_id || 'unknown';\nconst jobDuration = payload.duration_seconds || 0;\nconst results = payload.results || [];\nconst rows = [];\n\nfunction naStr(v) {\n  if (v === null || v === undefined || v === '') return 'N/A';\n  return typeof v === 'string' ? v : String(v);\n}\nfunction naPrice(v) {\n  if (v === null || v === undefined || v === '') return 'N/A';\n  if (typeof v === 'number' && !Number.isNaN(v)) return String(v);\n  return String(v);\n}\nfunction toBoolPt(v) { return v ? 'SIM' : 'NAO'; }\nfunction numericPrice(v) {\n  if (v === null || v === undefined || v === '') return null;\n  const n = Number(v);\n  return Number.isFinite(n) && n > 0 ? n : null;\n}\nfunction hasValidPrice(part) {\n  return !!(part && part.exact_match && numericPrice(part.price) !== null);\n}\nfunction normalizeSourceHealth(siteResult) {\n  const explicit = String(siteResult.source_health || '').trim().toUpperCase();\n  if (explicit) return explicit;\n  const status = String(siteResult.status || '').toLowerCase();\n  if (status === 'blocked') return 'BLOCKED';\n  if (status === 'timeout') return 'TIMEOUT';\n  if (status === 'error') return 'ERROR';\n  if (status === 'not_queried') return 'NOT_QUERIED';\n  return 'WORKING';\n}\nfunction normalizeSkuResult(siteResult, parts) {\n  const explicit = String(siteResult.sku_result || '').trim().toUpperCase();\n  if (explicit) return explicit;\n  const health = normalizeSourceHealth(siteResult);\n  if (health !== 'WORKING') return health;\n  if ((parts || []).some(hasValidPrice)) return 'FOUND_PRICE';\n  if (String(siteResult.status || '').toLowerCase() === 'no_price' || (parts || []).some((p) => !!p.exact_match)) return 'NO_PRICE';\n  return 'NOT_FOUND';\n}\nfunction toAvailabilityPt(v) {\n  const key = String(v || '').toLowerCase();\n  const map = {\n    in_stock: 'em_estoque',\n    out_of_stock: 'fora_de_estoque',\n    not_found: 'nao_encontrado',\n    no_price: 'sem_preco',\n    blocked: 'bloqueado',\n    timeout: 'timeout',\n    error: 'erro_scraper',\n    scraper_error: 'erro_scraper',\n    unknown: 'desconhecido',\n    no_results: 'sem_resultados',\n  };\n  return map[key] || key || 'desconhecido';\n}\nfunction availabilityForCanonical(status, fallback) {\n  const s = String(status || '').toUpperCase();\n  if (s === 'FOUND_PRICE') return toAvailabilityPt(fallback || 'in_stock');\n  if (s === 'NO_PRICE') return 'sem_preco';\n  if (s === 'NOT_FOUND') return 'nao_encontrado';\n  if (s === 'BLOCKED') return 'bloqueado';\n  if (s === 'TIMEOUT') return 'timeout';\n  if (s === 'ERROR') return 'erro_scraper';\n  if (s === 'NOT_QUERIED') return 'sem_resultados';\n  return toAvailabilityPt(fallback);\n}\nfunction rawTitleForStatus(status, message) {\n  const msg = String(message || status || 'sem_resultados').trim();\n  const s = String(status || '').toUpperCase();\n  if (s === 'BLOCKED') return 'BLOQUEADO: ' + msg;\n  if (s === 'TIMEOUT') return 'TIMEOUT: ' + msg;\n  if (s === 'ERROR') return 'ERRO: ' + msg;\n  if (s === 'NO_PRICE') return 'SEM_PRECO: ' + msg;\n  if (s === 'NOT_FOUND') return 'NOT_FOUND';\n  return msg.toUpperCase();\n}\nfunction toConditionPt(v) {\n  const key = String(v || '').toLowerCase();\n  if (!key || key === 'n/a') return 'N/A';\n  const map = { new: 'novo', used: 'usado', refurbished: 'recondicionado', unknown: 'desconhecido' };\n  return map[key] || key;\n}\nfunction placeholderRow({ sku, brand, siteResult, status }) {\n  const siteCode = siteResult.site || '';\n  const siteName = siteResult.site_name || siteCode;\n  const canonical = normalizeSkuResult(siteResult, []);\n  const health = normalizeSourceHealth(siteResult);\n  const message = siteResult.blocked_reason || siteResult.error_message || status || 'sem_resultados';\n  return {\n    job_id: jobId,\n    sku_searched: naStr(sku),\n    sku_found: 'N/A',\n    exact_match: toBoolPt(false),\n    site: naStr(siteName),\n    price: 'N/A',\n    preco_medio: 'N/A',\n    currency: 'N/A',\n    availability: availabilityForCanonical(canonical, status),\n    seller: 'N/A',\n    uf: '',\n    empresa: 'N/A',\n    cnpj: '',\n    product_url: 'N/A',\n    origin: 'N/A',\n    raw_title: rawTitleForStatus(canonical, message),\n    scraped_at: new Date().toISOString(),\n    search_time_ms: String(siteResult.search_time_ms || 0),\n    job_duration_s: String(jobDuration),\n    brand: naStr(brand),\n    condition: 'N/A',\n    site_code: naStr(siteCode),\n    status_resultado: canonical,\n    source_health: health,\n    has_valid_price: false,\n  };\n}\n\nfor (const skuResult of results) {\n  const sku = skuResult.sku || '';\n  const brand = skuResult.brand || '';\n  for (const siteResult of skuResult.site_results || []) {\n    const siteName = siteResult.site_name || siteResult.site || '';\n    const siteCode = siteResult.site || '';\n    const siteStatus = siteResult.status || 'unknown';\n    const searchTimeMs = siteResult.search_time_ms || 0;\n    const parts = Array.isArray(siteResult.results) ? siteResult.results : [];\n\n    if (parts.length === 0) {\n      rows.push(placeholderRow({ sku, brand, siteResult, status: siteStatus }));\n      continue;\n    }\n\n    for (const part of parts) {\n      const rowHasValidPrice = hasValidPrice(part);\n      const canonical = rowHasValidPrice ? 'FOUND_PRICE' : 'NO_PRICE';\n      rows.push({\n        job_id: jobId,\n        sku_searched: naStr(part.sku_searched || sku),\n        sku_found: naStr(part.sku_found),\n        exact_match: toBoolPt(!!part.exact_match),\n        site: naStr(siteName),\n        preco_medio: 'N/A',\n        price: naPrice(part.price),\n        currency: part.currency || 'BRL',\n        availability: availabilityForCanonical(canonical, part.availability || siteStatus || 'unknown'),\n        seller: naStr(part.seller_name),\n        uf: naStr(part.seller_uf || part.seller_state || ''),\n        empresa: naStr(part.seller_company_name || part.seller_name),\n        cnpj: naStr(part.seller_cnpj || ''),\n        product_url: naStr(part.product_url),\n        origin: naStr(part.origin),\n        raw_title: naStr(part.raw_title),\n        scraped_at: part.scraped_at || new Date().toISOString(),\n        search_time_ms: String(searchTimeMs),\n        job_duration_s: String(jobDuration),\n        brand: naStr(brand),\n        condition: toConditionPt(part.condition),\n        site_code: naStr(siteCode),\n        status_resultado: canonical,\n        source_health: normalizeSourceHealth(siteResult),\n        has_valid_price: rowHasValidPrice,\n      });\n    }\n  }\n}\n\nif (rows.length === 0) {\n  rows.push({\n    job_id: jobId,\n    sku_searched: 'SEM_DADOS',\n    sku_found: 'N/A',\n    exact_match: toBoolPt(false),\n    site: 'N/A',\n    price: 'N/A',\n    preco_medio: 'N/A',\n    currency: 'N/A',\n    availability: toAvailabilityPt('no_results'),\n    seller: 'N/A',\n    uf: '',\n    empresa: 'N/A',\n    cnpj: '',\n    product_url: 'N/A',\n    origin: 'N/A',\n    raw_title: 'Sem resultados de scraping',\n    scraped_at: new Date().toISOString(),\n    search_time_ms: '0',\n    job_duration_s: String(jobDuration),\n    brand: 'N/A',\n    condition: 'N/A',\n    site_code: 'N/A',\n    status_resultado: 'NOT_QUERIED',\n    source_health: 'NOT_QUERIED',\n    has_valid_price: false,\n  });\n}\n\nreturn rows.map((row) => ({ json: { ...row, _skip_encontrado: skipEncontrado } }));\n"
+      },
+      "id": "77f231ff-f230-47d8-8e73-62ab3d436edc",
+      "name": "📊 Extrair Dados (Detalhado)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// CDP source health extractor v1.0\nlet payload = $json.body;\nif (typeof payload === 'string') {\n  try { payload = JSON.parse(payload); } catch (e) { payload = {}; }\n}\nif (!payload || typeof payload !== 'object') payload = {};\n\nconst jobId = payload.job_id || 'unknown';\nconst jobStatus = payload.status || 'unknown';\nconst jobDuration = payload.duration_seconds || 0;\nconst jobErrors = payload.errors || [];\nconst warningMessages = payload.warning_messages || [];\nconst results = payload.results || [];\nconst errors = [];\nconst allSitesNotFoundSkus = [];\nconst warningStatuses = new Set(['blocked', 'timeout', 'error']);\n\nfor (const skuResult of results) {\n  const sku = skuResult.sku || '';\n  const siteResults = skuResult.site_results || [];\n  const allNotFound = siteResults.length > 0 && siteResults.every((sr) => String(sr.status || '').toLowerCase() === 'not_found');\n  if ((skuResult.all_sites_not_found === true || allNotFound) && sku) allSitesNotFoundSkus.push(sku);\n\n  for (const siteResult of siteResults) {\n    const status = String(siteResult.status || '').toLowerCase();\n    if (warningStatuses.has(status)) {\n      errors.push({\n        sku,\n        site: siteResult.site_name || siteResult.site || '',\n        status,\n        error: siteResult.error_message || status,\n        search_time_ms: siteResult.search_time_ms || 0,\n      });\n    }\n  }\n}\n\nconst payloadAllSitesNotFoundCount = Number(payload.all_sites_not_found_count || 0);\nconst allSitesNotFoundCount = payloadAllSitesNotFoundCount > 0 ? payloadAllSitesNotFoundCount : allSitesNotFoundSkus.length;\n\nreturn [{ json: {\n  job_id: jobId,\n  job_status: jobStatus,\n  job_duration_s: jobDuration,\n  total_errors: errors.length,\n  errors,\n  job_errors: jobErrors,\n  all_sites_not_found_count: allSitesNotFoundCount,\n  all_sites_not_found_skus: allSitesNotFoundSkus,\n  warning_messages: warningMessages,\n}}];"
+      },
+      "id": "bcbb6804-637b-49b3-812e-6c13c91e7706",
+      "name": "⚠️ Extrair Erros",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "__SET_CDP_DEV_RESULTADOS_SHEET_ID__",
+          "mode": "list",
+          "cachedResultName": "cdp_resultados",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Detalhado",
+          "mode": "name",
+          "cachedResultName": "Detalhado",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "job_id": "={{ $json.job_id }}",
+            "sku_pesquisado": "={{ $json.sku_searched }}",
+            "sku_encontrado": "={{ $json.sku_found }}",
+            "correspondencia_exata": "={{ $json.exact_match }}",
+            "site": "={{ $json.site }}",
+            "preco": "={{ $json.price }}",
+            "preco-medio": "={{ $json.preco_medio }}",
+            "moeda": "={{ $json.currency }}",
+            "disponibilidade": "={{ $json.availability }}",
+            "vendedor": "={{ $json.seller }}",
+            "uf": "={{ $json.uf }}",
+            "empresa": "={{ $json.empresa }}",
+            "cnpj": "={{ $json.cnpj }}",
+            "url_produto": "={{ $json.product_url }}",
+            "origem": "={{ $json.origin }}",
+            "titulo_bruto": "={{ $json.raw_title }}",
+            "coletado_em": "={{ $json.scraped_at }}",
+            "tempo_busca_ms": "={{ $json.search_time_ms }}",
+            "condicao": "={{ $json.condition }}",
+            "duracao_job_s": "={{ $json.job_duration_s }}",
+            "marca": "={{ $json.brand }}",
+            "codigo_site": "={{ $json.site_code }}",
+            "status_resultado": "={{ $json.status_resultado }}",
+            "source_health": "={{ $json.source_health }}",
+            "has_valid_price": "={{ $json.has_valid_price }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "4b07d225-3799-4091-9b49-20275463bc2d",
+      "name": "📊 Salvar → CDP_Resultados (Detalhado)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        272,
+        1136
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      },
+      "notes": "v0.5.0: Appends to 'Detalhado' tab (was 'Results'). One row per PartResult, including not_found rows. | v0.8.0: retry 5×/5s; no continueOnFail (retries work; fail loud if Sheets still errors)."
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') {\n    try { p = JSON.parse(p); } catch (e) { p = {}; }\n  }\n  return p && typeof p === 'object' ? p : {};\n}\nconst wh = $('🔔 Webhook: Receber Resultados').first().json;\nconst q = wh.query || {};\nconst meta = parseBody(wh.body);\nconst items = meta.results || [];\nconst errs = meta.errors || [];\nconst jm = typeof meta.job_metadata === 'object' && meta.job_metadata !== null ? meta.job_metadata : {};\n\nlet job_error = '';\nif (errs.length) job_error = errs.join(' | ');\nif (meta.warning_messages && meta.warning_messages.length) {\n  job_error = job_error ? job_error + ' | ' : '';\n  job_error += meta.warning_messages.join(' | ');\n}\nconst dupCsv = String(jm.duplicate_skus_csv || q.duplicate_skus_csv || '').trim();\nconst dupCount = Number(jm.duplicates_count || (dupCsv ? dupCsv.split(',').filter(Boolean).length : 0));\nif (dupCount > 0) {\n  const dupMsg = `SKUs repetidos: ${dupCount}${dupCsv ? ' (' + dupCsv + ')' : ''}`;\n  job_error = job_error ? job_error + ' | ' + dupMsg : dupMsg;\n}\nif (!job_error) job_error = '—';\n\nconst skus_csv = [...new Set(items.map((s) => String(s.sku || '').trim()).filter(Boolean))].join(', ');\nconst dur = meta.duration_seconds != null ? Number(meta.duration_seconds) : 0;\nconst notify = String(jm.notify || q.notify || 'none').toLowerCase();\nconst origem = notify === 'telegram' ? 'telegram' : notify === 'email' ? 'email' : 'auto';\nconst solicitante = String(jm.reply_email || q.reply_email || jm.chat_id || q.chat_id || '').trim() || '—';\nconst disparado_em = meta.started_at\n  ? String(meta.started_at)\n  : new Date(Date.now() - dur * 1000).toISOString();\nconst concluido_em = meta.completed_at ? String(meta.completed_at) : new Date().toISOString();\nconst totalItems = Number(meta.total_items || jm.total_read || items.length || 0);\nconst skus_validos = totalItems > 0 ? totalItems : Number(jm.valid_skus || items.length || 0);\n\nfunction partHasValidPrice(part) {\n  const n = Number(part?.price);\n  return !!(part && part.exact_match && Number.isFinite(n) && n > 0);\n}\nfunction siteHasValidPrice(sr) {\n  if (sr.has_valid_price === true) return true;\n  return (Array.isArray(sr.results) ? sr.results : []).some(partHasValidPrice);\n}\n\nconst pricedSkus = Number(meta.priced_sku_count || 0);\nconst evidenceSkus = Number(meta.any_evidence_sku_count || meta.sku_success_count || 0);\nconst noPriceSkus = Number(meta.no_price_sku_count || Math.max(0, evidenceSkus - pricedSkus));\nconst blockedSkus = Number(meta.blocked_sku_count || 0);\nconst errorSkus = Number(meta.error_sku_count || 0);\nconst notFoundSkus = Number(meta.all_sites_not_found_count || Math.max(0, skus_validos - evidenceSkus - blockedSkus - errorSkus));\nconst skuHit = skus_validos > 0 ? ((pricedSkus / skus_validos) * 100).toFixed(1) + '%' : '0.0%';\nconst status =\n  errs.length > 0 || errorSkus > 0\n    ? '❌ ERRO_JOB'\n    : blockedSkus > 0 || noPriceSkus > 0 || notFoundSkus > 0\n      ? '⚠️ AVISOS'\n      : '✅ CONCLUIDO';\n\nconst siteTotals = {};\nlet checks = 0;\nlet hits = 0;\nfor (const skuResult of items) {\n  for (const sr of (skuResult.site_results || [])) {\n    const key = String(sr.site || sr.site_name || 'site').trim() || 'site';\n    checks += 1;\n    if (!siteTotals[key]) siteTotals[key] = { total: 0, hits: 0 };\n    siteTotals[key].total += 1;\n    if (siteHasValidPrice(sr)) {\n      hits += 1;\n      siteTotals[key].hits += 1;\n    }\n  }\n}\nconst taxaSite = checks > 0 ? ((hits / checks) * 100).toFixed(1) + '%' : 'N/A';\nconst resumoSitesObj = {};\nfor (const [k, v] of Object.entries(siteTotals)) {\n  resumoSitesObj[k] = v.total > 0 ? Number(((v.hits / v.total) * 100).toFixed(1)) : 0;\n}\n\nreturn [{\n  json: {\n    job_id: meta.job_id || 'unknown',\n    origem,\n    solicitante,\n    disparado_em,\n    concluido_em,\n    tempo_segundos: dur,\n    status,\n    skus_lidos: totalItems,\n    skus_validos,\n    skus_encontrados: pricedSkus,\n    skus_falhos: notFoundSkus + blockedSkus + errorSkus,\n    taxa_sucesso_sku: skuHit,\n    taxa_sucesso_sites: taxaSite,\n    sites_pesquisados: Object.keys(siteTotals).length || 5,\n    resumo_sites: JSON.stringify({\n      ...resumoSitesObj,\n      no_price: noPriceSkus,\n      not_found: notFoundSkus,\n      blocked: blockedSkus,\n      error: errorSkus,\n    }),\n    lista_skus_csv: skus_csv || '—',\n    skus_repetidos: dupCsv || '—',\n    job_error,\n  },\n}];\n"
+      },
+      "id": "ee541344-b46d-4378-9a68-065bbbcd470a",
+      "name": "📊 Construir Relatório Histórico",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        1136
+      ],
+      "notes": "CDP v1.0: Builds one historical job row. Reads requester/duplicate context from callback query params because current scraper API callbacks do not include arbitrary job_metadata."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "__SET_CDP_DEV_RESULTADOS_SHEET_ID__",
+          "mode": "list",
+          "cachedResultName": "cdp_resultados",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Historico",
+          "mode": "name",
+          "cachedResultName": "Historico",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "job_id": "={{ $json.job_id }}",
+            "concluido_em": "={{ $json.concluido_em }}",
+            "tempo_segundos": "={{ $json.tempo_segundos }}",
+            "status": "={{ $json.status }}",
+            "skus_encontrados": "={{ $json.skus_encontrados }}",
+            "skus_falhos": "={{ $json.skus_falhos }}",
+            "taxa_sucesso_sku": "={{ $json.taxa_sucesso_sku }}",
+            "taxa_sucesso_sites": "={{ $json.taxa_sucesso_sites }}",
+            "resumo_sites": "={{ $json.resumo_sites }}",
+            "skus_repetidos": "={{ $json.skus_repetidos }}",
+            "job_error": "={{ $json.job_error }}",
+            "sites_pesquisados": "={{ $json.sites_pesquisados }}",
+            "skus_lidos": "={{ $json.skus_lidos }}",
+            "skus_validos": "={{ $json.skus_validos }}",
+            "disparado_em": "={{ $json.disparado_em }}",
+            "origem": "={{ $json.origem }}",
+            "solicitante": "={{ $json.solicitante }}",
+            "lista_skus_csv": "={{ $json.lista_skus_csv }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "3ef429b2-acb5-41fb-9352-30e4e5f71772",
+      "name": "📝 Salvar → CDP_Resultados (Histórico)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        720,
+        1136
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      },
+      "notes": "Appends to 'Historico'. skus_encontrados/taxa_sucesso_sku use priced_sku_count (FOUND_PRICE) only; NO_PRICE/NOT_FOUND/BLOCKED/ERROR stay separate in resumo_sites."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-site-errors",
+              "leftValue": "={{ $json.total_errors }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "has-job-errors",
+              "leftValue": "={{ ($json.job_errors || []).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "has-all-sites-not-found-warnings",
+              "leftValue": "={{ $json.all_sites_not_found_count || 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "f0a6355e-c2a4-494d-9f31-cacaaaf1aae1",
+      "name": "❓ Tem Erros?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        272,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nfunction env(name) {\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) return String(process.env[name]).trim();\n  } catch (e) {}\n  return '';\n}\nconst fallbackEmail = env('NOTIFICATION_EMAIL_TO') || 'dev.lucascruz@gmail.com';\n\nconst meta = $json;\nconst errors = meta.errors || [];\nconst jobErrors = meta.job_errors || [];\nconst warningMessages = meta.warning_messages || [];\nconst warningSkus = meta.all_sites_not_found_skus || [];\nconst warningCount = Number(meta.all_sites_not_found_count || 0);\nconst hasError = errors.length > 0 || jobErrors.length > 0;\nconst title = hasError\n  ? '⚠️ CDP Scraper — Error Alert'\n  : '⚠️ CDP Scraper — Warning Summary';\n\nlet body = '<h2>' + title + '</h2>';\nbody += '<p><strong>Job ID:</strong> ' + meta.job_id + '</p>';\nbody += '<p><strong>Job Status:</strong> ' + meta.job_status + '</p>';\nbody += '<p><strong>Duration:</strong> ' + meta.job_duration_s + 's</p>';\n\nif (errors.length > 0) {\n  body += '<h3>Site Errors (' + errors.length + ')</h3>';\n  body += '<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\">';\n  body += '<tr><th>SKU</th><th>Site</th><th>Error</th><th>Time (ms)</th></tr>';\n  for (const e of errors) {\n    body += '<tr><td>' + e.sku + '</td><td>' + e.site + '</td><td>' + e.error + '</td><td>' + e.search_time_ms + '</td></tr>';\n  }\n  body += '</table>';\n}\n\nif (jobErrors.length > 0) {\n  body += '<h3>Job-Level Errors</h3><ul>';\n  for (const e of jobErrors) body += '<li>' + e + '</li>';\n  body += '</ul>';\n}\n\nif (warningCount > 0) {\n  body += '<h3>All-Sites-Not-Found Warning (' + warningCount + ')</h3>';\n  if (warningMessages.length > 0) {\n    body += '<ul>';\n    for (const m of warningMessages) body += '<li>' + m + '</li>';\n    body += '</ul>';\n  }\n  if (warningSkus.length > 0) {\n    body += '<p><strong>SKUs:</strong> ' + warningSkus.join(', ') + '</p>';\n  }\n}\n\nconst subjectPrefix = hasError ? '⚠️ CDP Scraper Error' : '⚠️ CDP Scraper Warning';\nreturn [{ json: { email_to: fallbackEmail, subject: subjectPrefix + ' — Job ' + meta.job_id, html: body } }];"
+      },
+      "id": "ee5276c6-4e68-4064-ac03-fefb0863cb1e",
+      "name": "📧 Formatar Email de Erro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// v0.8.6: summary rows + sticky sheet status vocabulary\nfunction parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') {\n    try { p = JSON.parse(p); } catch (e) { p = {}; }\n  }\n  return p && typeof p === 'object' ? p : {};\n}\n\nconst STATUS = {\n  FOUND: '✅ Encontrado',\n  NOT_FOUND: '❌ Não encontrado',\n  NO_PRICE: '⚠️ Sem preço',\n  BLOCKED: '🚫 Bloqueado',\n};\n\nfunction siteStatuses(skuResult) {\n  return (Array.isArray(skuResult.site_results) ? skuResult.site_results : [])\n    .map((sr) => String(sr.status || '').trim().toLowerCase())\n    .filter(Boolean);\n}\n\nfunction numericPrice(v) {\n  if (v === null || v === undefined || v === '') return null;\n  const n = Number(v);\n  return Number.isFinite(n) && n > 0 ? n : null;\n}\n\nfunction partHasValidPrice(part) {\n  return !!(part && part.exact_match && numericPrice(part.price) !== null);\n}\n\nfunction siteHasValidPrice(siteResult) {\n  if (siteResult.has_valid_price === true) return true;\n  return (Array.isArray(siteResult.results) ? siteResult.results : []).some(partHasValidPrice);\n}\n\nfunction skuHasValidPrice(skuResult) {\n  if (skuResult.has_valid_price === true || String(skuResult.sku_result || '').toUpperCase() === 'FOUND_PRICE') return true;\n  const best = skuResult.best_price || null;\n  if (best && best.exact_match !== false && numericPrice(best.price) !== null) return true;\n  return (Array.isArray(skuResult.site_results) ? skuResult.site_results : []).some(siteHasValidPrice);\n}\n\nfunction skuHasNoPriceEvidence(skuResult) {\n  if (skuResult.has_any_exact_evidence === true) return true;\n  return (Array.isArray(skuResult.site_results) ? skuResult.site_results : []).some((sr) => {\n    const parts = Array.isArray(sr.results) ? sr.results : [];\n    return String(sr.sku_result || '').toUpperCase() === 'NO_PRICE'\n      || String(sr.status || '').toLowerCase() === 'no_price'\n      || parts.some((part) => !!part.exact_match);\n  });\n}\n\nfunction canonicalSkuStatus(skuResult) {\n  const explicit = String(skuResult.sku_result || '').trim().toUpperCase();\n  if (explicit) return explicit;\n  const statuses = siteStatuses(skuResult);\n  if (skuHasValidPrice(skuResult)) return 'FOUND_PRICE';\n  if (statuses.includes('blocked')) return 'BLOCKED';\n  if (statuses.includes('timeout') || statuses.includes('error')) return 'ERROR';\n  if (skuHasNoPriceEvidence(skuResult) || statuses.includes('no_price')) return 'NO_PRICE';\n  return 'NOT_FOUND';\n}\n\nfunction sheetStatusForCanonical(canonical) {\n  if (canonical === 'FOUND_PRICE') return STATUS.FOUND;\n  if (canonical === 'NO_PRICE') return STATUS.NO_PRICE;\n  if (canonical === 'BLOCKED') return STATUS.BLOCKED;\n  if (canonical === 'TIMEOUT' || canonical === 'ERROR') return '⚠️ Erro';\n  return STATUS.NOT_FOUND;\n}\n\nconst wh = $('🔔 Webhook: Receber Resultados').first().json;\nconst payload = parseBody(wh.body);\n\nconst skipEncontrado = false;\nconst results = Array.isArray(payload.results) ? payload.results : [];\nconst rows = [];\n\nfor (const skuResult of results) {\n  const sku = skuResult.sku || '';\n  const canonical = canonicalSkuStatus(skuResult);\n\n  let bestPrice = null;\n  let bestSite = '';\n  let bestUrl = '';\n  const best = skuResult.best_price || null;\n  if (best && best.exact_match !== false && numericPrice(best.price) !== null) {\n    bestPrice = numericPrice(best.price);\n    bestSite = best.site_name || best.site || '';\n    bestUrl = best.product_url || '';\n  }\n  for (const sr of skuResult.site_results || []) {\n    for (const part of sr.results || []) {\n      if (partHasValidPrice(part)) {\n        const price = numericPrice(part.price);\n        if (!bestPrice || price < bestPrice) {\n          bestPrice = price;\n          bestSite = sr.site_name || sr.site || '';\n          bestUrl = part.product_url || '';\n        }\n      }\n    }\n  }\n\n  if (!bestSite && skuHasNoPriceEvidence(skuResult)) {\n    for (const sr of skuResult.site_results || []) {\n      for (const part of sr.results || []) {\n        const u = String(part.product_url || '').trim();\n        if (part.exact_match && u) {\n          bestSite = sr.site_name || sr.site || '';\n          bestUrl = u;\n          break;\n        }\n      }\n      if (bestSite) break;\n    }\n  }\n\n  const status = sheetStatusForCanonical(canonical);\n\n  let melhor = 'N/A';\n  if (bestPrice) {\n    melhor = 'R$ ' + bestPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 });\n  } else if (canonical === 'NO_PRICE') {\n    melhor = 'S/ preço (ver Detalhado)';\n  } else if (canonical === 'BLOCKED') {\n    melhor = 'Bloqueado';\n  } else if (canonical === 'TIMEOUT' || canonical === 'ERROR') {\n    melhor = 'Erro';\n  }\n\n  rows.push({\n    CODIGO: sku,\n    STATUS: status,\n    MELHOR_PRECO: melhor,\n    SITE: bestSite || 'N/A',\n    LINK: bestUrl || 'N/A',\n    DATA: new Date().toLocaleDateString('pt-BR'),\n    _encontrado: status,\n  });\n}\n\nreturn rows.map((r) => ({ json: { ...r, _skip_encontrado: skipEncontrado } }));\n"
+      },
+      "id": "39f65a13-68af-4e73-9e7c-edc8d950cb6e",
+      "name": "📋 Extrair Resumo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        1136
+      ],
+      "notes": "v0.7.5: fallback SITE/LINK sem preço; STATUS sem preço. v0.7.4: body do Webhook."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "__SET_CDP_DEV_RESULTADOS_SHEET_ID__",
+          "mode": "list",
+          "cachedResultName": "cdp_resultados",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Resumo",
+          "mode": "name",
+          "cachedResultName": "Resumo",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "CODIGO": "={{ $json.CODIGO }}",
+            "STATUS": "={{ $json.STATUS }}",
+            "SITE": "={{ $json.SITE }}",
+            "LINK": "={{ $json.LINK }}",
+            "DATA": "={{ $json.DATA }}",
+            "MELHOR PREÇO": "={{ $json.MELHOR_PRECO }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "5ff685f0-dfd0-4ade-9782-42639dda417d",
+      "name": "📋 Salvar → CDP_Resultados (Resumo)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1168,
+        1040
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      },
+      "notes": "v0.5.0: Appends to 'Resumo' tab. Create this tab with columns: CODIGO, STATUS, MELHOR_PRECO, SITE, LINK, DATA | v0.8.0: retry 5×/5s; no continueOnFail (retries work; fail loud if Sheets still errors)."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "mode": "list",
+          "cachedResultName": "cdp_skus",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "SKUs",
+          "mode": "name",
+          "cachedResultName": "SKUs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "PROCESSADO": "={{ $json.PROCESSADO }}",
+            "ENCONTRADO": "={{ $json.ENCONTRADO }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "PROCESSADO",
+              "displayName": "PROCESSADO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ENCONTRADO",
+              "displayName": "ENCONTRADO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "3e8fb948-5685-4cef-b415-7ebd48574e8f",
+      "name": "✅ Marcar ENCONTRADO → CDP_SKUs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1392,
+        1232
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      },
+      "notes": "Updates PROCESSADO/ENCONTRADO by row_number using sticky status priority (Encontrado/Sem preço are not downgraded by later Não encontrado callbacks)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "skip-false",
+              "leftValue": "={{ $json._skip_encontrado }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "10bd442d-7ec7-4746-a519-575cbabff36e",
+      "name": "❓ Atualizar ENCONTRADO na planilha?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Telegram/email notification for cdp_scraper completion (injected into workflow JSON).\nconst ASSISTANT_NAME = 'Assistente CDP';\nconst WEBSCRAPERS_LABEL = 'WEBSCRAPERS';\nconst ESTOQUE_LABEL = 'ESTOQUE ONLINE';\nconst NL = '\\n';\n\nfunction parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') {\n    try {\n      p = JSON.parse(p);\n    } catch (e) {\n      p = {};\n    }\n  }\n  return p && typeof p === 'object' ? p : {};\n}\n\nfunction env(name) {\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));\n}\n\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const map = {\n    CDP_RESULTADOS_SHEETS_URL: 'CDP_DEV_RESULTADOS_SHEETS_URL',\n    NOTIFICATION_EMAIL_TO: 'CDP_DEV_NOTIFICATION_EMAIL_TO',\n  };\n  const mapped = map[name] || '';\n  return mapped ? env(mapped) : '';\n}\n\nfunction durPt(seconds) {\n  const s = Math.max(0, Math.round(Number(seconds) || 0));\n  if (s >= 3600) {\n    const h = Math.floor(s / 3600);\n    const m = Math.floor((s % 3600) / 60);\n    return h + 'h ' + (m ? m + 'min' : '');\n  }\n  if (s >= 60) return Math.floor(s / 60) + ' min';\n  return s + ' s';\n}\n\nfunction pecaLabel(n) {\n  const x = Number(n) || 0;\n  return x === 1 ? '1 peça' : x + ' peças';\n}\n\nfunction reportUrl() {\n  const configured = envFor('CDP_RESULTADOS_SHEETS_URL');\n  if (configured || isDevWorkflow()) return configured;\n  return 'https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit#gid=533358674';\n}\n\nfunction escapeHtml(value) {\n  return String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n}\n\nconst wh = $('🔔 Webhook: Receber Resultados').first().json;\nconst payload = parseBody(wh.body);\nconst meta = typeof payload.job_metadata === 'object' && payload.job_metadata !== null ? payload.job_metadata : {};\nconst q = wh.query || {};\nif (String(meta.delivery_mode || q.delivery_mode || '').trim().toLowerCase() === 'aggregate') {\n  return [];\n}\nconst results = payload.results || [];\n\nlet notify = String(meta.notify || q.notify || 'none').toLowerCase();\nlet replyChannel = String(\n  meta.reply_channel || q.reply_channel || meta.command_origin || q.command_origin || ''\n)\n  .trim()\n  .toLowerCase();\nlet chatId = String(meta.chat_id || q.chat_id || '').trim();\nlet replyEmail = String(meta.reply_email || q.reply_email || '').trim();\nconst fallbackEmail = envFor('NOTIFICATION_EMAIL_TO');\nif (notify === 'email' && !replyEmail && fallbackEmail) replyEmail = fallbackEmail;\nif (!replyChannel) {\n  if (notify === 'email' || replyEmail) replyChannel = 'email';\n  else if (notify === 'telegram' || chatId) replyChannel = 'telegram';\n}\nif (replyChannel === 'email') {\n  notify = 'email';\n  chatId = '';\n} else if (replyChannel === 'telegram') {\n  notify = 'telegram';\n  replyEmail = '';\n} else if (chatId) {\n  notify = 'telegram';\n  replyChannel = 'telegram';\n} else if (replyEmail) {\n  notify = 'email';\n  replyChannel = 'email';\n}\n\nconst origem = notify === 'telegram' ? 'telegram' : notify === 'email' ? 'email' : 'auto';\n\nfunction numericPrice(value) {\n  if (value === null || value === undefined || value === '') return null;\n  const n = Number(value);\n  return Number.isFinite(n) && n > 0 ? n : null;\n}\n\nfunction hasBestPrice(skuResult) {\n  if (skuResult.has_valid_price === true || String(skuResult.sku_result || '').toUpperCase() === 'FOUND_PRICE') {\n    return true;\n  }\n  const best = skuResult.best_price;\n  if (best && best.exact_match !== false && numericPrice(best.price) !== null) return true;\n  const sites = Array.isArray(skuResult.site_results) ? skuResult.site_results : [];\n  return sites.some((siteResult) => {\n    if (siteResult.has_valid_price === true || String(siteResult.sku_result || '').toUpperCase() === 'FOUND_PRICE') {\n      return true;\n    }\n    const parts = Array.isArray(siteResult.results) ? siteResult.results : [];\n    return parts.some((part) => !!(part && part.exact_match && numericPrice(part.price) !== null));\n  });\n}\n\nfunction hasAnyResult(skuResult) {\n  if (skuResult.has_any_exact_evidence === true || String(skuResult.sku_result || '').toUpperCase() === 'NO_PRICE') return true;\n  const sites = Array.isArray(skuResult.site_results) ? skuResult.site_results : [];\n  return sites.some((siteResult) => {\n    const parts = Array.isArray(siteResult.results) ? siteResult.results : [];\n    const status = String(siteResult.status || '').toLowerCase();\n    return String(siteResult.sku_result || '').toUpperCase() === 'NO_PRICE'\n      || status === 'no_price'\n      || parts.some((part) => !!part.exact_match);\n  });\n}\n\nconst total = Number(payload.total_items || results.length || 0);\nconst resultCount = Number(payload.any_evidence_sku_count ?? results.filter(hasAnyResult).length);\nconst bestPriceCount = Number(payload.priced_sku_count ?? results.filter(hasBestPrice).length);\nconst noPriceCount = Number(payload.no_price_sku_count || 0);\nconst blockedCount = Number(payload.blocked_sku_count || 0);\nconst errorCount = Number(payload.error_sku_count || 0);\nconst pct = total ? ((bestPriceCount / total) * 100).toFixed(1) : '0.0';\nconst dur = Number(payload.duration_seconds ?? 0);\nconst notFound = Math.max(0, total - resultCount - blockedCount - errorCount);\nconst noComparableBestPrice = Math.max(0, resultCount - bestPriceCount);\nconst noPriceTotal = Math.max(noPriceCount, noComparableBestPrice);\nconst relUrl = reportUrl();\n\nconst headerLines = [\n  '🤖 *' + ASSISTANT_NAME + '*',\n  '',\n  '✅ *' + WEBSCRAPERS_LABEL + ': busca concluída*',\n  '',\n  '📊 *' + bestPriceCount + '* de *' + total + '* com preço encontrado',\n];\nif (noPriceTotal > 0) headerLines.push('⚠️ Sem preço: *' + noPriceTotal + '*');\nif (notFound > 0) headerLines.push('⚠️ Sem resultado: *' + notFound + '*');\nif (blockedCount > 0) headerLines.push('🚫 Bloqueados: *' + blockedCount + '*');\nif (errorCount > 0) headerLines.push('⚠️ Erros/timeouts: *' + errorCount + '*');\n\nlet telegramText = headerLines.join(NL);\nif (relUrl) telegramText += NL + NL + '📎 Relatório: ' + relUrl;\nif (telegramText.length > 4000) telegramText = telegramText.slice(0, 3990) + NL + '…';\n\nconst tone = errorCount > 0 || blockedCount > 0 ? '#b45309' : bestPriceCount > 0 ? '#047857' : '#334155';\nconst status = errorCount > 0 || blockedCount > 0 ? 'Concluído com avisos' : 'Busca em sites concluída';\nconst emailHtml =\n  '<div style=\"margin:0;padding:0;background:#f6f8fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937\">' +\n  '<div style=\"max-width:640px;margin:0 auto;padding:28px 18px\">' +\n  '<div style=\"background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden\">' +\n  '<div style=\"padding:22px 24px;border-bottom:1px solid #eef2f7\">' +\n  '<div style=\"font-size:12px;text-transform:uppercase;letter-spacing:0;color:#64748b;font-weight:700\">' +\n  escapeHtml(WEBSCRAPERS_LABEL) +\n  '</div>' +\n  '<h1 style=\"font-size:24px;line-height:1.25;margin:8px 0 0;color:#111827\">' +\n  escapeHtml(status) +\n  '</h1>' +\n  '</div>' +\n  '<div style=\"padding:22px 24px\">' +\n  '<p style=\"font-size:15px;line-height:1.6;margin:0 0 18px\">A busca nos sites públicos foi finalizada.</p>' +\n  '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;margin:0 0 20px\">' +\n  '<tr>' +\n  '<td style=\"padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px\">' +\n  '<div style=\"font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700\">Peças analisadas</div>' +\n  '<div style=\"font-size:26px;font-weight:700;color:#111827;margin-top:4px\">' +\n  pecaLabel(total) +\n  '</div>' +\n  '</td>' +\n  '<td width=\"12\"></td>' +\n  '<td style=\"padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px\">' +\n  '<div style=\"font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700\">Com preço</div>' +\n  '<div style=\"font-size:26px;font-weight:700;color:' +\n  tone +\n  ';margin-top:4px\">' +\n  bestPriceCount +\n  '</div>' +\n  '</td>' +\n  '</tr>' +\n  '</table>' +\n  '<div style=\"font-size:14px;line-height:1.7;color:#475569\">' +\n  '<strong>Taxa com preço:</strong> ' +\n  pct +\n  '%' +\n  '<br><strong>Sem preço:</strong> ' +\n  noPriceTotal +\n  '<br><strong>Sem resultado:</strong> ' +\n  notFound +\n  '<br><strong>Bloqueados:</strong> ' +\n  blockedCount +\n  '<br><strong>Erros/timeouts:</strong> ' +\n  errorCount +\n  '<br><strong>Duração:</strong> ' +\n  escapeHtml(durPt(dur)) +\n  '</div>' +\n  '<div style=\"background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin:20px 0 0;font-size:13px;line-height:1.6;color:#475569\">Este é o resultado de <strong>' +\n  escapeHtml(WEBSCRAPERS_LABEL) +\n  '</strong>. O resultado de <strong>' +\n  escapeHtml(ESTOQUE_LABEL) +\n  '</strong> chega em um e-mail separado quando a consulta de estoque terminar.</div>' +\n  '<p style=\"margin:22px 0 0\"><a href=\"' +\n  escapeHtml(relUrl) +\n  '\" style=\"display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;padding:12px 18px;font-weight:700;font-size:14px\">Abrir relatório</a></p>' +\n  '</div>' +\n  '</div>' +\n  '<div style=\"font-size:12px;line-height:1.5;color:#94a3b8;text-align:center;padding:14px 0 0\">Mensagem automática do Assistente CDP.</div>' +\n  '</div>' +\n  '</div>';\nconst emailSubject =\n  ASSISTANT_NAME + ' - ' + WEBSCRAPERS_LABEL + ': busca concluída (' + bestPriceCount + '/' + total + ' com preço, ' + pct + '%)';\n\nif (notify === 'telegram' && chatId) {\n  return [\n    {\n      json: {\n        notify: 'telegram',\n        origem,\n        telegram_chat_id: chatId,\n        telegram_text: telegramText,\n        email_to: '',\n        email_subject: emailSubject,\n        email_html: '',\n        _total_items: total,\n      },\n    },\n  ];\n}\n\nif (notify === 'email' && replyEmail) {\n  return [\n    {\n      json: {\n        notify: 'email',\n        origem,\n        telegram_chat_id: '',\n        telegram_text: '',\n        email_to: replyEmail,\n        email_subject: emailSubject,\n        email_html: emailHtml,\n        _total_items: total,\n      },\n    },\n  ];\n}\n\nreturn [\n  {\n    json: {\n      notify: 'none',\n      origem,\n      telegram_chat_id: '',\n      telegram_text: '',\n      email_to: '',\n      email_subject: '',\n      email_html: '',\n      _no_delivery: true,\n      _total_items: total,\n    },\n  },\n];\n"
+      },
+      "id": "0f3e2bc4-7509-443f-90d6-1da20a911325",
+      "name": "📣 Formatar Notificação Conclusão",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        464
+      ],
+      "notes": "Assistente CDP — resumo sites + link relatório (lib)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "inline-summary-gate",
+              "leftValue": "={{ Number($json._total_items || 0) }}",
+              "rightValue": 12,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "79b74a67-47de-4558-a335-1febf7b18f6e",
+      "name": "📋 Resumo inline? (≤12 SKUs)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        272,
+        288
+      ],
+      "notes": "When >12 SKUs, bulk branch sends CSV. Inline text for smaller jobs."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "telegram-bool",
+              "leftValue": "={{ $json.notify === 'telegram' && !!$json.telegram_chat_id }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "77a7e048-4279-4ad0-b16c-45d46fa72c17",
+      "name": "❓ Enviar resumo Telegram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        720,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_chat_id }}",
+        "text": "={{ $json.telegram_text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "appendAttribution": false
+        }
+      },
+      "id": "d29e92f2-0f2d-428e-8733-49d77fa317f0",
+      "name": "📱 Telegram: Resumo conclusão",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        320
+      ],
+      "webhookId": "cdp-notify-tg",
+      "credentials": {
+        "telegramApi": {
+          "id": "OCT6L7sDZffEbhJ9",
+          "name": "NoxTKTech_bot"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "Enable after Telegram credential is configured (same bot as trigger).",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "email-bool",
+              "leftValue": "={{ $json.notify === 'email' && !!$json.email_to }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7b3421f4-d010-41a9-884f-f25762f84f4e",
+      "name": "❓ Enviar resumo Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email_to }}",
+        "subject": "={{ $json.email_subject }}",
+        "message": "={{ $json.email_html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1840,
+        240
+      ],
+      "id": "0406c7d0-f94e-4e8e-a579-989b61972234",
+      "name": "📧 Email: Resumo conclusão",
+      "webhookId": "ef40a77f-3892-452b-8ee8-61ce07ace465",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rQesNRyarukVs0N4",
+          "name": "gmail lucas@tktech"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email_to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        -96
+      ],
+      "id": "94646ad8-1175-454f-97a5-f69d28c12448",
+      "name": "📧 Enviar Alerta de Erro",
+      "webhookId": "bd702db4-3814-4fc3-8a38-7e7b436cca83",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rQesNRyarukVs0N4",
+          "name": "gmail lucas@tktech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') {\n    try { p = JSON.parse(p); } catch (e) { p = {}; }\n  }\n  return p && typeof p === 'object' ? p : {};\n}\nconst wh = $('🔔 Webhook: Receber Resultados').first().json;\nconst payload = parseBody(wh.body);\n\nconst q = wh.query || {};\nconst jmeta = typeof payload.job_metadata === 'object' && payload.job_metadata !== null ? payload.job_metadata : {};\nif (String(jmeta.ad_hoc || q.ad_hoc || '').toLowerCase() === 'true') {\n  return [];\n}\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\nconst results = payload.results || [];\nconst codigos = [...new Set(results.map((r) => String(r.sku || '').trim()).filter(Boolean))];\nreturn codigos.map((codigo) => ({ json: { CODIGO: codigo, NOTIFICADO: '✅ Sim' } }));"
+      },
+      "id": "09555a9f-9acc-44cc-a997-a8316fe6318f",
+      "name": "🔧 Expandir NOTIFICADO (✅ Sim)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2288,
+        320
+      ],
+      "notes": "CODIGOs from webhook body (same SKUs as API). Avoids $('📋 Extrair Resumo') when that branch did not run."
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') {\n    try { p = JSON.parse(p); } catch (e) { p = {}; }\n  }\n  return p && typeof p === 'object' ? p : {};\n}\nconst wh = $('🔔 Webhook: Receber Resultados').first().json;\nconst payload = parseBody(wh.body);\n\nconst q = wh.query || {};\nconst jmeta = typeof payload.job_metadata === 'object' && payload.job_metadata !== null ? payload.job_metadata : {};\nif (String(jmeta.ad_hoc || q.ad_hoc || '').toLowerCase() === 'true') {\n  return [];\n}\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\nconst results = payload.results || [];\nconst codigos = [...new Set(results.map((r) => String(r.sku || '').trim()).filter(Boolean))];\nreturn codigos.map((codigo) => ({ json: { CODIGO: codigo, NOTIFICADO: '❌ Não' } }));"
+      },
+      "id": "3e0d4a00-13bb-454b-9c96-f0b1a9b38a98",
+      "name": "🔧 Expandir NOTIFICADO (❌ Não)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2288,
+        80
+      ],
+      "notes": "CODIGOs from webhook body. Use only when no notification was possible or all sends failed."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "mode": "list",
+          "cachedResultName": "cdp_skus",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "SKUs",
+          "mode": "name",
+          "cachedResultName": "SKUs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "NOTIFICADO": "={{ $json.NOTIFICADO }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "NOTIFICADO",
+              "displayName": "NOTIFICADO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e79fee8f-433a-49fd-965c-0f81e6b04517",
+      "name": "✅ Marcar NOTIFICADO → CDP_SKUs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2512,
+        224
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      },
+      "notes": "v0.6.10: Updates NOTIFICADO per SKU after notify outcome (✅ Sim / ❌ Não). | v0.8.0: retry 5×/5s; no continueOnFail (retries work; fail loud if Sheets still errors).",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "tg-ok",
+              "leftValue": "={{ !$json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5c029a99-47f2-4feb-b77a-8c0aebfc4b1d",
+      "name": "❓ Telegram enviou OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('📣 Formatar Notificação Conclusão').item.json }];"
+      },
+      "id": "a5cf7244-d30c-4df6-b275-d5f5becbc377",
+      "name": "🔄 Retomar pós-falha Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        240
+      ],
+      "notes": "Restores 📣 Formatar Notificação Conclusão payload for Email branch."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "em-ok",
+              "leftValue": "={{ !$json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "81becd2a-47a2-42cb-b388-6d70a66edb8f",
+      "name": "❓ Email enviou OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "no-del",
+              "leftValue": "={{ $json._no_delivery === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d844a222-e8da-4344-be3c-74e0536bf43a",
+      "name": "❓ Sem destino de notificação?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        496,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "bulk-gate",
+              "leftValue": "={{ Number($json._total_items || 0) }}",
+              "rightValue": 12,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ebfb20b7-d0b6-44d7-931d-0b7134c01b0e",
+      "name": "📦 Bulk Mode? (>12 SKUs)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        272,
+        752
+      ],
+      "notes": "True → bulk CSV + Telegram document. v0.8.6 threshold 12 SKUs."
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Bulk spreadsheet export v1.2 — found means FOUND_PRICE only.\nfunction parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { p = {}; } }\n  return p && typeof p === 'object' ? p : {};\n}\nfunction env(name) {\n  try { if (typeof process !== 'undefined' && process.env && process.env[name]) return String(process.env[name]).trim(); } catch (e) {}\n  return '';\n}\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) return String($workflow.name);\n  } catch (e) {}\n  return '';\n}\nfunction isDevWorkflow() {\n  return workflowName().trim().toLowerCase().startsWith('dev -') || env('CDP_ENV').toLowerCase() === 'dev';\n}\nfunction envFor(name) {\n  if (isDevWorkflow() && name === 'CDP_RESULTADOS_SHEETS_URL') return env('CDP_DEV_RESULTADOS_SHEETS_URL');\n  return env(name);\n}\nfunction numericPrice(v) {\n  if (v === null || v === undefined || v === '') return null;\n  const n = Number(v);\n  return Number.isFinite(n) && n > 0 ? n : null;\n}\nfunction partHasValidPrice(part) {\n  return !!(part && part.exact_match && numericPrice(part.price) !== null);\n}\nfunction siteHasValidPrice(sr) {\n  if (sr.has_valid_price === true || String(sr.sku_result || '').toUpperCase() === 'FOUND_PRICE') return true;\n  return (Array.isArray(sr.results) ? sr.results : []).some(partHasValidPrice);\n}\nfunction siteHasNoPriceEvidence(sr) {\n  const parts = Array.isArray(sr.results) ? sr.results : [];\n  return String(sr.sku_result || '').toUpperCase() === 'NO_PRICE'\n    || String(sr.status || '').toLowerCase() === 'no_price'\n    || parts.some((part) => !!part.exact_match);\n}\nfunction skuHasValidPrice(skuResult) {\n  if (skuResult.has_valid_price === true || String(skuResult.sku_result || '').toUpperCase() === 'FOUND_PRICE') return true;\n  const best = skuResult.best_price || null;\n  if (best && best.exact_match !== false && numericPrice(best.price) !== null) return true;\n  return (Array.isArray(skuResult.site_results) ? skuResult.site_results : []).some(siteHasValidPrice);\n}\nfunction canonicalSkuStatus(skuResult) {\n  const explicit = String(skuResult.sku_result || '').trim().toUpperCase();\n  if (explicit) return explicit;\n  const sites = Array.isArray(skuResult.site_results) ? skuResult.site_results : [];\n  const statuses = sites.map((sr) => String(sr.status || '').toLowerCase());\n  if (skuHasValidPrice(skuResult)) return 'FOUND_PRICE';\n  if (statuses.includes('blocked')) return 'BLOCKED';\n  if (statuses.includes('timeout') || statuses.includes('error')) return 'ERROR';\n  if (skuResult.has_any_exact_evidence === true || sites.some(siteHasNoPriceEvidence)) return 'NO_PRICE';\n  return 'NOT_FOUND';\n}\nfunction bestExactOffer(skuResult) {\n  let bestPrice = null;\n  let bestSite = '';\n  let bestUrl = '';\n  const best = skuResult.best_price || null;\n  if (best && best.exact_match !== false && numericPrice(best.price) !== null) {\n    bestPrice = numericPrice(best.price);\n    bestSite = best.site_name || best.site || '';\n    bestUrl = best.product_url || '';\n  }\n  for (const sr of skuResult.site_results || []) {\n    for (const part of sr.results || []) {\n      if (!partHasValidPrice(part)) continue;\n      const price = numericPrice(part.price);\n      if (bestPrice === null || price < bestPrice) {\n        bestPrice = price;\n        bestSite = sr.site_name || sr.site || '';\n        bestUrl = part.product_url || '';\n      }\n    }\n  }\n  return { bestPrice, bestSite, bestUrl };\n}\nfunction statusLabel(status) {\n  if (status === 'FOUND_PRICE') return 'Encontrado';\n  if (status === 'NO_PRICE') return 'Sem preco';\n  if (status === 'BLOCKED') return 'Bloqueado';\n  if (status === 'TIMEOUT' || status === 'ERROR') return 'Erro';\n  return 'Sem resultado';\n}\nfunction csvEscape(val) {\n  const s = String(val ?? '');\n  if (/[;\\r\\n\"]/.test(s)) return '\"' + s.replace(/\"/g, '\"\"') + '\"';\n  return s;\n}\n\nconst notifData = $('📣 Formatar Notificação Conclusão').first().json;\nconst wh = $('🔔 Webhook: Receber Resultados').first().json;\nconst payload = parseBody(wh.body);\nconst jm = typeof payload.job_metadata === 'object' && payload.job_metadata !== null ? payload.job_metadata : {};\n\nconst jobId = payload.job_id || 'unknown';\nlet notify = notifData.notify || 'none';\nlet replyChannel = String(\n  jm.reply_channel || jm.command_origin || notifData.reply_channel || notifData.origem || ''\n).trim().toLowerCase();\nconst origem = notifData.origem || 'auto';\nlet chatId = String(notifData.telegram_chat_id || jm.chat_id || '').trim();\nlet replyEmail = notifData.email_to || jm.reply_email || '';\nif (!replyChannel) {\n  if (notify === 'email' || replyEmail) replyChannel = 'email';\n  else if (notify === 'telegram' || chatId) replyChannel = 'telegram';\n}\nif (replyChannel === 'email') {\n  notify = 'email';\n  chatId = '';\n} else if (replyChannel === 'telegram') {\n  notify = 'telegram';\n  replyEmail = '';\n}\nconst results = Array.isArray(payload.results) ? payload.results : [];\nconst total = Number(payload.total_items || results.length || 0);\nconst evidence = Number(payload.any_evidence_sku_count ?? payload.sku_success_count ?? 0);\nconst found = Number(payload.priced_sku_count ?? 0);\nconst noPrice = Number(payload.no_price_sku_count ?? Math.max(0, evidence - found));\nconst blocked = Number(payload.blocked_sku_count ?? 0);\nconst errors = Number(payload.error_sku_count ?? 0);\nconst notFound = Number(payload.all_sites_not_found_count ?? Math.max(0, total - evidence - blocked - errors));\nconst pct = total > 0 ? ((found / total) * 100).toFixed(1) : '0.0';\nconst dur = Number(payload.duration_seconds ?? 0);\nconst startedAt = payload.started_at || new Date(Date.now() - dur * 1000).toISOString();\nconst completedAt = payload.completed_at || new Date().toISOString();\nconst configuredSheetsUrl = envFor('CDP_RESULTADOS_SHEETS_URL');\nconst sheetsUrl = configuredSheetsUrl || (isDevWorkflow()\n  ? ''\n  : 'https://docs.google.com/spreadsheets/d/1O6H__UGqja7FZsQkA-WcePKtbKS-bcb5XFzmbJTrhPw/edit');\n\nconst rows = [];\nfor (const skuResult of results) {\n  const sku = skuResult.sku || '';\n  const canonical = canonicalSkuStatus(skuResult);\n  const offer = canonical === 'FOUND_PRICE' ? bestExactOffer(skuResult) : { bestPrice: null, bestSite: '', bestUrl: '' };\n  const siteSummary = [];\n  for (const sr of skuResult.site_results || []) {\n    const siteName = sr.site_name || sr.site || '';\n    const srStatus = String(sr.sku_result || sr.status || '').toLowerCase() || 'sem_resultado';\n    siteSummary.push(siteName + (siteHasValidPrice(sr) ? ' OK' : ' ' + srStatus));\n  }\n  rows.push({\n    SKU: sku,\n    STATUS: statusLabel(canonical),\n    'MELHOR PREÇO': offer.bestPrice !== null\n      ? 'BRL ' + Number(offer.bestPrice).toLocaleString('pt-BR', { minimumFractionDigits: 2 })\n      : 'N/A',\n    SITE: offer.bestSite || 'N/A',\n    LINK: offer.bestUrl || 'N/A',\n    'SITES CHECADOS': siteSummary.join(' | '),\n    DATA: new Date().toLocaleDateString('pt-BR'),\n  });\n}\n\nconst header = ['SKU','STATUS','MELHOR PREÇO','SITE','LINK','SITES CHECADOS','DATA'];\nconst csvLines = [header.map(csvEscape).join(';')];\nfor (const r of rows) csvLines.push(header.map((h) => csvEscape(r[h] ?? '')).join(';'));\nconst csvText = '\\ufeff' + csvLines.join('\\r\\n');\nconst b64 = Buffer.from(csvText, 'utf8').toString('base64');\nconst fname = `cdp_${jobId}_${new Date().toISOString().slice(0,10)}.csv`;\nconst durStr = dur >= 60 ? `${Math.floor(dur / 60)}m ${Math.round(dur % 60)}s` : `${Math.round(dur)}s`;\n\nreturn [{\n  json: {\n    notify, origem, chatId, replyEmail, sheetsUrl,\n    jobId, total, found, noPrice, notFound, blocked, errors, pct, durStr,\n    startedAt, completedAt,\n    filename: fname,\n    file_b64: b64,\n    xlsx_b64: b64,\n    _notify_ok: true,\n  },\n  binary: {\n    data: {\n      data: b64,\n      mimeType: 'text/csv; charset=utf-8',\n      fileName: fname,\n      fileExtension: 'csv',\n    },\n  },\n}];\n"
+      },
+      "id": "eb7f50dc-fe2c-45ac-bb84-73d8307ee96d",
+      "name": "🗂️ Gerar Excel Bulk",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        752
+      ],
+      "notes": "CDP v1.2: builds UTF-8 CSV from canonical result semantics; found means FOUND_PRICE only."
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "tg-route",
+                    "leftValue": "={{ $json.notify }}",
+                    "rightValue": "telegram",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "telegram"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "em-route",
+                    "leftValue": "={{ $json.notify }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "email"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "88155497-8fc6-4053-b20f-7a4d82361802",
+      "name": "🔀 Rota Bulk (Telegram / Email)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        720,
+        752
+      ],
+      "notes": "Routes to Telegram doc or Email based on notify field."
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst lines = [\n  '🤖 *Assistente CDP*',\n  '',\n  '✅ *WEBSCRAPERS: busca concluída*',\n  '',\n  '📊 *' + d.found + '* de *' + d.total + '* com preço encontrado',\n];\nif (Number(d.noPrice || 0) > 0) lines.push('⚠️ Sem preço: *' + d.noPrice + '*');\nif (Number(d.notFound || 0) > 0) lines.push('⚠️ Sem resultado: *' + d.notFound + '*');\nif (Number(d.blocked || 0) > 0) lines.push('🚫 Bloqueados: *' + d.blocked + '*');\nif (Number(d.errors || 0) > 0) lines.push('⚠️ Erros/timeouts: *' + d.errors + '*');\nlines.push('📎 Relatório: ' + d.sheetsUrl);\nreturn [{ json: { ...d, caption: lines.join('\\n') }, binary: $input.first().binary }];\n"
+      },
+      "id": "a33cfc7e-ebf3-4043-a1c2-d4d2783805fe",
+      "name": "📱 Formatar Caption Bulk (Telegram)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        656
+      ],
+      "notes": "Builds Markdown caption for the sendDocument call."
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d = $input.first().json;\nconst pct = Number(d.pct || 0);\nconst bar = Math.min(100, Math.max(0, Math.round(pct)));\nconst isGood = Number(d.found || 0) > 0 && Number(d.blocked || 0) === 0 && Number(d.errors || 0) === 0;\nconst html = `<!DOCTYPE html>\n<html lang=\"pt-BR\">\n<head><meta charset=\"UTF-8\">\n<style>\n  body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:20px}\n  .wrap{background:#fff;border-radius:8px;padding:32px;max-width:640px;margin:auto;box-shadow:0 2px 10px rgba(0,0,0,.1)}\n  h1{color:#111827;font-size:22px;margin:0 0 6px}.badge{display:inline-block;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:700;margin-bottom:20px;background:${isGood?'#16a34a':'#f59e0b'};color:#fff}\n  h2{font-size:13px;text-transform:uppercase;color:#6b7280;border-bottom:1px solid #e5e7eb;padding-bottom:5px;margin:22px 0 10px}\n  .row{display:flex;justify-content:space-between;padding:5px 0;font-size:14px}.lbl{color:#6b7280}.val{font-weight:600;color:#111827}\n  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.box{background:#f9fafb;border-radius:6px;padding:14px 16px}\n  .num{font-size:26px;font-weight:700;color:#111827}.g{color:#16a34a}.w{color:#b45309}.r{color:#dc2626}.sub{font-size:12px;color:#6b7280;margin-top:2px}\n  .bar-bg{height:10px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin:8px 0}.bar-fill{height:100%;background:${isGood?'#16a34a':'#f59e0b'};width:${bar}%;border-radius:99px}\n  .btn{display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:700;font-size:14px;margin-top:18px}\n  .foot{text-align:center;font-size:11px;color:#9ca3af;margin-top:28px}code{background:#f3f4f6;padding:1px 6px;border-radius:3px;font-size:12px}\n</style></head>\n<body><div class=\"wrap\">\n  <h1>WEBSCRAPERS: busca concluída</h1>\n  <span class=\"badge\">${isGood ? 'Com preço encontrado' : 'Atenção'}</span>\n  <p style=\"font-size:14px;color:#374151;margin:0 0 14px\">A busca nos sites públicos foi finalizada. Este é o resultado de <strong>WEBSCRAPERS</strong>; <strong>ESTOQUE ONLINE</strong> chega em e-mail separado quando a consulta de estoque terminar.</p>\n  <h2>Metadados do Job</h2>\n  <div class=\"row\"><span class=\"lbl\">Job ID</span><span class=\"val\"><code>${d.jobId}</code></span></div>\n  <div class=\"row\"><span class=\"lbl\">Início</span><span class=\"val\">${d.startedAt}</span></div>\n  <div class=\"row\"><span class=\"lbl\">Conclusão</span><span class=\"val\">${d.completedAt}</span></div>\n  <div class=\"row\"><span class=\"lbl\">Duração</span><span class=\"val\">${d.durStr}</span></div>\n  <h2>Resultados</h2>\n  <div class=\"grid\">\n    <div class=\"box\"><div class=\"num\">${d.total}</div><div class=\"sub\">SKUs processados</div></div>\n    <div class=\"box\"><div class=\"num g\">${d.found}</div><div class=\"sub\">Com preço encontrado</div></div>\n    <div class=\"box\"><div class=\"num w\">${d.noPrice}</div><div class=\"sub\">Sem preço</div></div>\n    <div class=\"box\"><div class=\"num r\">${d.notFound}</div><div class=\"sub\">Sem resultado</div></div>\n    <div class=\"box\"><div class=\"num r\">${d.blocked}</div><div class=\"sub\">Bloqueados</div></div>\n    <div class=\"box\"><div class=\"num r\">${d.errors}</div><div class=\"sub\">Erros/timeouts</div></div>\n  </div>\n  <div style=\"font-size:13px;color:#374151;margin-top:8px\"><strong>Taxa com preço: ${d.pct}%</strong></div>\n  <div class=\"bar-bg\"><div class=\"bar-fill\"></div></div>\n  <h2>Acessar resultados</h2>\n  <p style=\"font-size:14px;color:#374151\">Os resultados de WEBSCRAPERS estão no Google Sheets e em anexo neste e-mail.</p>\n  <a href=\"${d.sheetsUrl}\" class=\"btn\">Abrir Google Sheets</a>\n  <div class=\"foot\">Mensagem automática do Assistente CDP · ${new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})}</div>\n</div></body></html>`;\n\nconst subject = `Assistente CDP - WEBSCRAPERS: busca concluída (${d.found}/${d.total} com preço, ${d.pct}%)`;\nreturn [{ json: { ...d, email_html: html, email_subject: subject }, binary: $input.first().binary }];\n"
+      },
+      "id": "0781bc95-33f1-40d4-abf4-40dbd296835c",
+      "name": "📧 Formatar HTML Bulk (Email)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        848
+      ],
+      "notes": "Builds rich HTML email with stat grid, progress bar, and Sheets CTA."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.replyEmail }}",
+        "subject": "={{ $json.email_subject }}",
+        "message": "={{ $json.email_html }}",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "id": "9eb427a1-52c3-432f-a280-d4c8760a65c2",
+      "name": "📧 Email: Enviar Excel Bulk",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1168,
+        848
+      ],
+      "webhookId": "cdp-bulk-email",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rQesNRyarukVs0N4",
+          "name": "gmail lucas@tktech"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "Sends HTML email + CSV attachment to reply_email from job metadata."
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Re-expand SKU list from the webhook payload to mark NOTIFICADO\nfunction parseBody(raw) {\n  let p = raw; if (typeof p === 'string') { try { p = JSON.parse(p); } catch(e){p={};} }\n  return (p && typeof p === 'object') ? p : {};\n}\nconst wh = $('🔔 Webhook: Receber Resultados').first().json;\nconst payload = parseBody(wh.body);\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode === 'aggregate') {\n  return [];\n}\n\nconst results = payload.results || [];\nconst codigos = [...new Set(results.map(r => String(r.sku||'').trim()).filter(Boolean))];\nreturn codigos.map(c => ({ json: { CODIGO: c, NOTIFICADO: '✅ Sim' } }));\n"
+      },
+      "id": "18a0ad58-7071-4e46-9fa4-83bb2dbf82e6",
+      "name": "🔧 Bulk: Expandir NOTIFICADO (✅ Sim)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        752
+      ],
+      "notes": "Marks all SKUs as NOTIFICADO after bulk send (both channels converge here)."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "mode": "list",
+          "cachedResultName": "cdp_skus",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "SKUs",
+          "mode": "name",
+          "cachedResultName": "SKUs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "NOTIFICADO": "={{ $json.NOTIFICADO }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "NOTIFICADO",
+              "displayName": "NOTIFICADO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "58e2942e-2e8f-4c7d-a4ed-e28c8ec43586",
+      "name": "✅ Bulk: Marcar NOTIFICADO → CDP_SKUs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1616,
+        752
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      },
+      "notes": "Updates NOTIFICADO=✅ Sim for all SKUs in this job by row_number. | v0.8.0: retry 5x/5s; no continueOnFail (retries work; fail loud if Sheets still errors).",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendDocument",
+        "chatId": "={{ $json.chatId }}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {
+          "caption": "={{ $json.caption }}",
+          "parse_mode": "Markdown",
+          "appendAttribution": false
+        }
+      },
+      "id": "019cd95e-e2be-4fa2-8965-b5a9224b6b57",
+      "name": "📱 Telegram: Enviar Excel Bulk",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1168,
+        656
+      ],
+      "webhookId": "cdp-bulk-tg-doc",
+      "credentials": {
+        "telegramApi": {
+          "id": "OCT6L7sDZffEbhJ9",
+          "name": "NoxTKTech_bot"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "v0.8.4: native Telegram credential (same as resumo). Sheets run before this node. continueOnFail so a send failure does not block NOTIFICADO.",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "ea9759a1-e612-4aa2-9cbb-68e8406dee26",
+      "name": "🧺 Coletar ENCONTRADO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        732,
+        1232
+      ],
+      "parameters": {
+        "jsCode": "const marks = $input.all().map((i) => i.json);\nreturn [{ json: { marks } }];\n"
+      },
+      "notes": "Collapse marking items into one payload so the sheet read runs once (and merge feeders)."
+    },
+    {
+      "id": "99e08055-40e6-4304-8cd9-48b48ede9872",
+      "name": "📄 Ler CDP_SKUs (ENCONTRADO)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        952,
+        1232
+      ],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "mode": "list",
+          "cachedResultName": "cdp_skus",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "SKUs",
+          "mode": "name",
+          "cachedResultName": "SKUs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=0"
+        },
+        "options": {}
+      },
+      "notes": "Read SKUs rows (CODIGO + row_number) so every duplicate CODIGO row can be marked.",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      }
+    },
+    {
+      "id": "29bd78b2-edc9-428c-bcef-3088ab6b7f69",
+      "name": "🧭 Mapear ENCONTRADO por row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1172,
+        1232
+      ],
+      "parameters": {
+        "jsCode": "const marks = $('🧺 Coletar ENCONTRADO').first().json.marks || [];\nconst byCodigo = {};\nfor (const it of marks) {\n  const k = String(it.CODIGO == null ? '' : it.CODIGO).trim().toUpperCase();\n  if (k) byCodigo[k] = it;\n}\nfunction normalizeSheetStatus(value) {\n  let s = String(value || '').trim().toLowerCase();\n  try { s = s.normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''); } catch (e) {}\n  s = s.replace(/[^a-z0-9]+/g, ' ').trim();\n  if (!s) return '';\n  if (s.includes('sem preco') || s.includes('sem melhor preco') || s.includes('s preco') || s.includes('no price')) return 'sem_preco';\n  if (s.includes('nao encontrado') || s.includes('not found')) return 'nao_encontrado';\n  if (s.includes('bloqueado') || s.includes('blocked')) return 'bloqueado';\n  if (s.includes('encontrado') || s === 'found') return 'encontrado';\n  if (s.includes('processando') || s.includes('processing')) return 'processando';\n  return s;\n}\nfunction sheetStatusRank(value) {\n  const ranks = { processando: 0, nao_encontrado: 1, bloqueado: 2, sem_preco: 3, encontrado: 4 };\n  const key = normalizeSheetStatus(value);\n  return Object.prototype.hasOwnProperty.call(ranks, key) ? ranks[key] : -1;\n}\nfunction chooseSheetStatus(current, candidate) {\n  return sheetStatusRank(current) > sheetStatusRank(candidate) ? current : candidate;\n}\nconst rows = $input.all().map((i) => i.json);\nconst out = [];\nfor (const row of rows) {\n  const rn = row.row_number;\n  if (rn === undefined || rn === null || rn === '') continue;\n  const k = String(row.CODIGO == null ? '' : row.CODIGO).trim().toUpperCase();\n  const it = byCodigo[k];\n  if (!it) continue;\n  out.push({ json: { row_number: rn, PROCESSADO: '✅ Processado', ENCONTRADO: chooseSheetStatus(row.ENCONTRADO, it._encontrado) } });\n}\nreturn out;\n"
+      },
+      "notes": "Fan out one update per matching sheet row_number (handles duplicate CODIGO rows)."
+    },
+    {
+      "id": "c899ab4a-73d4-49b0-8c34-9dd2a0ae43c5",
+      "name": "🧺 Coletar NOTIFICADO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1852,
+        224
+      ],
+      "parameters": {
+        "jsCode": "const marks = $input.all().map((i) => i.json);\nreturn [{ json: { marks } }];\n"
+      },
+      "notes": "Collapse marking items into one payload so the sheet read runs once (and merge feeders)."
+    },
+    {
+      "id": "534799f9-6f03-4d36-b787-bfda68cd9e08",
+      "name": "📄 Ler CDP_SKUs (NOTIFICADO)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2072,
+        224
+      ],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "mode": "list",
+          "cachedResultName": "cdp_skus",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "SKUs",
+          "mode": "name",
+          "cachedResultName": "SKUs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=0"
+        },
+        "options": {}
+      },
+      "notes": "Read SKUs rows (CODIGO + row_number) so every duplicate CODIGO row can be marked.",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      }
+    },
+    {
+      "id": "dd367c1d-91b8-4b7b-afe6-17501dae61d8",
+      "name": "🧭 Mapear NOTIFICADO por row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2292,
+        224
+      ],
+      "parameters": {
+        "jsCode": "const marks = $('🧺 Coletar NOTIFICADO').first().json.marks || [];\nconst byCodigo = {};\nfor (const it of marks) {\n  const k = String(it.CODIGO == null ? '' : it.CODIGO).trim().toUpperCase();\n  if (k) byCodigo[k] = it;\n}\nfunction normalizeSheetStatus(value) {\n  let s = String(value || '').trim().toLowerCase();\n  try { s = s.normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''); } catch (e) {}\n  s = s.replace(/[^a-z0-9]+/g, ' ').trim();\n  if (!s) return '';\n  if (s.includes('sem preco') || s.includes('sem melhor preco') || s.includes('s preco') || s.includes('no price')) return 'sem_preco';\n  if (s.includes('nao encontrado') || s.includes('not found')) return 'nao_encontrado';\n  if (s.includes('bloqueado') || s.includes('blocked')) return 'bloqueado';\n  if (s.includes('encontrado') || s === 'found') return 'encontrado';\n  if (s.includes('processando') || s.includes('processing')) return 'processando';\n  return s;\n}\nfunction sheetStatusRank(value) {\n  const ranks = { processando: 0, nao_encontrado: 1, bloqueado: 2, sem_preco: 3, encontrado: 4 };\n  const key = normalizeSheetStatus(value);\n  return Object.prototype.hasOwnProperty.call(ranks, key) ? ranks[key] : -1;\n}\nfunction chooseSheetStatus(current, candidate) {\n  return sheetStatusRank(current) > sheetStatusRank(candidate) ? current : candidate;\n}\nconst rows = $input.all().map((i) => i.json);\nconst out = [];\nfor (const row of rows) {\n  const rn = row.row_number;\n  if (rn === undefined || rn === null || rn === '') continue;\n  const k = String(row.CODIGO == null ? '' : row.CODIGO).trim().toUpperCase();\n  const it = byCodigo[k];\n  if (!it) continue;\n  out.push({ json: { row_number: rn, NOTIFICADO: it.NOTIFICADO } });\n}\nreturn out;\n"
+      },
+      "notes": "Fan out one update per matching sheet row_number (handles duplicate CODIGO rows)."
+    },
+    {
+      "id": "f858a6df-4895-4206-a5d4-40ff33b869b5",
+      "name": "🧺 Bulk: Coletar NOTIFICADO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        956,
+        752
+      ],
+      "parameters": {
+        "jsCode": "const marks = $input.all().map((i) => i.json);\nreturn [{ json: { marks } }];\n"
+      },
+      "notes": "Collapse marking items into one payload so the sheet read runs once (and merge feeders)."
+    },
+    {
+      "id": "14ab52e5-660f-4b8f-9649-d55b9b3a4a74",
+      "name": "📄 Bulk: Ler CDP_SKUs (NOTIFICADO)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1176,
+        752
+      ],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "mode": "list",
+          "cachedResultName": "cdp_skus",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "SKUs",
+          "mode": "name",
+          "cachedResultName": "SKUs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=0"
+        },
+        "options": {}
+      },
+      "notes": "Read SKUs rows (CODIGO + row_number) so every duplicate CODIGO row can be marked.",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      }
+    },
+    {
+      "id": "6384dbec-f061-4d96-bafa-5c0c97f9e669",
+      "name": "🧭 Bulk: Mapear NOTIFICADO por row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1396,
+        752
+      ],
+      "parameters": {
+        "jsCode": "const marks = $('🧺 Bulk: Coletar NOTIFICADO').first().json.marks || [];\nconst byCodigo = {};\nfor (const it of marks) {\n  const k = String(it.CODIGO == null ? '' : it.CODIGO).trim().toUpperCase();\n  if (k) byCodigo[k] = it;\n}\nfunction normalizeSheetStatus(value) {\n  let s = String(value || '').trim().toLowerCase();\n  try { s = s.normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''); } catch (e) {}\n  s = s.replace(/[^a-z0-9]+/g, ' ').trim();\n  if (!s) return '';\n  if (s.includes('sem preco') || s.includes('sem melhor preco') || s.includes('s preco') || s.includes('no price')) return 'sem_preco';\n  if (s.includes('nao encontrado') || s.includes('not found')) return 'nao_encontrado';\n  if (s.includes('bloqueado') || s.includes('blocked')) return 'bloqueado';\n  if (s.includes('encontrado') || s === 'found') return 'encontrado';\n  if (s.includes('processando') || s.includes('processing')) return 'processando';\n  return s;\n}\nfunction sheetStatusRank(value) {\n  const ranks = { processando: 0, nao_encontrado: 1, bloqueado: 2, sem_preco: 3, encontrado: 4 };\n  const key = normalizeSheetStatus(value);\n  return Object.prototype.hasOwnProperty.call(ranks, key) ? ranks[key] : -1;\n}\nfunction chooseSheetStatus(current, candidate) {\n  return sheetStatusRank(current) > sheetStatusRank(candidate) ? current : candidate;\n}\nconst rows = $input.all().map((i) => i.json);\nconst out = [];\nfor (const row of rows) {\n  const rn = row.row_number;\n  if (rn === undefined || rn === null || rn === '') continue;\n  const k = String(row.CODIGO == null ? '' : row.CODIGO).trim().toUpperCase();\n  const it = byCodigo[k];\n  if (!it) continue;\n  out.push({ json: { row_number: rn, NOTIFICADO: it.NOTIFICADO } });\n}\nreturn out;\n"
+      },
+      "notes": "Fan out one update per matching sheet row_number (handles duplicate CODIGO rows)."
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_scraper — POST aggregate pipeline handoff to cdp_notifier after Sheets writes.\n\nfunction parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') {\n    try {\n      p = JSON.parse(p);\n    } catch (e) {\n      p = {};\n    }\n  }\n  return p && typeof p === 'object' ? p : {};\n}\n\nfunction env(name) {\n  try {\n    if (typeof $env !== 'undefined' && $env && $env[name]) {\n      return String($env[name]).trim();\n    }\n  } catch (e) {}\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));\n}\n\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const map = {\n    CDP_NOTIFIER_WEBHOOK_URL: 'CDP_DEV_NOTIFIER_WEBHOOK_URL',\n    WEBHOOK_URL: 'CDP_DEV_WEBHOOK_URL',\n    CDP_NOTIFIER_WEBHOOK_PATH: 'CDP_DEV_NOTIFIER_WEBHOOK_PATH',\n  };\n  const mapped = map[name] || '';\n  return mapped ? env(mapped) : env(name);\n}\n\nfunction trimTrailingSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\n\nfunction trimSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.startsWith('/')) out = out.slice(1);\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\n\nfunction normalizeSkuResult(siteResult, parts) {\n  const explicit = String(siteResult.sku_result || '').trim().toUpperCase();\n  if (explicit) return explicit;\n  const health = String(siteResult.source_health || '').trim().toUpperCase();\n  if (health && health !== 'WORKING') return health;\n  const partsArr = Array.isArray(parts) ? parts : [];\n  function hasValidPrice(part) {\n    if (!part || !part.exact_match) return false;\n    const n = Number(part.price);\n    return Number.isFinite(n) && n > 0;\n  }\n  if (partsArr.some(hasValidPrice)) return 'FOUND_PRICE';\n  if (String(siteResult.status || '').toLowerCase() === 'no_price') return 'NO_PRICE';\n  return 'NOT_FOUND';\n}\n\nfunction countScraperSummary(results) {\n  const totals = { with_price: 0, no_price: 0, not_found: 0, blocked: 0, errors: 0 };\n  for (const row of results || []) {\n    for (const site of row.site_results || []) {\n      const parts = site.parts || [];\n      const skuResult = normalizeSkuResult(site, parts);\n      if (skuResult === 'FOUND_PRICE') totals.with_price += 1;\n      else if (skuResult === 'NO_PRICE') totals.no_price += 1;\n      else if (skuResult === 'BLOCKED') totals.blocked += 1;\n      else if (skuResult === 'TIMEOUT' || skuResult === 'ERROR') totals.errors += 1;\n      else totals.not_found += 1;\n    }\n  }\n  return totals;\n}\n\nconst wh = $('🔔 Webhook: Receber Resultados').first().json;\nconst payload = parseBody(wh.body);\nconst q = wh.query || {};\nconst jmeta =\n  typeof payload.job_metadata === 'object' && payload.job_metadata !== null ? payload.job_metadata : {};\n\nconst deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();\nif (deliveryMode !== 'aggregate') {\n  return [];\n}\n\nconst batchGroupId = String(jmeta.batch_group_id || q.batch_group_id || '').trim();\nif (!batchGroupId) {\n  return [];\n}\n\nconst totals = countScraperSummary(payload.results || []);\nconst jobStatus = String(payload.status || '').toLowerCase();\nconst pipelineStatus = jobStatus === 'failed' ? 'failed' : 'completed';\n\nlet notifierUrl = envFor('CDP_NOTIFIER_WEBHOOK_URL');\nif (!notifierUrl) {\n  const base = trimTrailingSlashes(envFor('WEBHOOK_URL') || 'https://automacao.tktechnologies.com.br');\n  const rel = trimSlashes(envFor('CDP_NOTIFIER_WEBHOOK_PATH') || 'webhook/cdp-notifier');\n  notifierUrl = base + '/' + rel;\n}\n\nreturn [\n  {\n    json: {\n      notifier_url: notifierUrl,\n      handoff_body: {\n        batch_group_id: batchGroupId,\n        source: 'scraper',\n        status: pipelineStatus,\n        summary: {\n          ...totals,\n          duration_seconds: Number(payload.duration_seconds) || null,\n          status: pipelineStatus,\n          failed_reason: pipelineStatus === 'failed' ? String(payload.error || '') : null,\n        },\n      },\n    },\n  },\n];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "fe11cc0c-5a74-47a2-8d42-045518bef851",
+      "name": "📣 Preparar handoff notifier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3200,
+        400
+      ],
+      "notes": "Aggregate delivery: POST compact summary to cdp_notifier."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.notifier_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.handoff_body) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "432ea8c9-3494-494d-9113-ad1dc6c8f60b",
+      "name": "📤 POST cdp-notifier",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3440,
+        400
+      ],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "🔔 Webhook: Receber Resultados": {
+      "main": [
+        [
+          {
+            "node": "🔐 Verificar Webhook Secret",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔐 Verificar Webhook Secret": {
+      "main": [
+        [
+          {
+            "node": "🎲 Atraso aleatório 10–60s (Sheets)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎲 Atraso aleatório 10–60s (Sheets)": {
+      "main": [
+        [
+          {
+            "node": "⏳ Esperar N s (rate limit Sheets)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ Esperar N s (rate limit Sheets)": {
+      "main": [
+        [
+          {
+            "node": "📊 Extrair Dados (Detalhado)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "⚠️ Extrair Erros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Extrair Dados (Detalhado)": {
+      "main": [
+        [
+          {
+            "node": "📊 Salvar → CDP_Resultados (Detalhado)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚠️ Extrair Erros": {
+      "main": [
+        [
+          {
+            "node": "❓ Tem Erros?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Salvar → CDP_Resultados (Detalhado)": {
+      "main": [
+        [
+          {
+            "node": "📊 Construir Relatório Histórico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Construir Relatório Histórico": {
+      "main": [
+        [
+          {
+            "node": "📝 Salvar → CDP_Resultados (Histórico)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Salvar → CDP_Resultados (Histórico)": {
+      "main": [
+        [
+          {
+            "node": "📋 Extrair Resumo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Tem Erros?": {
+      "main": [
+        [
+          {
+            "node": "📧 Formatar Email de Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Formatar Email de Erro": {
+      "main": [
+        [
+          {
+            "node": "📧 Enviar Alerta de Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Extrair Resumo": {
+      "main": [
+        [
+          {
+            "node": "📋 Salvar → CDP_Resultados (Resumo)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "❓ Atualizar ENCONTRADO na planilha?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Atualizar ENCONTRADO na planilha?": {
+      "main": [
+        [
+          {
+            "node": "🧺 Coletar ENCONTRADO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Salvar → CDP_Resultados (Resumo)": {
+      "main": [
+        [
+          {
+            "node": "📣 Preparar handoff notifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📣 Formatar Notificação Conclusão": {
+      "main": [
+        [
+          {
+            "node": "📋 Resumo inline? (≤12 SKUs)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📦 Bulk Mode? (>12 SKUs)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Resumo inline? (≤12 SKUs)": {
+      "main": [
+        [
+          {
+            "node": "❓ Sem destino de notificação?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Enviar resumo Telegram?": {
+      "main": [
+        [
+          {
+            "node": "📱 Telegram: Resumo conclusão",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❓ Enviar resumo Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Telegram: Resumo conclusão": {
+      "main": [
+        [
+          {
+            "node": "❓ Telegram enviou OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Enviar resumo Email?": {
+      "main": [
+        [
+          {
+            "node": "📧 Email: Resumo conclusão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Email: Resumo conclusão": {
+      "main": [
+        [
+          {
+            "node": "❓ Email enviou OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Expandir NOTIFICADO (✅ Sim)": {
+      "main": [
+        [
+          {
+            "node": "🧺 Coletar NOTIFICADO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Expandir NOTIFICADO (❌ Não)": {
+      "main": [
+        [
+          {
+            "node": "🧺 Coletar NOTIFICADO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Telegram enviou OK?": {
+      "main": [
+        [
+          {
+            "node": "🔧 Expandir NOTIFICADO (✅ Sim)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔄 Retomar pós-falha Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Retomar pós-falha Telegram": {
+      "main": [
+        [
+          {
+            "node": "❓ Enviar resumo Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Email enviou OK?": {
+      "main": [
+        [
+          {
+            "node": "🔧 Expandir NOTIFICADO (✅ Sim)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Sem destino de notificação?": {
+      "main": [
+        [
+          {
+            "node": "🔧 Expandir NOTIFICADO (❌ Não)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❓ Enviar resumo Telegram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Bulk Mode? (>12 SKUs)": {
+      "main": [
+        [
+          {
+            "node": "🗂️ Gerar Excel Bulk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🗂️ Gerar Excel Bulk": {
+      "main": [
+        [
+          {
+            "node": "🔀 Rota Bulk (Telegram / Email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Rota Bulk (Telegram / Email)": {
+      "main": [
+        [
+          {
+            "node": "📱 Formatar Caption Bulk (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📧 Formatar HTML Bulk (Email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Formatar Caption Bulk (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "📱 Telegram: Enviar Excel Bulk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Formatar HTML Bulk (Email)": {
+      "main": [
+        [
+          {
+            "node": "📧 Email: Enviar Excel Bulk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Email: Enviar Excel Bulk": {
+      "main": [
+        [
+          {
+            "node": "🔧 Bulk: Expandir NOTIFICADO (✅ Sim)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Bulk: Expandir NOTIFICADO (✅ Sim)": {
+      "main": [
+        [
+          {
+            "node": "🧺 Bulk: Coletar NOTIFICADO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Telegram: Enviar Excel Bulk": {
+      "main": [
+        [
+          {
+            "node": "🔧 Bulk: Expandir NOTIFICADO (✅ Sim)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧺 Coletar ENCONTRADO": {
+      "main": [
+        [
+          {
+            "node": "📄 Ler CDP_SKUs (ENCONTRADO)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 Ler CDP_SKUs (ENCONTRADO)": {
+      "main": [
+        [
+          {
+            "node": "🧭 Mapear ENCONTRADO por row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧭 Mapear ENCONTRADO por row": {
+      "main": [
+        [
+          {
+            "node": "✅ Marcar ENCONTRADO → CDP_SKUs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧺 Coletar NOTIFICADO": {
+      "main": [
+        [
+          {
+            "node": "📄 Ler CDP_SKUs (NOTIFICADO)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 Ler CDP_SKUs (NOTIFICADO)": {
+      "main": [
+        [
+          {
+            "node": "🧭 Mapear NOTIFICADO por row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧭 Mapear NOTIFICADO por row": {
+      "main": [
+        [
+          {
+            "node": "✅ Marcar NOTIFICADO → CDP_SKUs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧺 Bulk: Coletar NOTIFICADO": {
+      "main": [
+        [
+          {
+            "node": "📄 Bulk: Ler CDP_SKUs (NOTIFICADO)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 Bulk: Ler CDP_SKUs (NOTIFICADO)": {
+      "main": [
+        [
+          {
+            "node": "🧭 Bulk: Mapear NOTIFICADO por row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧭 Bulk: Mapear NOTIFICADO por row": {
+      "main": [
+        [
+          {
+            "node": "✅ Bulk: Marcar NOTIFICADO → CDP_SKUs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📣 Preparar handoff notifier": {
+      "main": [
+        [
+          {
+            "node": "📤 POST cdp-notifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 POST cdp-notifier": {
+      "main": [
+        [
+          {
+            "node": "📣 Formatar Notificação Conclusão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "name": "DEV - cdp_scraper"
+}

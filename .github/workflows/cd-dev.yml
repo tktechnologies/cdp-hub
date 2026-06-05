@@ -1,0 +1,84 @@
+name: CD - Development
+
+on:
+  push:
+    branches: [dev]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".github/workflows/ci-*.yml"
+
+concurrency:
+  group: cd-development
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: automation
+  ACR_NAME: cdpscraperprodacr
+  IMAGE_TAG: dev-${{ github.sha }}
+
+jobs:
+  deploy:
+    name: Deploy DEV stack
+    runs-on: ubuntu-latest
+    environment: development
+
+    env:
+      CDP_DEV_ROUTER_WORKFLOW_ID: ${{ vars.CDP_DEV_ROUTER_WORKFLOW_ID }}
+      CDP_DEV_SCRAPER_WORKFLOW_ID: ${{ vars.CDP_DEV_SCRAPER_WORKFLOW_ID }}
+      CDP_DEV_STOKAPI_WORKFLOW_ID: ${{ vars.CDP_DEV_STOKAPI_WORKFLOW_ID }}
+      CDP_DEV_PROGRESS_WORKFLOW_ID: ${{ vars.CDP_DEV_PROGRESS_WORKFLOW_ID }}
+      CDP_DEV_NOTIFIER_WORKFLOW_ID: ${{ vars.CDP_DEV_NOTIFIER_WORKFLOW_ID }}
+      TELEGRAM_DEV_ALLOWED_CHAT_IDS: ${{ vars.TELEGRAM_DEV_ALLOWED_CHAT_IDS }}
+      CDP_DEV_SCRAPER_API_BASE: ${{ vars.CDP_DEV_SCRAPER_API_BASE }}
+      CDP_DEV_MUVSTOK_API_BASE: ${{ vars.CDP_DEV_MUVSTOK_API_BASE }}
+      CDP_DEV_SKUS_SHEET_ID: ${{ vars.CDP_DEV_SKUS_SHEET_ID }}
+      CDP_DEV_RESULTADOS_SHEET_ID: ${{ vars.CDP_DEV_RESULTADOS_SHEET_ID }}
+      CDP_DEV_RESULTADOS_SHEETS_URL: ${{ vars.CDP_DEV_RESULTADOS_SHEETS_URL }}
+      N8N_DEV_TELEGRAM_CREDENTIAL_ID: ${{ vars.N8N_DEV_TELEGRAM_CREDENTIAL_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy scraper DEV images
+        env:
+          API_APP_NAME: cdp-scrapers-api-dev
+          WORKER_APP_NAME: cdp-scrapers-worker-dev
+        run: bash scripts/deploy-scraper-image.sh
+
+      - name: Deploy StokAPI DEV
+        env:
+          TAG: ${{ env.IMAGE_TAG }}
+        run: bash muvstok-api/scripts/deploy_muv_dev.sh
+
+      - name: Configure shared n8n DEV env
+        env:
+          TELEGRAM_DEV_BOT_TOKEN: ${{ secrets.TELEGRAM_DEV_BOT_TOKEN }}
+          CDP_DEV_API_KEY: ${{ secrets.CDP_DEV_API_KEY }}
+          CDP_DEV_MUVSTOK_API_KEY: ${{ secrets.CDP_DEV_MUVSTOK_API_KEY }}
+          CDP_DEV_CALLBACK_WEBHOOK_SECRET: ${{ secrets.CDP_DEV_CALLBACK_WEBHOOK_SECRET }}
+          CDP_DEV_MUVSTOK_CALLBACK_WEBHOOK_SECRET: ${{ secrets.CDP_DEV_MUVSTOK_CALLBACK_WEBHOOK_SECRET }}
+        run: bash scripts/configure-shared-n8n-dev-env.sh
+
+      - name: Sync DEV n8n workflows
+        if: >-
+          vars.CDP_DEV_ROUTER_WORKFLOW_ID != '' &&
+          vars.CDP_DEV_SCRAPER_WORKFLOW_ID != '' &&
+          vars.CDP_DEV_STOKAPI_WORKFLOW_ID != '' &&
+          vars.CDP_DEV_PROGRESS_WORKFLOW_ID != ''
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          N8N_MCP_AUTH_HEADER: ${{ secrets.N8N_MCP_AUTH_HEADER }}
+          N8N_DEV_TELEGRAM_CREDENTIAL_ID: ${{ vars.N8N_DEV_TELEGRAM_CREDENTIAL_ID }}
+          CDP_DEV_SKUS_SHEET_ID: ${{ vars.CDP_DEV_SKUS_SHEET_ID }}
+          CDP_DEV_RESULTADOS_SHEET_ID: ${{ vars.CDP_DEV_RESULTADOS_SHEET_ID }}
+        run: |
+          make n8n-dev-workflows
+          make sync-n8n-dev

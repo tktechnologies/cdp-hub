@@ -1,0 +1,463 @@
+{
+  "name": "DEV - cdp_notifier",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dev-cdp-notifier",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "dfec5e82-0e02-4164-ab97-6489e7ae8c90",
+      "name": "🔔 Webhook cdp-notifier",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        400,
+        400
+      ],
+      "webhookId": "aa65d283-9d05-4ba7-b924-dc4d5bec6db0"
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_notifier — parse receiver handoff webhook and prepare pipeline-result API call.\n\nfunction env(name) {\n  try {\n    if (typeof $env !== 'undefined' && $env && $env[name]) {\n      return String($env[name]).trim();\n    }\n  } catch (e) {}\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));\n}\n\nfunction devEnvName(name) {\n  return {\n    CDP_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',\n    MUVSTOK_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',\n    CDP_API_KEY: 'CDP_DEV_API_KEY',\n    MUVSTOK_API_KEY: 'CDP_DEV_API_KEY',\n    API_KEY: 'CDP_DEV_API_KEY',\n  }[name] || '';\n}\n\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const mapped = devEnvName(name);\n  return mapped ? env(mapped) : env(name);\n}\n\nfunction trimTrailingSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\n\nfunction parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') {\n    try {\n      p = JSON.parse(p);\n    } catch (e) {\n      p = {};\n    }\n  }\n  return p && typeof p === 'object' ? p : {};\n}\n\nconst wh = $('🔔 Webhook cdp-notifier').first().json;\nconst body = parseBody(wh.body);\nconst batchGroupId = String(body.batch_group_id || '').trim();\nconst source = String(body.source || '').trim().toLowerCase();\nconst status = String(body.status || 'completed').trim().toLowerCase();\nconst summary = body.summary && typeof body.summary === 'object' ? body.summary : {};\n\nif (!batchGroupId || (source !== 'scraper' && source !== 'stokapi')) {\n  return [{ json: { skip: true, reason: 'invalid_handoff' } }];\n}\n\nconst apiBase = trimTrailingSlashes(\n  envFor('CDP_SCRAPER_API_BASE') || envFor('MUVSTOK_SCRAPER_API_BASE') || ''\n);\nconst apiKey = envFor('CDP_API_KEY') || envFor('MUVSTOK_API_KEY') || envFor('API_KEY');\n\nreturn [\n  {\n    json: {\n      skip: false,\n      pipeline_result_url:\n        apiBase + '/api/v1/dispatch-runs/by-batch/' + encodeURIComponent(batchGroupId) + '/pipeline-result',\n      pipeline_result_api_key: apiKey,\n      pipeline_result_body: {\n        source,\n        status,\n        summary,\n      },\n      handoff: body,\n    },\n  },\n];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "763077db-09c5-44c3-a03a-81c17b204b3b",
+      "name": "📥 Preparar pipeline-result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        400
+      ],
+      "notes": ""
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "skip",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2659aea6-fa3a-47d4-9018-11b91bd4805a",
+      "name": "❓ Handoff inválido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        880,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.pipeline_result_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.pipeline_result_api_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.pipeline_result_body) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "d5b8c911-24a4-458d-b061-3a42cf3c06f9",
+      "name": "📋 POST pipeline-result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        320
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "ready",
+              "leftValue": "={{ $json.ready_for_final }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2243bc9e-3867-413a-8d09-a85cf41e2c9c",
+      "name": "❓ Pronto para envio final?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_notifier — format final Telegram/email from pipeline-result claim.\n\nconst WEBSCRAPERS_LABEL = 'WEBSCRAPERS';\nconst ESTOQUE_LABEL = 'ESTOQUE ONLINE';\n\nfunction env(name) {\n  try {\n    if (typeof $env !== 'undefined' && $env && $env[name]) {\n      return String($env[name]).trim();\n    }\n  } catch (e) {}\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));\n}\n\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const map = { CDP_RESULTADOS_SHEETS_URL: 'CDP_DEV_RESULTADOS_SHEETS_URL' };\n  const mapped = map[name] || '';\n  return mapped ? env(mapped) : env(name);\n}\n\nfunction reportUrl() {\n  const configured = envFor('CDP_RESULTADOS_SHEETS_URL');\n  if (configured || isDevWorkflow()) return configured;\n  return 'https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit#gid=533358674';\n}\n\nfunction escapeHtml(value) {\n  return String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n}\n\nfunction durPt(seconds) {\n  const s = Math.max(0, Math.round(Number(seconds) || 0));\n  if (s >= 3600) {\n    const h = Math.floor(s / 3600);\n    const m = Math.floor((s % 3600) / 60);\n    return h + 'h' + (m ? ' ' + m + 'min' : '');\n  }\n  if (s >= 60) return Math.floor(s / 60) + ' min';\n  return s > 0 ? s + ' s' : '';\n}\n\nfunction sectionLines(label, summary) {\n  const s = summary || {};\n  const lines = [\n    '*' + label + '*',\n    '· Com preço: ' + (Number(s.with_price) || 0),\n    '· Sem preço: ' + (Number(s.no_price) || 0),\n    '· Não encontrado: ' + (Number(s.not_found) || 0),\n    '· Bloqueado: ' + (Number(s.blocked) || 0),\n    '· Erros: ' + (Number(s.errors) || 0),\n  ];\n  const dur = durPt(s.duration_seconds);\n  if (dur) lines.push('· Duração: ' + dur);\n  if (String(s.status || '').toLowerCase() === 'failed') {\n    lines.push('· Status: falha' + (s.failed_reason ? ' — ' + String(s.failed_reason).slice(0, 120) : ''));\n  }\n  return lines;\n}\n\nconst apiResp = $input.first().json;\nconst claim = apiResp.claim || apiResp.body?.claim || null;\nif (!apiResp.ready_for_final || !claim) {\n  return [{ json: { skip_send: true, not_ready: true, reason: 'not_ready' } }];\n}\n\nconst scraper = claim.scraper_summary || {};\nconst stokapi = claim.stokapi_summary || {};\nconst url = reportUrl();\nlet replyChannel = String(claim.reply_channel || '').trim().toLowerCase();\nconst chatId = String(claim.chat_id || '').trim();\nconst replyEmail = String(claim.reply_email || '').trim();\n\nif (!replyChannel) {\n  if (replyEmail) replyChannel = 'email';\n  else if (chatId) replyChannel = 'telegram';\n}\n\nif (!chatId && !replyEmail) {\n  return [\n    {\n      json: {\n        skip_send: true,\n        skipped_no_target: true,\n        run_id: claim.run_id,\n        sheet_row_numbers: claim.sheet_row_numbers || [],\n      },\n    },\n  ];\n}\n\nconst tgLines = [\n  '✅ *Consulta CDP concluída*',\n  '',\n  ...sectionLines(WEBSCRAPERS_LABEL, scraper),\n  '',\n  ...sectionLines(ESTOQUE_LABEL, stokapi),\n  '',\n  '📎 [Abrir relatório](' + url + ')',\n];\n\nconst htmlSections =\n  '<h2 style=\"margin:0 0 12px;font-size:18px\">Consulta CDP concluída</h2>' +\n  '<p style=\"margin:0 0 16px;font-size:14px;line-height:1.6\">Resumo consolidado de sites e estoque.</p>' +\n  '<div style=\"margin:0 0 14px\"><strong>' +\n  escapeHtml(WEBSCRAPERS_LABEL) +\n  '</strong><br>Com preço: ' +\n  (Number(scraper.with_price) || 0) +\n  ' · Sem preço: ' +\n  (Number(scraper.no_price) || 0) +\n  ' · Não encontrado: ' +\n  (Number(scraper.not_found) || 0) +\n  ' · Bloqueado: ' +\n  (Number(scraper.blocked) || 0) +\n  ' · Erros: ' +\n  (Number(scraper.errors) || 0) +\n  (scraper.duration_seconds ? '<br>Duração: ' + escapeHtml(durPt(scraper.duration_seconds)) : '') +\n  '</div>' +\n  '<div style=\"margin:0 0 20px\"><strong>' +\n  escapeHtml(ESTOQUE_LABEL) +\n  '</strong><br>Com preço: ' +\n  (Number(stokapi.with_price) || 0) +\n  ' · Sem preço: ' +\n  (Number(stokapi.no_price) || 0) +\n  ' · Não encontrado: ' +\n  (Number(stokapi.not_found) || 0) +\n  ' · Bloqueado: ' +\n  (Number(stokapi.blocked) || 0) +\n  ' · Erros: ' +\n  (Number(stokapi.errors) || 0) +\n  '</div>' +\n  '<p style=\"margin:0\"><a href=\"' +\n  escapeHtml(url) +\n  '\" style=\"display:inline-block;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;padding:12px 18px;font-weight:700\">Abrir relatório</a></p>';\n\nreturn [\n  {\n    json: {\n      skip_send: false,\n      run_id: claim.run_id,\n      reply_channel: replyChannel,\n      chat_id: chatId,\n      email_to: replyEmail,\n      sheet_row_numbers: claim.sheet_row_numbers || [],\n      msg_telegram: tgLines.join('\\n'),\n      msg_email_subject: 'Consulta CDP concluída',\n      msg_email_html:\n        '<div style=\"font-family:Arial,sans-serif;color:#1f2937;max-width:640px\">' + htmlSections + '</div>',\n    },\n  },\n];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "9ca82fa5-c3fa-412b-ab86-32f8cdb5ce96",
+      "name": "📣 Formatar mensagem final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        240
+      ],
+      "notes": ""
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "no-target",
+              "leftValue": "={{ $json.skipped_no_target }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f60b1586-78c7-448e-a747-2aa507434760",
+      "name": "❓ Sem destino?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "tg",
+              "leftValue": "={{ $json.reply_channel }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "844ce693-94f9-4d95-9506-c87e4d223897",
+      "name": "❓ Canal Telegram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.msg_telegram }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "e86bdb51-8ac9-439b-819c-e72bc543f0f9",
+      "name": "📱 Telegram: resultado final",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2320,
+        80
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "OCT6L7sDZffEbhJ9",
+          "name": "NoxTKTech_bot"
+        }
+      },
+      "continueOnFail": true,
+      "webhookId": "5d21d93b-7919-40ff-b053-b7013fe7fedd"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email_to }}",
+        "subject": "={{ $json.msg_email_subject }}",
+        "message": "={{ $json.msg_email_html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "00f18594-7075-42b2-8886-89bc8e8ae9a6",
+      "name": "📧 Email: resultado final",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2320,
+        240
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail",
+          "name": "Gmail account"
+        }
+      },
+      "continueOnFail": true,
+      "webhookId": "4d2df83d-fa80-4f55-9db7-1be98cbf162c",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ (String($env.CDP_SCRAPER_API_BASE || $env.MUVSTOK_SCRAPER_API_BASE || '').trim().replace(/\\/+$/, '')) + '/api/v1/dispatch-runs/' + $('📣 Formatar mensagem final').first().json.run_id + '/final-notification' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.CDP_API_KEY || $env.MUVSTOK_API_KEY || $env.API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: $('📣 Formatar mensagem final').first().json.skipped_no_target ? 'skipped_no_target' : 'sent', final_channel: $('📣 Formatar mensagem final').first().json.reply_channel }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "a95d4df8-36f5-4689-9a03-e5dfb31b82f7",
+      "name": "📋 PATCH final-notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2560,
+        160
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_notifier — expand sheet_row_numbers for NOTIFICADO column updates.\n\nconst prep = $('📣 Formatar mensagem final').first().json;\nconst rows = Array.isArray(prep.sheet_row_numbers) ? prep.sheet_row_numbers : [];\nconst status = prep.skipped_no_target ? '🚫 Sem destino' : '✅ Notificado';\n\nif (!rows.length) {\n  return [];\n}\n\nreturn rows\n  .map((rowNumber) => Number(rowNumber))\n  .filter((n) => Number.isFinite(n) && n > 0)\n  .map((row_number) => ({\n    json: {\n      row_number,\n      NOTIFICADO: status,\n    },\n  }));\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "461ff770-4a76-4515-a498-5807b94b65ff",
+      "name": "🔧 Expandir NOTIFICADO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        360
+      ],
+      "notes": ""
+    }
+  ],
+  "connections": {
+    "🔔 Webhook cdp-notifier": {
+      "main": [
+        [
+          {
+            "node": "📥 Preparar pipeline-result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Preparar pipeline-result": {
+      "main": [
+        [
+          {
+            "node": "❓ Handoff inválido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Handoff inválido?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "📋 POST pipeline-result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 POST pipeline-result": {
+      "main": [
+        [
+          {
+            "node": "❓ Pronto para envio final?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Pronto para envio final?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "📣 Formatar mensagem final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📣 Formatar mensagem final": {
+      "main": [
+        [
+          {
+            "node": "❓ Sem destino?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Sem destino?": {
+      "main": [
+        [
+          {
+            "node": "📋 PATCH final-notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❓ Canal Telegram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Canal Telegram?": {
+      "main": [
+        [
+          {
+            "node": "📱 Telegram: resultado final",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📧 Email: resultado final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Telegram: resultado final": {
+      "main": [
+        [
+          {
+            "node": "📋 PATCH final-notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Email: resultado final": {
+      "main": [
+        [
+          {
+            "node": "📋 PATCH final-notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 PATCH final-notification": {
+      "main": [
+        [
+          {
+            "node": "🔧 Expandir NOTIFICADO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "description": "CDP notifier: single final message after dual pipeline"
+}

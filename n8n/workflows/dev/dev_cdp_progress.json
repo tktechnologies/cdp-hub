@@ -1,0 +1,378 @@
+{
+  "name": "DEV - cdp_progress",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": "={{ Number($env.CDP_DEV_PROGRESS_INTERVAL_MIN || $env.CDP_PROGRESS_INTERVAL_MIN || 10) }}"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "⏰ Schedule progress poll",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ (String($env.CDP_SCRAPER_API_BASE || $env.MUVSTOK_SCRAPER_API_BASE || '').trim().replace(/\\/+$/, '')) + '/api/v1/dispatch-runs/active' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.CDP_API_KEY || $env.MUVSTOK_API_KEY || $env.API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "📋 GET active dispatch runs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_progress — poll active dispatch runs and decide whether to notify.\n\nfunction env(name, defaultVal) {\n  try {\n    if (typeof $env !== 'undefined' && $env && $env[name]) {\n      return String($env[name]).trim() || defaultVal;\n    }\n  } catch (e) {}\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim() || defaultVal;\n    }\n  } catch (e) {}\n  return defaultVal;\n}\n\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV', ''));\n}\n\nfunction devEnvName(name) {\n  const map = {\n    CDP_PROGRESS_INTERVAL_MIN: 'CDP_DEV_PROGRESS_INTERVAL_MIN',\n    CDP_PROGRESS_MIN_SKUS: 'CDP_DEV_PROGRESS_MIN_SKUS',\n    CDP_PROGRESS_MIN_STEP_PCT: 'CDP_DEV_PROGRESS_MIN_STEP_PCT',\n    CDP_PROGRESS_MAX_MESSAGES: 'CDP_DEV_PROGRESS_MAX_MESSAGES',\n    CDP_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',\n    MUVSTOK_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',\n    CDP_MUVSTOK_API_BASE: 'CDP_DEV_MUVSTOK_API_BASE',\n    CDP_API_KEY: 'CDP_DEV_API_KEY',\n    MUVSTOK_API_KEY: 'CDP_DEV_API_KEY',\n    API_KEY: 'CDP_DEV_API_KEY',\n    CDP_MUVSTOK_API_KEY: 'CDP_DEV_MUVSTOK_API_KEY',\n  };\n  return map[name] || '';\n}\n\nfunction envFor(name, defaultVal) {\n  if (!isDevWorkflow()) return env(name, defaultVal);\n  const mapped = devEnvName(name);\n  const value = mapped ? env(mapped, '') : '';\n  return value || defaultVal;\n}\n\nfunction envInt(name, defaultVal) {\n  const raw = envFor(name, '');\n  if (!raw) return defaultVal;\n  const n = parseInt(raw, 10);\n  return Number.isFinite(n) ? n : defaultVal;\n}\n\nfunction trimTrailingSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\n\nconst intervalMin = envInt('CDP_PROGRESS_INTERVAL_MIN', 10);\nif (intervalMin <= 0) {\n  return [{ json: { skip: true, reason: 'progress_disabled' } }];\n}\n\nconst minSkus = envInt('CDP_PROGRESS_MIN_SKUS', 15);\nconst minStepPct = envInt('CDP_PROGRESS_MIN_STEP_PCT', 10);\nconst maxMessages = envInt('CDP_PROGRESS_MAX_MESSAGES', 6);\n\nconst scraperBase = trimTrailingSlashes(\n  envFor('CDP_SCRAPER_API_BASE', envFor('MUVSTOK_SCRAPER_API_BASE', ''))\n);\nconst stokapiBase = trimTrailingSlashes(\n  envFor(\n    'CDP_MUVSTOK_API_BASE',\n    isDevWorkflow() ? '' : 'https://cdp-muv-api.bravecoast-b14d791e.eastus2.azurecontainerapps.io'\n  )\n);\nconst apiKey = envFor('CDP_API_KEY', envFor('MUVSTOK_API_KEY', envFor('API_KEY', '')));\nconst stokapiKey = envFor('CDP_MUVSTOK_API_KEY', apiKey);\n\nconst runsResp = $input.first().json;\nconst runs = Array.isArray(runsResp) ? runsResp : runsResp.runs || [];\n\nif (!runs.length) {\n  return [{ json: { skip: true, reason: 'no_active_runs' } }];\n}\n\nconst out = [];\nfor (const run of runs) {\n  if (!run || !run.chat_id) continue;\n  if (run.progress_enabled === false) continue;\n  if (Number(run.total_skus || 0) < minSkus) continue;\n  if (Number(run.progress_message_count || 0) >= maxMessages) continue;\n\n  const scraperIds = Array.isArray(run.scraper_job_ids) ? run.scraper_job_ids : [];\n  const primaryScraper = scraperIds[0] || '';\n  out.push({\n    json: {\n      skip: false,\n      run_id: run.id,\n      chat_id: run.chat_id,\n      batch_group_id: run.batch_group_id,\n      total_skus: run.total_skus,\n      last_progress_notified_pct: Number(run.last_progress_pct || 0),\n      min_step_pct: minStepPct,\n      progress_message_count: Number(run.progress_message_count || 0),\n      scraper_job_url: primaryScraper ? scraperBase + '/api/v1/jobs/' + primaryScraper : '',\n      stokapi_job_url: run.stokapi_job_id\n        ? stokapiBase + '/api/v1/muvstok/jobs/' + run.stokapi_job_id\n        : '',\n      scraper_api_key: apiKey,\n      stokapi_api_key: stokapiKey,\n      dispatch_runs_url: scraperBase + '/api/v1/dispatch-runs/' + run.id,\n      dispatch_runs_api_key: apiKey,\n    },\n  });\n}\n\nif (!out.length) {\n  return [{ json: { skip: true, reason: 'nothing_to_notify' } }];\n}\nreturn out;\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "📊 Progress: preparar runs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "❓ Progress skip?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.scraper_job_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.scraper_api_key }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "📊 Progress: GET Scraper",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1360,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('📊 Progress: preparar runs').item.json.stokapi_job_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $('📊 Progress: preparar runs').item.json.stokapi_api_key }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "name": "📊 Progress: GET StokAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1360,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_progress — format proactive update and PATCH dispatch run state.\n\nfunction num(v, fallback) {\n  const n = Number(v);\n  return Number.isFinite(n) ? n : fallback;\n}\n\nconst ctx = $('📊 Progress: preparar runs').item.json;\nlet scraper = {};\nlet stokapi = {};\ntry {\n  scraper = $('📊 Progress: GET Scraper').first().json;\n} catch (e) {}\ntry {\n  stokapi = $('📊 Progress: GET StokAPI').first().json;\n} catch (e) {}\n\nconst total = num(ctx.total_skus, num(scraper.total_items, 0));\nconst processed = num(\n  scraper.items_processed,\n  num(scraper.items_succeeded, 0) + num(scraper.items_failed, 0)\n);\nconst pct = total > 0 ? Math.round((processed / total) * 100) : 0;\nconst lastPct = num(ctx.last_progress_notified_pct, 0);\nconst minStep = num(ctx.min_step_pct, 10);\n\nconst scraperTerminal = ['completed', 'partial', 'failed'].includes(\n  String(scraper.status || '').toLowerCase()\n);\nconst stokTerminal = ['succeeded', 'partially_succeeded', 'failed'].includes(\n  String(stokapi.status || '').toLowerCase()\n);\n\nif (scraperTerminal && stokTerminal) {\n  return [\n    {\n      json: {\n        skip_notify: true,\n        run_id: ctx.run_id,\n        chat_id: ctx.chat_id,\n        patch_url: ctx.dispatch_runs_url,\n        patch_api_key: ctx.dispatch_runs_api_key,\n        patch_body: {\n          last_progress_pct: 100,\n          progress_message_count: num(ctx.progress_message_count, 0),\n          scraper_status: String(scraper.status || 'completed'),\n          stokapi_status: String(stokapi.status || 'succeeded'),\n          completed_at: new Date().toISOString(),\n        },\n      },\n    },\n  ];\n}\n\nif (pct - lastPct < minStep && String(scraper.status || '').toLowerCase() === 'running') {\n  return [{ json: { skip_notify: true, reason: 'step_too_small' } }];\n}\n\nconst eta = num(scraper.estimated_seconds_remaining, 0);\nconst etaLine = eta > 0 ? ' · ~' + Math.ceil(eta / 60) + ' min restantes' : '';\n\nconst msg =\n  '🤖 *Atualização* — sites: ' +\n  processed +\n  '/' +\n  total +\n  ' peças (' +\n  pct +\n  '%)' +\n  etaLine;\n\nreturn [\n  {\n    json: {\n      skip_notify: false,\n      chat_id: ctx.chat_id,\n      msg_telegram: msg,\n      run_id: ctx.run_id,\n      patch_url: ctx.dispatch_runs_url,\n      patch_api_key: ctx.dispatch_runs_api_key,\n      patch_body: {\n        last_progress_pct: pct,\n        progress_message_count: num(ctx.progress_message_count, 0) + 1,\n        scraper_status: String(scraper.status || 'running'),\n        stokapi_status: String(stokapi.status || 'processing'),\n      },\n    },\n  },\n];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "a1b2c3d4-0007-4000-8000-000000000007",
+      "name": "📊 Progress: formatar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "notify-check",
+              "leftValue": "={{ $json.skip_notify }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0008-4000-8000-000000000008",
+      "name": "❓ Progress notificar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.msg_telegram }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "appendAttribution": false
+        }
+      },
+      "id": "a1b2c3d4-0009-4000-8000-000000000009",
+      "name": "📱 Telegram: progresso",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        2080,
+        320
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "OCT6L7sDZffEbhJ9",
+          "name": "NoxTKTech_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $json.patch_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.patch_api_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.patch_body) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "a1b2c3d4-0010-4000-8000-000000000010",
+      "name": "📋 PATCH dispatch run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2320,
+        320
+      ]
+    }
+  ],
+  "connections": {
+    "⏰ Schedule progress poll": {
+      "main": [
+        [
+          {
+            "node": "📋 GET active dispatch runs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 GET active dispatch runs": {
+      "main": [
+        [
+          {
+            "node": "📊 Progress: preparar runs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Progress: preparar runs": {
+      "main": [
+        [
+          {
+            "node": "❓ Progress skip?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Progress skip?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "📊 Progress: GET Scraper",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📊 Progress: GET StokAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Progress: GET Scraper": {
+      "main": [
+        [
+          {
+            "node": "📊 Progress: formatar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Progress: GET StokAPI": {
+      "main": [
+        [
+          {
+            "node": "📊 Progress: formatar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Progress: formatar": {
+      "main": [
+        [
+          {
+            "node": "❓ Progress notificar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Progress notificar?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "📱 Telegram: progresso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Telegram: progresso": {
+      "main": [
+        [
+          {
+            "node": "📋 PATCH dispatch run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}

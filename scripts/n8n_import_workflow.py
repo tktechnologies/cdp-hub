@@ -8,7 +8,19 @@ import pathlib
 import sys
 
 # Reuse credentials from n8n_publish
-from n8n_publish import n8n_api_key, n8n_api_request, mcp_auth_header, mcp_call, parse_structured
+from n8n_publish import (
+    _SETTINGS_ALLOWED,
+    n8n_api_key,
+    n8n_api_request,
+    mcp_auth_header,
+    mcp_call,
+    parse_structured,
+)
+
+
+def _sanitized_settings(local: dict) -> dict:
+    merged = local.get("settings") or {}
+    return {k: v for k, v in merged.items() if k in _SETTINGS_ALLOWED}
 
 
 def main() -> int:
@@ -26,7 +38,7 @@ def main() -> int:
         "name": local["name"],
         "nodes": local["nodes"],
         "connections": local["connections"],
-        "settings": local.get("settings") or {},
+        "settings": _sanitized_settings(local),
     }
     if local.get("description"):
         payload["description"] = local["description"]

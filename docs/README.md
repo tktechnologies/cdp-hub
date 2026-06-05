@@ -4,6 +4,7 @@
 |----------|---------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | **Canonical** platform design (services, dual pipeline, n8n, agents) |
 | [ENVIRONMENTS.md](ENVIRONMENTS.md) | **DEV vs PRODUCTION** — daily workflow, first-time DEV setup, checklists |
+| [ENVIRONMENTS.md](ENVIRONMENTS.md) | DEV vs PRODUCTION — daily workflow, first-time DEV setup, checklists |
 | [SETUP.md](SETUP.md) | Local dev quick start |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Change workflow, gates, n8n rules |
 | [PLATFORM_OVERVIEW.md](PLATFORM_OVERVIEW.md) | Detailed reference (API tables, Azure, progress) |

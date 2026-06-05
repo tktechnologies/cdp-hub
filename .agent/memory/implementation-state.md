@@ -27,11 +27,11 @@ decommissioned later with explicit approval.
 
 | Workflow | ID | Webhook / trigger | Notes |
 |----------|----|-------------------|-------|
-| `DEV - cdp_router` | `TBD` | DEV Telegram bot | Gmail and schedule triggers disabled initially |
-| `DEV - cdp_scraper` | `TBD` | `dev-scraper-result` | Uses `CDP_DEV_CALLBACK_WEBHOOK_SECRET` and DEV sheets |
-| `DEV - cdp_stokapi` | `TBD` | `dev-muvstok-result` | Uses `CDP_DEV_MUVSTOK_CALLBACK_WEBHOOK_SECRET` and DEV sheets |
-| `DEV - cdp_progress` | `TBD` | Schedule | Uses `CDP_DEV_PROGRESS_*` and DEV Telegram credential |
-| `DEV - cdp_notifier` | `TBD` | `dev-cdp-notifier` | Aggregate final Telegram; Gmail disabled on DEV copy |
+| `DEV - cdp_router` | `L8foaUWF2CYhp42n` | DEV Telegram (`NoxTKTech_bot` cred `OCT6L7sDZffEbhJ9`) | Gmail/schedule disabled; unique webhookIds required on import |
+| `DEV - cdp_scraper` | `mjkPMAB0spid7YvU` | `dev-scraper-result` | Uses `CDP_DEV_CALLBACK_WEBHOOK_SECRET` and DEV sheets |
+| `DEV - cdp_stokapi` | `Kx7ZQLnaOINhX2Uk` | `dev-muvstok-result` | Uses `CDP_DEV_MUVSTOK_CALLBACK_WEBHOOK_SECRET` and DEV sheets |
+| `DEV - cdp_progress` | `DCrWffIqKnpK1wYy` | Schedule | Uses `CDP_DEV_PROGRESS_*` and DEV Telegram credential |
+| `DEV - cdp_notifier` | `ssk4HbowArZILiAl` | `dev-cdp-notifier` | Aggregate final Telegram; Gmail disabled on DEV copy |
 
 **DEV sync:** `make n8n-dev-workflows` generates local copies under
 `n8n/workflows/dev/` (including `dev_cdp_notifier.json`). First import with
@@ -42,14 +42,13 @@ is configured by `scripts/configure-shared-n8n-dev-env.sh`.
 
 **DEV setup — next steps (human / Azure / n8n UI):**
 
-- [ ] Create DEV Telegram bot (@BotFather); store token in `cdp-scrapers-kv-dev` (`telegram-dev-bot-token`)
-- [ ] Create **Telegram DEV account** credential in `automacao.tktechnologies.com.br`; set `N8N_DEV_TELEGRAM_CREDENTIAL_ID`
-- [ ] Copy prod spreadsheets (or separate tabs) → `CDP_DEV_SKUS_SHEET_ID`, `CDP_DEV_RESULTADOS_SHEET_ID`, `CDP_DEV_RESULTADOS_SHEETS_URL`
+- [x] DEV Telegram credential: **NoxTKTech_bot** (`N8N_DEV_TELEGRAM_CREDENTIAL_ID=OCT6L7sDZffEbhJ9`) — 2026-06-05
+- [x] `make import-n8n-dev` — workflow IDs recorded above (2026-06-05)
+- [ ] Copy prod spreadsheets (or separate tabs) → `CDP_DEV_SKUS_SHEET_ID`, `CDP_DEV_RESULTADOS_SHEET_ID`, `CDP_DEV_RESULTADOS_SHEETS_URL` (still placeholders in DEV JSON until set)
 - [ ] Confirm DEV Key Vault has `api-key`, `callback-webhook-secret`, Muvstok creds for `cdp-muv-api-dev` / worker
-- [ ] Run `make import-n8n-dev` with `N8N_API_KEY` + credential ID; paste printed IDs here and into GitHub `development` vars
 - [ ] Set GitHub `development` secrets/vars per [docs/ENVIRONMENTS.md](../../docs/ENVIRONMENTS.md)
 - [ ] Push to `dev` → **CD - Development** (images + `configure-shared-n8n-dev-env.sh` + `sync-n8n-dev`)
-- [ ] Smoke: DEV bot `.sku` → DEV sheets + `dev-scraper-result` / `dev-muvstok-result` / `dev-cdp-notifier`
+- [ ] Smoke: **NoxTKTech_bot** `.sku` → DEV sheets + `dev-scraper-result` / `dev-muvstok-result` / `dev-cdp-notifier`
 
 **Email command whitelist:** Production n8n has `EMAIL_ALLOWED_SENDERS=dev.lucascruz@gmail.com,peron@sopecasgenuinas.com.br` (Container App revision `cdp-n8n-prod--0000020`, 2026-06-03). Keep the user whitelist on; add future users as comma-separated emails.
 
