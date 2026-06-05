@@ -53,3 +53,10 @@ Python 3.12 FastAPI ingestion platform for API Diversos SKU data. Accepts jobs w
 - Official validation requires Azure-hosted environments.
 - n8n: `cdp_stokapi` receiver at monorepo `n8n/workflows/cdp_stokapi.json`; production dispatch is inline in `cdp_router` via `n8n/src/router_stokapi.js` (not Execute Workflow).
 - Platform docs: `../docs/ARCHITECTURE.md`, `../docs/architecture/DUAL_PIPELINE.md`, `../docs/PLATFORM_OVERVIEW.md` for detailed API/Azure reference.
+- Reporting semantics: processing `succeeded` only means the worker completed the
+  SKU lookup. Price-found metrics require `sku_result = FOUND_PRICE` and
+  `has_valid_price = true`; `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`,
+  `ERROR`, and `NOT_QUERIED` are separate outcomes.
+- `cdp_stokapi` Detalhado seller metadata is `vendedor`, `uf`, `empresa`,
+  `cnpj`; API raw rows may contain `estado`/state-name aliases, but the receiver
+  writes only canonical `uf`.

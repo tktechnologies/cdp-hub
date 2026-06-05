@@ -23,3 +23,4 @@ agents understand how CDP fits together without copying service internals.
 |------|---------|
 | [service-catalog.md](service-catalog.md) | Cross-service ownership, entries, contracts, and gates |
 | [workspace-sync.md](workspace-sync.md) | What to update in root vs service `.agent` workspaces |
+| [google-sheets-reporting.md](google-sheets-reporting.md) | Sheets tabs, KPI definitions, formulas, pivots, dashboard UX |

@@ -1,6 +1,6 @@
 # Implementation State
 
-Last reviewed: 2026-05-27.
+Last reviewed: 2026-06-03.
 
 ## n8n (renamed)
 
@@ -30,6 +30,20 @@ Sync: monorepo `make sync-n8n` with user approval; includes `cdp_progress` when 
 - Tests: `tests/test_workers/test_sku_processor_cache.py`, `tests/test_services/test_sku_cache.py`, `tests/test_services/test_request_skus.py`.
 - **Deployed 2026-05-29:** migration `20260529_0004` on prod PG; images `20260529-1040` on `cdp-muv-api` / `cdp-muv-worker` with `MUVSTOK_CACHE_*` env.
 
+## Result semantics (2026-06-03)
+
+- Worker lifecycle `status=succeeded` means the lookup completed; it is not a
+  found-price signal.
+- Callback/results now carry `sku_result`, `source_health`, and
+  `has_valid_price`.
+- Found-price metrics require `sku_result=FOUND_PRICE` and
+  `has_valid_price=true`.
+- `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`, and `NOT_QUERIED`
+  remain distinct in callbacks, `Detalhado`, Historico, Telegram, and dashboard
+  formulas.
+- Local receiver JSON is regenerated; live `cdp_stokapi` publish still requires
+  explicit user approval.
+
 ## API / worker
 
 - FastAPI + worker on Azure `cdp-muv-api` / `cdp-muv-worker`
@@ -37,6 +51,8 @@ Sync: monorepo `make sync-n8n` with user approval; includes `cdp_progress` when 
 - Callbacks to `muvstok-result` with `x-webhook-secret`
 - **Progress:** `GET /api/v1/muvstok/jobs/{id}` returns live `items_processed` / `progress_pct` while status is `processing` (read-time recount from DB).
 - **User-facing branding** (Telegram, Sheets, n8n node labels, `app_name`): **API Diversos** / `api-diversos`. Internal routes, env vars, DB tables, and webhook path unchanged for compatibility.
+- **Detalhado seller columns**: `vendedor`, `uf`, `empresa`, `cnpj`; raw
+  `estado` aliases normalize to `uf`.
 
 ## Docs
 

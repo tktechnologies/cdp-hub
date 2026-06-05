@@ -24,6 +24,12 @@ If the task is **only** router or cross-service: stop and use platform tier firs
 - Database model, repository, query, or migration: read `skills/muvstok-add-repository/SKILL.md`, `skills/muvstok-add-migration/SKILL.md`, `specs/004-database-design.md`, `app/db/models.py`, `app/repositories/`, and migrations.
 - Redis Streams, worker queueing, ack, retry, pending, or dead-letter behavior: read `skills/muvstok-redis-queue/SKILL.md`, `specs/010-queue-processing.md`, `app/clients/redis_queue_client.py`, `app/services/queue_service.py`, and `app/workers/redis_worker.py`.
 - Worker job/SKU processing: read `skills/muvstok-build-worker/SKILL.md`, `specs/003-job-lifecycle.md`, `app/workers/`, `app/services/`, `app/repositories/`, and `app/clients/muvstok_client.py`.
+- Result/status classification for callbacks or Sheets: read
+  `specs/002-api-contract.md`, `specs/003-job-lifecycle.md`,
+  `app/domain/sku_result_status.py`, `app/services/callback_service.py`, and
+  `n8n/lib/muvstok_sheet_helpers.js`.
+  Detalhado seller fields are `uf`, `empresa`, `cnpj`; `estado` is an input
+  alias only.
 - Azure validation, deployment, or cloud test work: read `skills/muvstok-azure-validation/SKILL.md`, `standards/azure-playbook.md`, `standards/testing-playbook.md`, and `scripts/azure_test.sh`.
 - Security, secrets, callback URLs, API keys, or log redaction: read `standards/security-and-secrets.md`, `specs/008-security-and-secrets.md`, and `app/core/security.py`.
 - Observability, logs, metrics, or traces: read `standards/observability.md`, `specs/007-observability.md`, `app/core/logging.py`, and `app/observability/`.

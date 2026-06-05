@@ -36,6 +36,22 @@ Tier 1 rules. Service-specific rules live in `scrapers/.agent/rules.md` and `muv
 - Behavior changes update specs/docs in the **owning** tier.
 - Keep project-owned agent guidance in `.agent` workspaces. Task-scoped rule summaries live in [rules/](rules/), and cross-service knowledge lives in [knowledge/](knowledge/).
 
+## Google Sheets / Reporting
+
+- User-facing stock source name is **API Diversos**; use **StokAPI** only for
+  technical service references.
+- Keep `muvstok` only in stable internal compatibility names such as
+  `muvstok-result`, `/api/v1/muvstok/*`, env vars, DB tables, Redis keys, and
+  file paths.
+- Sheets dashboards must separate SKU metrics from row/offer/register metrics:
+  never count `N/A`, `NO_PRICE`, `NOT_FOUND`, blocked, blank, error, or
+  placeholder rows as found SKUs.
+- Reporting success means `status_resultado`/`sku_result = FOUND_PRICE` and
+  `has_valid_price = TRUE`. Row existence in `Detalhado` is not success, and
+  blocked/captcha/403 is `BLOCKED`, not `NOT_FOUND`.
+- For dashboard/report work, start with [rules/google-sheets.md](rules/google-sheets.md)
+  and [knowledge/google-sheets-reporting.md](knowledge/google-sheets-reporting.md).
+
 ## AIOX
 
 `.aiox-core/` and top-level `.agent/workflows/*.md` (analyst, dev, pm, …) are IDE tooling — not CDP runtime.

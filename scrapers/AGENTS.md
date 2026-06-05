@@ -33,6 +33,19 @@ make migrate   # if schema changed
 
 When changing job/callback JSON shapes, update `../contracts/` and `tests/test_contracts/`.
 
+## Result semantics
+
+- Callback rows must emit canonical `sku_result`, `source_health`, and
+  `has_valid_price`.
+- Seller metadata from scraper results uses `seller_uf`, `seller_company_name`,
+  and `seller_cnpj`; the `cdp_scraper` receiver writes Detalhado columns `uf`,
+  `empresa`, `cnpj` after `vendedor`.
+- `FOUND_PRICE` requires an exact SKU match plus a positive usable price.
+- `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`, and `NOT_QUERIED` are
+  not found-price successes.
+- Mercado Livre captcha/anti-bot/403/access-denied pages must surface as
+  `BLOCKED`, not `NOT_FOUND`.
+
 ## n8n
 
 - Receiver JSON: `../../n8n/workflows/cdp_scraper.json`

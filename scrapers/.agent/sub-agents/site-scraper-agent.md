@@ -16,6 +16,12 @@ Site-specific scraping logic, result parsing, SKU matching, and scraper tests.
 
 - Changed scraper files and tests.
 - Exact SKU behavior and result-field notes.
+- Seller metadata notes: whether the site exposes `seller_uf`,
+  `seller_company_name`, and `seller_cnpj`; blank values are acceptable when not
+  visible.
+- Canonical status notes: when the site emits `FOUND_PRICE`, `NO_PRICE`,
+  `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, or `ERROR`; `BLOCKED` must not be collapsed
+  into `NOT_FOUND`.
 - Narrow pytest command and result.
 
 ## Boundaries

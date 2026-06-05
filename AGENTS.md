@@ -25,17 +25,20 @@ Full model: [docs/architecture/AGENT_ARCHITECTURE.md](docs/architecture/AGENT_AR
 ## Core rules
 
 - **Two APIs, one router** — no shared Python between services.
-- **Callbacks only** — `scraper-result`, `muvstok-result` webhooks.
+- **Callbacks only** — `scraper-result`, `muvstok-result` webhooks; receivers hand off aggregate final delivery to `cdp_notifier` (`cdp-notifier`).
 - **Router Code:** edit `n8n/src/` → `python3 scripts/sync_workflow_code_from_shared.py` → `make sync-n8n` (user approval). Graph/node changes may need MCP `operations` publish — see `docs/n8n/LIVE_WORKFLOWS.md`.
 - **No Execute Workflow** for StokAPI production dispatch.
 - **Contracts:** [contracts/](contracts/) when changing job or callback JSON.
 - **Agent docs:** keep project-owned agent guidance under [.agent/](.agent/) and service `.agent/` workspaces.
 - **Service catalog:** root [.agent/knowledge/](.agent/knowledge/) links n8n, Scraper, and API Diversos ownership.
+- **Detalhado seller columns:** use `vendedor`, then canonical `uf`, `empresa`, `cnpj`.
+  Do not add/write `estado`; accept `estado` only as a raw input alias that normalizes to `uf`.
 
 ## Platform skills
 
 - Router sync: [.agent/skills/n8n-router-sync/SKILL.md](.agent/skills/n8n-router-sync/SKILL.md)
 - Dual pipeline: [.agent/skills/dual-pipeline-change/SKILL.md](.agent/skills/dual-pipeline-change/SKILL.md)
+- Google Sheets dashboards: [.agent/skills/google-sheets-dashboard/SKILL.md](.agent/skills/google-sheets-dashboard/SKILL.md)
 
 ## Maintenance prompts
 

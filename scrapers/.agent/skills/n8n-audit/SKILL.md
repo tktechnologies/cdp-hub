@@ -42,6 +42,8 @@ Paths are monorepo-root paths.
 1. Verifies `X-Webhook-Secret` from env
 2. Preserves statuses: `success`, `not_found`, `no_price`, `blocked`, `timeout`, `error`
 3. Google Sheets use `$json.<field>` expressions
+4. Detalhado writes `uf`, `empresa`, `cnpj` after `vendedor`; no `estado`
+   output column.
 
 ## Validation
 

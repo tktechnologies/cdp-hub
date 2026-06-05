@@ -19,6 +19,8 @@ Run before publishing or updating live n8n workflows through MCP.
    - Secret from env (`CDP_CALLBACK_WEBHOOK_SECRET` / fallbacks)
    - All statuses preserved distinctly
    - Google Sheets mappings use `$json.<field>`
+   - Detalhado mappings use `uf`, `empresa`, `cnpj` after `vendedor`; no
+     `estado` output column.
 6. **Environment:** Required vars present on n8n container.
 7. **Docs updated:** [docs/n8n/LIVE_WORKFLOWS.md](../../../../docs/n8n/LIVE_WORKFLOWS.md) if IDs or behavior changed.
 8. **Git clean:** `git diff --check` passes.

@@ -20,7 +20,7 @@ Bootstrap (read before editing):
 
 Delegate before coding:
 - Playwright / cache / Celery → .agent/prompts/maintenance/scraper.md
-- Muvstok jobs / worker → .agent/prompts/maintenance/stokapi.md
+- API Diversos/StokAPI jobs / worker → .agent/prompts/maintenance/stokapi.md
 - n8n only → .agent/prompts/maintenance/n8n.md
 - Azure deploy only → .agent/prompts/maintenance/infrastructure.md
 

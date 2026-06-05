@@ -1,6 +1,6 @@
 # Delivery And Data Contract
 
-Last updated: 2026-05-14
+Last updated: 2026-06-03
 
 ## What We Deliver
 
@@ -39,6 +39,9 @@ per product result, plus placeholder rows for checked-but-missing site results.
 | `site_results` | Per-site status and listings. |
 | `best_price` | Lowest exact-match priced result when all priced exact matches share one currency. |
 | `total_results` | Count of product/listing records returned across all searched sites. |
+| `sku_result` | Canonical result: `FOUND_PRICE`, `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`, `NOT_QUERIED`. |
+| `has_valid_price` | True only when at least one searched source found a usable positive price. |
+| `priced_result_count` | Count of detailed results with usable positive price. |
 
 ## SiteResult Fields
 
@@ -50,6 +53,9 @@ per product result, plus placeholder rows for checked-but-missing site results.
 | `error_message` | Details when status is `error`, `blocked`, or `timeout`. |
 | `results` | Array of `PartResult` records. Empty when not found or blocked. |
 | `search_time_ms` | Time spent on that site for this SKU. |
+| `source_health` | Source health: `WORKING`, `BLOCKED`, `TIMEOUT`, `ERROR`, `NOT_QUERIED`. |
+| `sku_result` | Canonical SKU/source result. |
+| `has_valid_price` | True only when this source has an exact positive usable price. |
 
 Site statuses:
 
@@ -61,6 +67,15 @@ Site statuses:
 | `blocked` | Source blocked the scraper, CAPTCHA/access-denied/403. | Alert or track source health. Do not treat as no inventory. |
 | `timeout` | Site did not complete within timeout. | Retry later or route to manual review. |
 | `error` | Unexpected scraper/application exception. | Alert with `error_message`. |
+
+Canonical reporting rules:
+
+- `FOUND_PRICE` requires `has_valid_price = true`.
+- `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`, and `NOT_QUERIED` are
+  not found-price successes.
+- A placeholder row in `Detalhado` records what happened; row existence is not
+  success.
+- `BLOCKED` is never rewritten to `NOT_FOUND`.
 
 ## PartResult Fields
 
@@ -115,7 +130,13 @@ price
 currency
 condition
 availability
+status_resultado
+source_health
+has_valid_price
 seller_name
+seller_uf
+seller_company_name
+seller_cnpj
 product_url
 origin
 raw_title
@@ -127,6 +148,10 @@ job_completed_at
 job_duration_seconds
 ```
 
+When flattened into `Detalhado`, seller metadata columns are `vendedor`, `uf`,
+`empresa`, `cnpj`. Do not write `estado`; normalize raw state/location aliases
+to two-letter `uf`.
+
 For site statuses with no `PartResult`, create one placeholder row with:
 
 ```text
@@ -137,6 +162,9 @@ price = empty
 currency = ""
 availability = site_status
 raw_title = site_status uppercased, for example NOT_FOUND or BLOCKED
+status_resultado = canonical result
+source_health = source reachability/health
+has_valid_price = false
 ```
 
 ## Known Production Snapshot
@@ -158,4 +186,3 @@ As of 2026-05-14:
 
 N8N reports should distinguish source health problems from part availability.
 `blocked`, `timeout`, and `error` are not the same as `not_found`.
-

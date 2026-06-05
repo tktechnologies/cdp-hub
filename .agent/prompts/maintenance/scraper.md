@@ -30,6 +30,11 @@ Boundaries (do not cross):
 - Active sites: gm, ml, vw, eu, pecadireta; melibox optional. Archived: goparts, procurapecas, ebay
 - Proxy rollout: scrapers/docs/runbooks/iproyal-isp-proxy-setup.md (IPRoyal) → proxy-rollout workflow
 - Router always force_refresh: false — cache logic stays in worker
+- Result semantics: found-price requires `sku_result=FOUND_PRICE`,
+  `has_valid_price=true`, exact SKU match, and positive usable price. Mercado
+  Livre captcha/anti-bot/403/access denied is `BLOCKED`, not `NOT_FOUND`.
+- Scraper seller metadata fields are `seller_uf`, `seller_company_name`,
+  `seller_cnpj`; cdp_scraper writes `uf`, `empresa`, `cnpj` after `vendedor`.
 
 Before done:
 - make -C scrapers test lint (or targeted pytest)

@@ -48,8 +48,7 @@ muvstok-api/.agent/ = API Diversos service depth
 
 ## Remaining Watch Items
 
-- `cdp_progress` still needs a live workflow ID after first import; once
-  `CDP_PROGRESS_WORKFLOW_ID` is set, `make sync-n8n` includes it.
+- ~~`cdp_progress` live workflow ID~~ — resolved 2026-06-05 (`V9I6o32XDoPIRarz`; see `implementation-state.md`).
 - Some scripts still read an external user-home MCP config file for credentials.
   That is runtime credential lookup, not project-owned agent documentation.
 - Pre-existing application/workflow changes remain dirty and were not reverted
