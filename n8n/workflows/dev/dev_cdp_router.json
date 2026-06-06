@@ -49,8 +49,8 @@
       "webhookId": "7d740532-d503-480a-8bde-3765af4bceda",
       "credentials": {
         "telegramApi": {
-          "id": "OCT6L7sDZffEbhJ9",
-          "name": "Telegram DEV account"
+          "id": "wblrlkXu6SW1M5M1",
+          "name": "dev-cdp-bot"
         }
       },
       "notes": "v0.6.0: Recebe SKUs via Telegram (texto ou arquivo .xlsx/.csv). Necessita configurar credenciais do bot (@BotFather)."
@@ -1304,8 +1304,8 @@
       "webhookId": "f8d6d2c0-1836-4049-aeaa-377dd7b1ddf9",
       "credentials": {
         "telegramApi": {
-          "id": "OCT6L7sDZffEbhJ9",
-          "name": "Telegram DEV account"
+          "id": "wblrlkXu6SW1M5M1",
+          "name": "dev-cdp-bot"
         }
       },
       "notes": "v3: replies when .sku is sent without codes or file"
@@ -1469,8 +1469,8 @@
       "webhookId": "29269094-b21d-4d5e-b3a1-b169bf92000e",
       "credentials": {
         "telegramApi": {
-          "id": "OCT6L7sDZffEbhJ9",
-          "name": "Telegram DEV account"
+          "id": "wblrlkXu6SW1M5M1",
+          "name": "dev-cdp-bot"
         }
       }
     },
@@ -1679,8 +1679,8 @@
       ],
       "credentials": {
         "telegramApi": {
-          "id": "OCT6L7sDZffEbhJ9",
-          "name": "Telegram DEV account"
+          "id": "wblrlkXu6SW1M5M1",
+          "name": "dev-cdp-bot"
         }
       },
       "continueOnFail": true
@@ -1862,8 +1862,8 @@
       "webhookId": "cd245ff5-1a37-4f53-8d55-27fef29746b8",
       "credentials": {
         "telegramApi": {
-          "id": "OCT6L7sDZffEbhJ9",
-          "name": "Telegram DEV account"
+          "id": "wblrlkXu6SW1M5M1",
+          "name": "dev-cdp-bot"
         }
       },
       "continueOnFail": true,

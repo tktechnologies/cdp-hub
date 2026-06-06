@@ -27,7 +27,7 @@ decommissioned later with explicit approval.
 
 | Workflow | ID | Webhook / trigger | Notes |
 |----------|----|-------------------|-------|
-| `DEV - cdp_router` | `L8foaUWF2CYhp42n` | DEV Telegram (`NoxTKTech_bot` cred `OCT6L7sDZffEbhJ9`) | Gmail/schedule disabled; unique webhookIds required on import |
+| `DEV - cdp_router` | `L8foaUWF2CYhp42n` | DEV Telegram (`dev-cdp-bot` cred `wblrlkXu6SW1M5M1`) | Gmail/schedule disabled; unique webhookIds required on import |
 | `DEV - cdp_scraper` | `mjkPMAB0spid7YvU` | `dev-scraper-result` | Uses `CDP_DEV_CALLBACK_WEBHOOK_SECRET` and DEV sheets |
 | `DEV - cdp_stokapi` | `Kx7ZQLnaOINhX2Uk` | `dev-muvstok-result` | Uses `CDP_DEV_MUVSTOK_CALLBACK_WEBHOOK_SECRET` and DEV sheets |
 | `DEV - cdp_progress` | `DCrWffIqKnpK1wYy` | Schedule | Uses `CDP_DEV_PROGRESS_*` and DEV Telegram credential |
@@ -46,13 +46,13 @@ is configured by `scripts/configure-shared-n8n-dev-env.sh`.
 
 **DEV setup — next steps (human / Azure / n8n UI):**
 
-- [x] DEV Telegram credential: **NoxTKTech_bot** (`N8N_DEV_TELEGRAM_CREDENTIAL_ID=OCT6L7sDZffEbhJ9`) — 2026-06-05
+- [x] DEV Telegram credential: **dev-cdp-bot** (`N8N_DEV_TELEGRAM_CREDENTIAL_ID=wblrlkXu6SW1M5M1`) — 2026-06-06
 - [x] `make import-n8n-dev` — workflow IDs recorded above (2026-06-05)
 - [x] DEV Google Sheet `1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY` (SKUs + resultados in one workbook; report link gid `2069105059`) — 2026-06-05
 - [ ] Confirm DEV Key Vault has `api-key`, `callback-webhook-secret`, Muvstok creds for `cdp-muv-api-dev` / worker
 - [ ] Set GitHub `development` secrets/vars per [docs/ENVIRONMENTS.md](../../docs/ENVIRONMENTS.md)
 - [ ] Push to `dev` → **CD - Development** (images + `configure-shared-n8n-dev-env.sh` + `sync-n8n-dev`)
-- [ ] Smoke: **NoxTKTech_bot** `.sku` → DEV sheets + `dev-scraper-result` / `dev-muvstok-result` / `dev-cdp-notifier`
+- [ ] Smoke: **dev-cdp-bot** `.sku` → DEV sheets + `dev-scraper-result` / `dev-muvstok-result` / `dev-cdp-notifier`
 
 **Email command whitelist:** Production n8n has `EMAIL_ALLOWED_SENDERS=dev.lucascruz@gmail.com,peron@sopecasgenuinas.com.br` (Container App revision `cdp-n8n-prod--0000021`, confirmed 2026-06-06). Keep the user whitelist on; add future users as comma-separated emails.
 

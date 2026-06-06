@@ -302,8 +302,8 @@
       "webhookId": "bc226546-378d-495e-8eae-71988b46a4eb",
       "credentials": {
         "telegramApi": {
-          "id": "OCT6L7sDZffEbhJ9",
-          "name": "Telegram DEV account"
+          "id": "wblrlkXu6SW1M5M1",
+          "name": "dev-cdp-bot"
         }
       },
       "retryOnFail": true,

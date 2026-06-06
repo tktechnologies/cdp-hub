@@ -42,12 +42,13 @@ Production n8n publish (`make sync-n8n`) always needs explicit human approval �
 Prerequisites: `N8N_API_KEY`, DEV Key Vault secrets, DEV Google Sheets copies.
 
 1. **DEV Telegram bot** — Create via @BotFather; store token in `cdp-scrapers-kv-dev` as `telegram-dev-bot-token`.
-2. **n8n credential** — In `automacao.tktechnologies.com.br`, add credential **Telegram DEV account**; note its ID → `N8N_DEV_TELEGRAM_CREDENTIAL_ID`.
+2. **n8n credential** — In `automacao.tktechnologies.com.br`, use credential **dev-cdp-bot**; set its ID as `N8N_DEV_TELEGRAM_CREDENTIAL_ID`.
 3. **Generate + import workflows** (from repo root, with API key and credential ID exported):
 
    ```bash
    export N8N_API_KEY=...
-   export N8N_DEV_TELEGRAM_CREDENTIAL_ID=...
+   export N8N_DEV_TELEGRAM_CREDENTIAL_ID=wblrlkXu6SW1M5M1
+   export N8N_DEV_TELEGRAM_CREDENTIAL_NAME=dev-cdp-bot
    make import-n8n-dev
    ```
 

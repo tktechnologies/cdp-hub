@@ -603,8 +603,8 @@
       "webhookId": "cdp-notify-tg",
       "credentials": {
         "telegramApi": {
-          "id": "OCT6L7sDZffEbhJ9",
-          "name": "Telegram DEV account"
+          "id": "wblrlkXu6SW1M5M1",
+          "name": "dev-cdp-bot"
         }
       },
       "continueOnFail": true,
@@ -1198,8 +1198,8 @@
       "webhookId": "cdp-bulk-tg-doc",
       "credentials": {
         "telegramApi": {
-          "id": "OCT6L7sDZffEbhJ9",
-          "name": "Telegram DEV account"
+          "id": "wblrlkXu6SW1M5M1",
+          "name": "dev-cdp-bot"
         }
       },
       "continueOnFail": true,

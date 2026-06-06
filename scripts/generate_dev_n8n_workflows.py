@@ -75,7 +75,7 @@ def _replace_strings(value: Any, mapping: dict[str, str]) -> Any:
 
 
 def _patch_telegram_credentials(wf: dict[str, Any], credential_id: str) -> None:
-    credential_name = os.environ.get("N8N_DEV_TELEGRAM_CREDENTIAL_NAME", "Telegram DEV account").strip()
+    credential_name = os.environ.get("N8N_DEV_TELEGRAM_CREDENTIAL_NAME", "dev-cdp-bot").strip()
     for node in wf.get("nodes", []):
         credentials = node.get("credentials")
         if not isinstance(credentials, dict):
@@ -220,7 +220,7 @@ def main(argv: list[str] | None = None) -> int:
         if not env_value:
             print(
                 "N8N_DEV_TELEGRAM_CREDENTIAL_ID is required for import-n8n-dev "
-                "(create Telegram DEV account credential in n8n first).",
+                "(create or select the dev-cdp-bot Telegram credential in n8n first).",
                 file=sys.stderr,
             )
             return 1
