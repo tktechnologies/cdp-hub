@@ -10,7 +10,7 @@
 | [index.md](index.md) | Task routing (platform vs service) |
 | [rules.md](rules.md) | Non-negotiable platform rules |
 | [rules/](rules/) | Task-scoped rule summaries for platform, services, n8n, Python, contracts, infra |
-| [knowledge/](knowledge/) | Cross-service ownership and workspace sync maps |
+| [knowledge/](knowledge/) | Cross-service ownership, reporting semantics, and workspace sync maps |
 | [knowledge/google-sheets-reporting.md](knowledge/google-sheets-reporting.md) | Sheets KPI definitions, formula rules, pivots, dashboard UX |
 | [memory/implementation-state.md](memory/implementation-state.md) | Live workflow IDs, cross-service snapshot |
 | [references/monorepo-map.md](references/monorepo-map.md) | Directory map |
@@ -50,7 +50,7 @@
 | Path | Purpose |
 |------|---------|
 | [workflows/cdp/](workflows/cdp/) | CDP release checklists (n8n, etc.) |
-| [workflows/README.md](workflows/README.md) | AIOX personas (optional; not in repo) |
+| [workflows/README.md](workflows/README.md) | CDP platform workflow checklists |
 
 ## Prompts
 

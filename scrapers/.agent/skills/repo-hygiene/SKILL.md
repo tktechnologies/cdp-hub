@@ -1,3 +1,8 @@
+---
+name: scraper-repo-hygiene
+description: Clean, audit, or reorganize the scraper repository while preserving useful docs, tests, scripts, and agent guidance.
+---
+
 # Skill: Scraper Repo Hygiene
 
 Use when cleaning, auditing, or reorganizing the repository.

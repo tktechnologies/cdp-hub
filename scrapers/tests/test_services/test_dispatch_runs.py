@@ -1,5 +1,7 @@
 """Tests for dispatch run registry and final notification."""
 
+# ruff: noqa: E402
+
 import os
 from uuid import uuid4
 

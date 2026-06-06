@@ -1,6 +1,6 @@
 # CDP Platform — Implementation State
 
-**Last reviewed:** 2026-06-05 · **Live workflow IDs:** [docs/n8n/LIVE_WORKFLOWS.md](../../docs/n8n/LIVE_WORKFLOWS.md)
+**Last reviewed:** 2026-06-06 · **Live workflow IDs:** [docs/n8n/LIVE_WORKFLOWS.md](../../docs/n8n/LIVE_WORKFLOWS.md)
 
 ## Current snapshot
 
@@ -15,11 +15,11 @@ decommissioned later with explicit approval.
 
 | Workflow | ID | Webhook / trigger | Last known active version |
 |----------|-----|-------------------|---------------------------|
-| `cdp_router` | `6id6dkinK9xTLfsb` | Telegram, Gmail, schedule | `a9a34416-d362-46a1-9d05-bc8583df42b3` (2026-06-05) |
-| `cdp_scraper` | `VfBSV3WU6on8BXm8` | `scraper-result` | `4a4ecf8c-0ce8-4aea-a864-7b510a91c7ea` (2026-06-05) |
-| `cdp_stokapi` | `t160mzGPYYlJcrjZ` | `muvstok-result` | `eb5ae450-ad4e-4f44-8d30-022067f31b3a` (2026-06-05) |
-| `cdp_progress` | `V9I6o32XDoPIRarz` | Schedule | REST activation (2026-06-05; MCP publish N/A — enable MCP on workflow card) |
-| `cdp_notifier` | `ennI9nKin9ruPaLO` | `cdp-notifier` | Import + REST activation (2026-06-05; set `CDP_NOTIFIER_WORKFLOW_ID` for `make sync-n8n`) |
+| `cdp_router` | `6id6dkinK9xTLfsb` | Telegram, Gmail, schedule | `65dea47b-8cba-4db5-9969-da9493eec252` (MCP publish check, 2026-06-06) |
+| `cdp_scraper` | `VfBSV3WU6on8BXm8` | `scraper-result` | `0086a065-8369-48d3-b33a-4de4312f76f6` (MCP publish check, 2026-06-06) |
+| `cdp_stokapi` | `t160mzGPYYlJcrjZ` | `muvstok-result` | `e139b97d-0688-4cf1-ba5a-2899d24dcaac` (MCP publish check, 2026-06-06) |
+| `cdp_progress` | `V9I6o32XDoPIRarz` | Schedule | REST activation (2026-06-05; MCP not enabled on workflow card as of 2026-06-06) |
+| `cdp_notifier` | `ennI9nKin9ruPaLO` | `cdp-notifier` | Import + REST activation (2026-06-05; MCP not enabled on workflow card as of 2026-06-06) |
 
 **Sync:** `make sync-n8n` — inject → patch receivers → build notifier → REST PUT (`scripts/n8n_publish.py`) → MCP `publish_workflow` where available; non-MCP workflows fall back to REST activation. Set `CDP_PROGRESS_WORKFLOW_ID=V9I6o32XDoPIRarz` and `CDP_NOTIFIER_WORKFLOW_ID=ennI9nKin9ruPaLO` (or export before sync) to include progress and notifier.
 
@@ -33,6 +33,10 @@ decommissioned later with explicit approval.
 | `DEV - cdp_progress` | `DCrWffIqKnpK1wYy` | Schedule | Uses `CDP_DEV_PROGRESS_*` and DEV Telegram credential |
 | `DEV - cdp_notifier` | `ssk4HbowArZILiAl` | `dev-cdp-notifier` | Aggregate final Telegram; Gmail disabled on DEV copy |
 
+MCP access is not enabled on the DEV workflow cards as of 2026-06-06, so
+MCP `get_workflow_details` / `publish_workflow` cannot inspect or publish the
+DEV copies until MCP is enabled in n8n UI/settings for each workflow.
+
 **DEV sync:** `make n8n-dev-workflows` generates local copies under
 `n8n/workflows/dev/` (including `dev_cdp_notifier.json`). First import with
 `make import-n8n-dev` after creating the DEV Telegram credential in shared
@@ -44,17 +48,17 @@ is configured by `scripts/configure-shared-n8n-dev-env.sh`.
 
 - [x] DEV Telegram credential: **NoxTKTech_bot** (`N8N_DEV_TELEGRAM_CREDENTIAL_ID=OCT6L7sDZffEbhJ9`) — 2026-06-05
 - [x] `make import-n8n-dev` — workflow IDs recorded above (2026-06-05)
-- [ ] Copy prod spreadsheets (or separate tabs) → `CDP_DEV_SKUS_SHEET_ID`, `CDP_DEV_RESULTADOS_SHEET_ID`, `CDP_DEV_RESULTADOS_SHEETS_URL` (still placeholders in DEV JSON until set)
+- [x] DEV Google Sheet `1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY` (SKUs + resultados in one workbook; report link gid `2069105059`) — 2026-06-05
 - [ ] Confirm DEV Key Vault has `api-key`, `callback-webhook-secret`, Muvstok creds for `cdp-muv-api-dev` / worker
 - [ ] Set GitHub `development` secrets/vars per [docs/ENVIRONMENTS.md](../../docs/ENVIRONMENTS.md)
 - [ ] Push to `dev` → **CD - Development** (images + `configure-shared-n8n-dev-env.sh` + `sync-n8n-dev`)
 - [ ] Smoke: **NoxTKTech_bot** `.sku` → DEV sheets + `dev-scraper-result` / `dev-muvstok-result` / `dev-cdp-notifier`
 
-**Email command whitelist:** Production n8n has `EMAIL_ALLOWED_SENDERS=dev.lucascruz@gmail.com,peron@sopecasgenuinas.com.br` (Container App revision `cdp-n8n-prod--0000020`, 2026-06-03). Keep the user whitelist on; add future users as comma-separated emails.
+**Email command whitelist:** Production n8n has `EMAIL_ALLOWED_SENDERS=dev.lucascruz@gmail.com,peron@sopecasgenuinas.com.br` (Container App revision `cdp-n8n-prod--0000021`, confirmed 2026-06-06). Keep the user whitelist on; add future users as comma-separated emails.
 
 **Email command trigger:** Gmail Trigger filters `subject:"cdp-enviar-skus"`. Put `.analisar` or `.sku ...` at the start of the subject or first body line.
 
-**GitHub:** `origin` and `tktech` → `cdp-hub` `main` @ `ba177cb+` (monorepo sync 2026-06-02).
+**GitHub:** `tktech/main` and `tktech/dev` @ `3daf582`; `origin/main` was 6 commits behind before the 2026-06-06 sync pass.
 
 ### Scraper (`scrapers/`)
 
@@ -75,7 +79,7 @@ is configured by `scripts/configure-shared-n8n-dev-env.sh`.
 | Stack | FastAPI, Redis Streams worker, PostgreSQL |
 | Azure prod | `cdp-muv-api`, `cdp-muv-worker` |
 | Last deploy | 2026-05-29 — `cdp-muv-api:20260529-1040` (unchanged 2026-06-02; no app diff) |
-| Azure dev | `cdp-muv-api-dev`, `cdp-muv-worker-dev` (scripts ready; apps after dev KV/infra) |
+| Azure dev | `cdp-muv-api-dev`, `cdp-muv-worker-dev` not present as of 2026-06-06 audit; scripts ready, but deployment requires DEV Key Vault access/secrets |
 
 ### Shared
 
@@ -100,6 +104,8 @@ is configured by `scripts/configure-shared-n8n-dev-env.sh`.
 | `N8N_API_KEY` in `~/.cursor/mcp.json` | Use `muvstok-api/.env` or export `N8N_API_KEY` before `make sync-n8n` |
 | StokAPI dev Container Apps | `muvstok-api/scripts/deploy_muv_dev.sh` now creates/updates `cdp-muv-api-dev` and `cdp-muv-worker-dev`; requires dev KV DB/Redis/API/callback secrets and Muvstok credentials |
 | Deprecated `scrapers/n8n/docs/` | Stubs point to `docs/n8n/` |
+| n8n MCP disabled on `cdp_progress`, `cdp_notifier`, and DEV copies | Enable MCP access from each n8n workflow card/settings, then rerun MCP inspection/publish |
+| DEV Key Vault RBAC unavailable for current Azure identity | Grant secret metadata/value access or run DEV CD with configured GitHub environment secrets |
 
 ## Changelog (abbreviated)
 

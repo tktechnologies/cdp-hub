@@ -5,7 +5,8 @@
 
 ## Context
 
-CDP needs public scrape data and internal Muvstok stock data for the same SKU sets, triggered from Telegram/Sheets via n8n.
+CDP needs public scrape data and API Diversos/StokAPI stock data for the same
+SKU sets, triggered from Telegram/Sheets via n8n.
 
 ## Decision
 

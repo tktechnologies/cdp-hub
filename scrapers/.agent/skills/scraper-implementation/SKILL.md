@@ -1,3 +1,8 @@
+---
+name: scraper-implementation
+description: Add a new supplier scraper or improve an existing scraper, including parsing, browser/API behavior, exact-match rules, seller metadata, registry updates, and tests.
+---
+
 # Skill: Implement Or Improve A Scraper
 
 Use when adding a new supplier scraper or improving an existing one.

@@ -40,6 +40,8 @@ Examples:
   `sku_result=BLOCKED`, `source_health=BLOCKED`.
 - Sheet receivers write seller metadata as `vendedor`, `uf`, `empresa`, `cnpj`.
   Raw `estado` aliases are accepted only to normalize into `uf`.
+- Rows with `codigoFilial` are enriched from the dealership directory before
+  persistence/callback so `uf` and related filial metadata are available to n8n.
 
 ## Rules
 

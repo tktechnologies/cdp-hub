@@ -1,3 +1,8 @@
+---
+name: scraper-source-playbooks
+description: Use source-specific scraper playbooks to debug, improve, or validate one supplier scraper at a time.
+---
+
 # Scraper Source Playbooks Skill
 
 Use when debugging, improving, or validating a specific supplier scraper.

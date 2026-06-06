@@ -18,7 +18,7 @@ If the task touches **router** or **both pipelines**, switch to platform tier: [
 | Orchestrator, cache, jobs | `src/services/orchestrator.py`, `src/services/scrape_cache.py`, `docs/SPECS/SCRAPE_CACHE_SPEC.md` |
 | n8n scraper receiver audit | `skills/n8n-audit/SKILL.md`, `../../n8n/workflows/cdp_scraper.json` |
 | n8n publish preflight | `skills/n8n-release-preflight/SKILL.md` |
-| Router / dual pipeline / sync all 3 workflows | **Platform** `../../.agent/skills/n8n-router-sync/SKILL.md` |
+| Router / dual pipeline / platform workflow sync | **Platform** `../../.agent/skills/n8n-router-sync/SKILL.md` |
 | BR ISP proxy purchase / prod config | `workflows/proxy-rollout.md`, `commands/proxy-readiness.md` |
 | Repo cleanup | `skills/repo-hygiene/SKILL.md` |
 

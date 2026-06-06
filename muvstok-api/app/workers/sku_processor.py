@@ -18,6 +18,7 @@ from app.repositories.error_repository import ErrorRepository
 from app.repositories.muvstok_api_data_repository import MuvstokApiDataRepository
 from app.repositories.snapshot_repository import SnapshotRepository
 from app.services.auth_service import AuthService
+from app.services.dealership_directory import DealershipDirectory
 from app.services.governance_service import GovernanceService
 from app.services.sku_cache import CachedSku, SkuCache, normalize_cache_sku
 
@@ -58,6 +59,7 @@ class SkuProcessor:
         api_data_repository: MuvstokApiDataRepository,
         error_repository: ErrorRepository,
         sku_cache: SkuCache | None = None,
+        dealership_directory: DealershipDirectory | None = None,
     ) -> None:
         self._auth_service = auth_service
         self._muvstok_client = muvstok_client
@@ -66,6 +68,7 @@ class SkuProcessor:
         self._error_repository = error_repository
         self._governance = GovernanceService()
         self._sku_cache = sku_cache
+        self._dealership_directory = dealership_directory
         # Job-scoped memo (one SkuProcessor is created per job): a duplicate SKU within the
         # same job reuses the first occurrence's result with no upstream call.
         self._job_memo: dict[str, _MemoEntry] = {}
@@ -96,6 +99,11 @@ class SkuProcessor:
         if self._sku_cache is not None:
             cached = await self._sku_cache.get(sku)
             if cached is not None:
+                if self._dealership_directory is not None:
+                    cached = CachedSku(
+                        status=cached.status,
+                        rows=await self._dealership_directory.enrich_rows(list(cached.rows)),
+                    )
                 memo = self._memo_from_cache(cached)
                 self._job_memo[cache_key] = memo
                 await self._persist_cached_result(job_id, correlation_id, item, memo)
@@ -107,6 +115,8 @@ class SkuProcessor:
                 refreshed = await self._auth_service.get_token(force_refresh=True)
                 rows, status_code = await self._muvstok_client.fetch_sku(sku, refreshed)
                 token = refreshed
+            if rows and self._dealership_directory is not None:
+                rows = await self._dealership_directory.enrich_rows(rows)
 
             if status_code == 404 or not rows:
                 await self._persist_not_found(job_id, correlation_id, item)

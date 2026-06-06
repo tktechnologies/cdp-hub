@@ -46,11 +46,11 @@
         -240,
         1920
       ],
-      "webhookId": "957cbfea-f59d-4703-a42e-069236fb55f4",
+      "webhookId": "7d740532-d503-480a-8bde-3765af4bceda",
       "credentials": {
         "telegramApi": {
           "id": "OCT6L7sDZffEbhJ9",
-          "name": "NoxTKTech_bot"
+          "name": "Telegram DEV account"
         }
       },
       "notes": "v0.6.0: Recebe SKUs via Telegram (texto ou arquivo .xlsx/.csv). Necessita configurar credenciais do bot (@BotFather)."
@@ -126,17 +126,17 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_skus",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "SKUs",
           "mode": "name",
           "cachedResultName": "SKUs",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -230,17 +230,17 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_RESULTADOS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_resultados",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "Historico",
           "mode": "name",
           "cachedResultName": "Historico",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -581,7 +581,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// cdp_router — Scraper POST /api/v1/jobs (force_refresh=false → Redis/PostgreSQL 24h cache).\n\nconst DEFAULT_BATCH_SIZE = 100;\nconst MAX_BATCH_SIZE = 100;\nconst DEFAULT_SITES = ['gm', 'ml', 'vw', 'eu', 'pecadireta'];\nconst DEFAULT_SCRAPER_API_BASE =\n  'https://cdp-scrapers-api-prod.bravecoast-b14d791e.eastus2.azurecontainerapps.io';\nconst DEFAULT_N8N_WEBHOOK_BASE = 'https://automacao.tktechnologies.com.br';\nconst data = $input.first().json;\nconst skus = Array.isArray(data.skus) ? data.skus : [];\nconst sheetRows = Array.isArray(data.sheet_rows) ? data.sheet_rows : skus;\n\nfunction env(name) {\n  try {\n    if (typeof $env !== 'undefined' && $env && $env[name]) {\n      return String($env[name]).trim();\n    }\n  } catch (e) {}\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));\n}\nfunction devEnvName(name) {\n  const map = {\n    CDP_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',\n    MUVSTOK_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',\n    CDP_API_KEY: 'CDP_DEV_API_KEY',\n    MUVSTOK_API_KEY: 'CDP_DEV_API_KEY',\n    API_KEY: 'CDP_DEV_API_KEY',\n    CDP_SCRAPER_BATCH_SIZE: 'CDP_DEV_SCRAPER_BATCH_SIZE',\n    CDP_SCRAPER_SITES: 'CDP_DEV_SCRAPER_SITES',\n    WEBHOOK_URL: 'CDP_DEV_WEBHOOK_URL',\n    CDP_N8N_WEBHOOK_URL: 'CDP_DEV_N8N_WEBHOOK_URL',\n    CDP_N8N_WEBHOOK_PATH: 'CDP_DEV_N8N_WEBHOOK_PATH',\n  };\n  return map[name] || '';\n}\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const mapped = devEnvName(name);\n  const value = mapped ? env(mapped) : '';\n  if (value) return value;\n  if (name === 'WEBHOOK_URL') return env('WEBHOOK_URL') || DEFAULT_N8N_WEBHOOK_BASE;\n  if (name === 'CDP_N8N_WEBHOOK_PATH') return 'webhook/dev-scraper-result';\n  return '';\n}\nfunction envList(name) {\n  const raw = envFor(name);\n  return raw ? raw.split(',').map((s) => s.trim()).filter(Boolean) : [];\n}\nfunction trimTrailingSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\nfunction trimSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.startsWith('/')) out = out.slice(1);\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\nfunction readStaticRequester() {\n  try {\n    if (typeof $getWorkflowStaticData === 'function') {\n      const sd = $getWorkflowStaticData('global');\n      if (sd && sd.cdp_sheet_requester) return sd.cdp_sheet_requester;\n    }\n  } catch (e) {}\n  return null;\n}\nfunction looksLikeEmail(value) {\n  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(value || '').trim());\n}\nfunction skuKey(value) {\n  return String(value || '')\n    .trim()\n    .toUpperCase()\n    .replace(/[\\s\\-\\.\\\\/]/g, '');\n}\n\nconst configuredSites = envList('CDP_SCRAPER_SITES');\nconst sites = configuredSites.length ? configuredSites : DEFAULT_SITES;\nconst commandRoute = String(data.command_route || 'analisar');\nconst scraperApiBase = trimTrailingSlashes(\n  envFor('CDP_SCRAPER_API_BASE') ||\n    envFor('MUVSTOK_SCRAPER_API_BASE') ||\n    (isDevWorkflow() ? '' : DEFAULT_SCRAPER_API_BASE)\n);\nconst apiKey = envFor('CDP_API_KEY') || envFor('MUVSTOK_API_KEY') || envFor('API_KEY');\nconst batchSizeRaw = Number(envFor('CDP_SCRAPER_BATCH_SIZE') || DEFAULT_BATCH_SIZE);\nconst BATCH_SIZE = Math.max(\n  1,\n  Math.min(MAX_BATCH_SIZE, Number.isFinite(batchSizeRaw) ? batchSizeRaw : DEFAULT_BATCH_SIZE)\n);\n\nconst ctx = readStaticRequester();\nlet chatId = String(data.telegram_chat_id || data.chat_id || '').trim();\nlet emailFrom = String(data.email_from || '').trim();\nconst notifyRaw = String(data.notify || '').trim();\nlet commandOrigin = String(data.command_origin || data.origem || '').trim().toLowerCase();\nlet replyChannel = String(data.reply_channel || '').trim().toLowerCase();\nif (!emailFrom && looksLikeEmail(notifyRaw)) emailFrom = notifyRaw;\nconst dataHasChannel = Boolean(\n  replyChannel || commandOrigin === 'email' || commandOrigin === 'telegram' || emailFrom || chatId\n);\nif (ctx) {\n  if (!dataHasChannel && !replyChannel && ctx.reply_channel) {\n    replyChannel = String(ctx.reply_channel).trim().toLowerCase();\n  }\n  if (!dataHasChannel && !commandOrigin && ctx.command_origin) {\n    commandOrigin = String(ctx.command_origin).trim().toLowerCase();\n  }\n  if (!dataHasChannel && !emailFrom && ctx.email_from) emailFrom = String(ctx.email_from).trim();\n  const inputIsEmail = commandOrigin === 'email' || replyChannel === 'email' || emailFrom;\n  if (!inputIsEmail && !chatId && ctx.chat_id) chatId = String(ctx.chat_id).trim();\n}\nconst adHoc = !!(chatId || emailFrom);\nlet notify = 'none';\nif (!replyChannel) {\n  if (commandOrigin === 'email' || emailFrom) replyChannel = 'email';\n  else if (commandOrigin === 'telegram' || chatId) replyChannel = 'telegram';\n}\nif (!commandOrigin && replyChannel) commandOrigin = replyChannel;\nif (replyChannel === 'email') {\n  notify = 'email';\n  commandOrigin = 'email';\n  chatId = '';\n} else if (replyChannel === 'telegram') {\n  notify = 'telegram';\n  commandOrigin = 'telegram';\n  emailFrom = '';\n} else if (chatId) {\n  notify = 'telegram';\n  replyChannel = 'telegram';\n  commandOrigin = commandOrigin || 'telegram';\n} else if (emailFrom) {\n  notify = 'email';\n  replyChannel = 'email';\n  commandOrigin = commandOrigin || 'email';\n}\n\nconst batchGroupId =\n  String(data.batch_group_id || '').trim() ||\n  'bg-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);\n\nlet callbackUrl = envFor('CDP_N8N_WEBHOOK_URL');\nif (!callbackUrl) {\n  const base = trimTrailingSlashes(envFor('WEBHOOK_URL'));\n  const rel = trimSlashes(envFor('CDP_N8N_WEBHOOK_PATH') || 'webhook/scraper-result');\n  if (base) callbackUrl = base + '/' + rel;\n}\nif (!callbackUrl && !isDevWorkflow()) {\n  callbackUrl = 'https://automacao.tktechnologies.com.br/webhook/scraper-result';\n}\n\nfunction encodeQueryParam(key, value) {\n  return encodeURIComponent(key) + '=' + encodeURIComponent(String(value));\n}\nfunction buildQueryString(parts) {\n  return parts.map(([k, v]) => encodeQueryParam(k, v)).join('&');\n}\nconst deliveryMode = adHoc ? 'legacy' : 'aggregate';\nconst queryParts = [\n  ['notify', notify],\n  ['reply_channel', replyChannel || notify],\n  ['command_origin', commandOrigin || replyChannel || notify],\n  ['batch_group_id', batchGroupId],\n  ['dual_run', 'scraper'],\n  ['command_route', commandRoute],\n  ['delivery_mode', deliveryMode],\n];\nif (notify === 'telegram' && chatId) queryParts.push(['chat_id', chatId]);\nif (notify === 'email' && emailFrom) queryParts.push(['reply_email', emailFrom]);\nif (adHoc) queryParts.push(['ad_hoc', 'true']);\ncallbackUrl += (callbackUrl.includes('?') ? '&' : '?') + buildQueryString(queryParts);\n\nconst batches = [];\nfor (let i = 0; i < skus.length; i += BATCH_SIZE) {\n  batches.push(skus.slice(i, i + BATCH_SIZE));\n}\nconst totalBatches = batches.length;\n\nreturn batches.map((batch, index) => {\n  const batchSkuKeys = new Set(batch.map((it) => skuKey(it.sku)));\n  const batchSheetRows = sheetRows.filter((it) => batchSkuKeys.has(skuKey(it.sku || it.SKU || it)));\n  return {\n    json: {\n      callback_url: callbackUrl,\n      items: batch.map((it) => ({\n        sku: it.sku,\n        brand: it.brand || '',\n        description: it.description || '',\n      })),\n      sheet_rows: batchSheetRows.map((it) => ({\n        sku: it.sku,\n        row_number: it.row_number ?? null,\n      })),\n      sites,\n      priority: 5,\n      force_refresh: false,\n      api_jobs_url: scraperApiBase + '/api/v1/jobs',\n      api_key: apiKey,\n      batch_group_id: batchGroupId,\n      batch_index: index + 1,\n      total_batches: totalBatches,\n      batch_size: batch.length,\n      sheet_row_count: batchSheetRows.length,\n      ad_hoc: adHoc,\n      notify,\n      reply_channel: replyChannel || notify,\n      command_origin: commandOrigin || replyChannel || notify,\n      chat_id: notify === 'telegram' ? chatId : undefined,\n      reply_email: notify === 'email' ? emailFrom : '',\n      command_route: commandRoute,\n      metadata: {\n        source: 'cdp_router',\n        pipeline: 'scraper',\n        command_route: commandRoute,\n        command_origin: commandOrigin || replyChannel || notify,\n        reply_channel: replyChannel || notify,\n        notify,\n        delivery_mode: adHoc ? 'legacy' : 'aggregate',\n        chat_id: notify === 'telegram' ? chatId : '',\n        reply_email: notify === 'email' ? emailFrom : '',\n        batch_group_id: batchGroupId,\n        batch_index: index + 1,\n        total_batches: totalBatches,\n        cache_policy: 'redis_24h',\n        unique_skus: batch.length,\n        sheet_rows: batchSheetRows.length,\n      },\n    },\n  };\n});\n",
+        "jsCode": "// cdp_router — Scraper POST /api/v1/jobs (force_refresh=false → Redis/PostgreSQL 24h cache).\n\nconst DEFAULT_BATCH_SIZE = 100;\nconst MAX_BATCH_SIZE = 100;\nconst DEFAULT_SITES = [\n  'gm',\n  'ml',\n  'vw',\n  'eu',\n  'pecadireta',\n  'melibox',\n  'goparts',\n  'procurapecas',\n  'ebay',\n];\nconst DEFAULT_SCRAPER_API_BASE =\n  'https://cdp-scrapers-api-prod.bravecoast-b14d791e.eastus2.azurecontainerapps.io';\nconst DEFAULT_N8N_WEBHOOK_BASE = 'https://automacao.tktechnologies.com.br';\nconst data = $input.first().json;\nconst skus = Array.isArray(data.skus) ? data.skus : [];\nconst sheetRows = Array.isArray(data.sheet_rows) ? data.sheet_rows : skus;\n\nfunction env(name) {\n  try {\n    if (typeof $env !== 'undefined' && $env && $env[name]) {\n      return String($env[name]).trim();\n    }\n  } catch (e) {}\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));\n}\nfunction devEnvName(name) {\n  const map = {\n    CDP_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',\n    MUVSTOK_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',\n    CDP_API_KEY: 'CDP_DEV_API_KEY',\n    MUVSTOK_API_KEY: 'CDP_DEV_API_KEY',\n    API_KEY: 'CDP_DEV_API_KEY',\n    CDP_SCRAPER_BATCH_SIZE: 'CDP_DEV_SCRAPER_BATCH_SIZE',\n    CDP_SCRAPER_SITES: 'CDP_DEV_SCRAPER_SITES',\n    WEBHOOK_URL: 'CDP_DEV_WEBHOOK_URL',\n    CDP_N8N_WEBHOOK_URL: 'CDP_DEV_N8N_WEBHOOK_URL',\n    CDP_N8N_WEBHOOK_PATH: 'CDP_DEV_N8N_WEBHOOK_PATH',\n  };\n  return map[name] || '';\n}\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const mapped = devEnvName(name);\n  const value = mapped ? env(mapped) : '';\n  if (value) return value;\n  if (name === 'WEBHOOK_URL') return env('WEBHOOK_URL') || DEFAULT_N8N_WEBHOOK_BASE;\n  if (name === 'CDP_N8N_WEBHOOK_PATH') return 'webhook/dev-scraper-result';\n  return '';\n}\nfunction envList(name) {\n  const raw = envFor(name);\n  return raw ? raw.split(',').map((s) => s.trim()).filter(Boolean) : [];\n}\nfunction trimTrailingSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\nfunction trimSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.startsWith('/')) out = out.slice(1);\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\nfunction readStaticRequester() {\n  try {\n    if (typeof $getWorkflowStaticData === 'function') {\n      const sd = $getWorkflowStaticData('global');\n      if (sd && sd.cdp_sheet_requester) return sd.cdp_sheet_requester;\n    }\n  } catch (e) {}\n  return null;\n}\nfunction looksLikeEmail(value) {\n  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(value || '').trim());\n}\nfunction skuKey(value) {\n  return String(value || '')\n    .trim()\n    .toUpperCase()\n    .replace(/[\\s\\-\\.\\\\/]/g, '');\n}\n\nconst configuredSites = envList('CDP_SCRAPER_SITES');\nconst sites = configuredSites.length ? configuredSites : DEFAULT_SITES;\nconst commandRoute = String(data.command_route || 'analisar');\nconst scraperApiBase = trimTrailingSlashes(\n  envFor('CDP_SCRAPER_API_BASE') ||\n    envFor('MUVSTOK_SCRAPER_API_BASE') ||\n    (isDevWorkflow() ? '' : DEFAULT_SCRAPER_API_BASE)\n);\nconst apiKey = envFor('CDP_API_KEY') || envFor('MUVSTOK_API_KEY') || envFor('API_KEY');\nconst batchSizeRaw = Number(envFor('CDP_SCRAPER_BATCH_SIZE') || DEFAULT_BATCH_SIZE);\nconst BATCH_SIZE = Math.max(\n  1,\n  Math.min(MAX_BATCH_SIZE, Number.isFinite(batchSizeRaw) ? batchSizeRaw : DEFAULT_BATCH_SIZE)\n);\n\nconst ctx = readStaticRequester();\nlet chatId = String(data.telegram_chat_id || data.chat_id || '').trim();\nlet emailFrom = String(data.email_from || '').trim();\nconst notifyRaw = String(data.notify || '').trim();\nlet commandOrigin = String(data.command_origin || data.origem || '').trim().toLowerCase();\nlet replyChannel = String(data.reply_channel || '').trim().toLowerCase();\nif (!emailFrom && looksLikeEmail(notifyRaw)) emailFrom = notifyRaw;\nconst dataHasChannel = Boolean(\n  replyChannel || commandOrigin === 'email' || commandOrigin === 'telegram' || emailFrom || chatId\n);\nif (ctx) {\n  if (!dataHasChannel && !replyChannel && ctx.reply_channel) {\n    replyChannel = String(ctx.reply_channel).trim().toLowerCase();\n  }\n  if (!dataHasChannel && !commandOrigin && ctx.command_origin) {\n    commandOrigin = String(ctx.command_origin).trim().toLowerCase();\n  }\n  if (!dataHasChannel && !emailFrom && ctx.email_from) emailFrom = String(ctx.email_from).trim();\n  const inputIsEmail = commandOrigin === 'email' || replyChannel === 'email' || emailFrom;\n  if (!inputIsEmail && !chatId && ctx.chat_id) chatId = String(ctx.chat_id).trim();\n}\nlet notify = 'none';\nif (!replyChannel) {\n  if (commandOrigin === 'email' || emailFrom) replyChannel = 'email';\n  else if (commandOrigin === 'telegram' || chatId) replyChannel = 'telegram';\n}\nif (!commandOrigin && replyChannel) commandOrigin = replyChannel;\nif (replyChannel === 'email') {\n  notify = 'email';\n  commandOrigin = 'email';\n  chatId = '';\n} else if (replyChannel === 'telegram') {\n  notify = 'telegram';\n  commandOrigin = 'telegram';\n  emailFrom = '';\n} else if (chatId) {\n  notify = 'telegram';\n  replyChannel = 'telegram';\n  commandOrigin = commandOrigin || 'telegram';\n} else if (emailFrom) {\n  notify = 'email';\n  replyChannel = 'email';\n  commandOrigin = commandOrigin || 'email';\n}\n\nconst batchGroupId =\n  String(data.batch_group_id || '').trim() ||\n  'bg-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);\nconst adHoc = String(commandRoute || '').startsWith('sku');\n\nlet callbackUrl = envFor('CDP_N8N_WEBHOOK_URL');\nif (!callbackUrl) {\n  const base = trimTrailingSlashes(envFor('WEBHOOK_URL'));\n  const rel = trimSlashes(envFor('CDP_N8N_WEBHOOK_PATH') || 'webhook/scraper-result');\n  if (base) callbackUrl = base + '/' + rel;\n}\nif (!callbackUrl && !isDevWorkflow()) {\n  callbackUrl = 'https://automacao.tktechnologies.com.br/webhook/scraper-result';\n}\n\nfunction encodeQueryParam(key, value) {\n  return encodeURIComponent(key) + '=' + encodeURIComponent(String(value));\n}\nfunction buildQueryString(parts) {\n  return parts.map(([k, v]) => encodeQueryParam(k, v)).join('&');\n}\nconst deliveryMode = notify === 'none' ? 'legacy' : 'aggregate';\nconst queryParts = [\n  ['notify', notify],\n  ['reply_channel', replyChannel || notify],\n  ['command_origin', commandOrigin || replyChannel || notify],\n  ['batch_group_id', batchGroupId],\n  ['dual_run', 'scraper'],\n  ['command_route', commandRoute],\n  ['delivery_mode', deliveryMode],\n];\nif (notify === 'telegram' && chatId) queryParts.push(['chat_id', chatId]);\nif (notify === 'email' && emailFrom) queryParts.push(['reply_email', emailFrom]);\nif (adHoc) queryParts.push(['ad_hoc', 'true']);\ncallbackUrl += (callbackUrl.includes('?') ? '&' : '?') + buildQueryString(queryParts);\n\nconst batches = [];\nfor (let i = 0; i < skus.length; i += BATCH_SIZE) {\n  batches.push(skus.slice(i, i + BATCH_SIZE));\n}\nconst totalBatches = batches.length;\n\nreturn batches.map((batch, index) => {\n  const batchSkuKeys = new Set(batch.map((it) => skuKey(it.sku)));\n  const batchSheetRows = sheetRows.filter((it) => batchSkuKeys.has(skuKey(it.sku || it.SKU || it)));\n  return {\n    json: {\n      callback_url: callbackUrl,\n      items: batch.map((it) => ({\n        sku: it.sku,\n        brand: it.brand || '',\n        description: it.description || '',\n      })),\n      sheet_rows: batchSheetRows.map((it) => ({\n        sku: it.sku,\n        row_number: it.row_number ?? null,\n      })),\n      sites,\n      priority: 5,\n      force_refresh: false,\n      api_jobs_url: scraperApiBase + '/api/v1/jobs',\n      api_key: apiKey,\n      batch_group_id: batchGroupId,\n      batch_index: index + 1,\n      total_batches: totalBatches,\n      batch_size: batch.length,\n      sheet_row_count: batchSheetRows.length,\n      ad_hoc: adHoc,\n      notify,\n      reply_channel: replyChannel || notify,\n      command_origin: commandOrigin || replyChannel || notify,\n      chat_id: notify === 'telegram' ? chatId : undefined,\n      reply_email: notify === 'email' ? emailFrom : '',\n      command_route: commandRoute,\n      metadata: {\n        source: 'cdp_router',\n        pipeline: 'scraper',\n        command_route: commandRoute,\n        command_origin: commandOrigin || replyChannel || notify,\n        reply_channel: replyChannel || notify,\n        notify,\n        delivery_mode: deliveryMode,\n        chat_id: notify === 'telegram' ? chatId : '',\n        reply_email: notify === 'email' ? emailFrom : '',\n        batch_group_id: batchGroupId,\n        batch_index: index + 1,\n        total_batches: totalBatches,\n        cache_policy: 'redis_24h',\n        unique_skus: batch.length,\n        sheet_rows: batchSheetRows.length,\n      },\n    },\n  };\n});\n",
         "mode": "runOnceForAllItems"
       },
       "id": "99162794-4160-4334-bdd3-885473fe4524",
@@ -613,17 +613,17 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_skus",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": 843035952,
           "mode": "list",
           "cachedResultName": "SKUs",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=843035952"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=843035952"
         },
         "options": {}
       },
@@ -1244,7 +1244,7 @@
         656,
         2832
       ],
-      "webhookId": "a0f7fe53-1adc-48c1-aae0-7fa08828b360",
+      "webhookId": "99b3be90-5a58-4087-baa7-8828c1e76ffb",
       "credentials": {
         "gmailOAuth2": {
           "id": "rQesNRyarukVs0N4",
@@ -1301,11 +1301,11 @@
         432,
         2352
       ],
-      "webhookId": "28253cf8-5ee8-4a1c-bc98-9e9202fabbd9",
+      "webhookId": "f8d6d2c0-1836-4049-aeaa-377dd7b1ddf9",
       "credentials": {
         "telegramApi": {
           "id": "OCT6L7sDZffEbhJ9",
-          "name": "NoxTKTech_bot"
+          "name": "Telegram DEV account"
         }
       },
       "notes": "v3: replies when .sku is sent without codes or file"
@@ -1326,7 +1326,7 @@
         656,
         3024
       ],
-      "webhookId": "9893bf54-dcaf-4460-be6d-edf33ce01a5e",
+      "webhookId": "59e1efc4-ca0e-45a3-ba66-880855a0da7e",
       "credentials": {
         "gmailOAuth2": {
           "id": "rQesNRyarukVs0N4",
@@ -1466,11 +1466,11 @@
         2224,
         1952
       ],
-      "webhookId": "51a12377-8dd6-4a1e-892a-e0e08ed74abd",
+      "webhookId": "29269094-b21d-4d5e-b3a1-b169bf92000e",
       "credentials": {
         "telegramApi": {
           "id": "OCT6L7sDZffEbhJ9",
-          "name": "NoxTKTech_bot"
+          "name": "Telegram DEV account"
         }
       }
     },
@@ -1492,7 +1492,7 @@
         2224,
         2144
       ],
-      "webhookId": "83944d13-4d67-4963-b30e-62b66eb4a0dc",
+      "webhookId": "7760aea2-1788-422c-9e2a-149da702f1d7",
       "credentials": {
         "gmailOAuth2": {
           "id": "rQesNRyarukVs0N4",
@@ -1516,7 +1516,7 @@
         2448,
         2528
       ],
-      "webhookId": "68ee2346-199e-48b2-bdb6-7cf5b198d398",
+      "webhookId": "8a504163-61de-40ab-a247-85467972628d",
       "credentials": {
         "gmailOAuth2": {
           "id": "rQesNRyarukVs0N4",
@@ -1680,7 +1680,7 @@
       "credentials": {
         "telegramApi": {
           "id": "OCT6L7sDZffEbhJ9",
-          "name": "NoxTKTech_bot"
+          "name": "Telegram DEV account"
         }
       },
       "continueOnFail": true
@@ -1859,11 +1859,11 @@
         1552,
         1440
       ],
-      "webhookId": "c89d9956-c90d-4a0a-95df-98ad737cd9cd",
+      "webhookId": "cd245ff5-1a37-4f53-8d55-27fef29746b8",
       "credentials": {
         "telegramApi": {
           "id": "OCT6L7sDZffEbhJ9",
-          "name": "NoxTKTech_bot"
+          "name": "Telegram DEV account"
         }
       },
       "continueOnFail": true,

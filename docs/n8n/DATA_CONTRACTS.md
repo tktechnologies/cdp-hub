@@ -183,6 +183,9 @@ As of 2026-05-14:
   smoke SKU or parser check.
 - `melibox` returned `blocked`; production worker receives `403 forbidden` at
   the Melibox login entry before credentials can be used.
+- Archived sites requested for audit visibility (`goparts`, `procurapecas`,
+  `ebay`) should appear as `BLOCKED` rows until proxy smoke validates safe
+  reactivation.
 
 N8N reports should distinguish source health problems from part availability.
 `blocked`, `timeout`, and `error` are not the same as `not_found`.

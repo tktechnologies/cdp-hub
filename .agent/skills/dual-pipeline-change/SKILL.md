@@ -1,3 +1,8 @@
+---
+name: dual-pipeline-change
+description: Change CDP .analisar, .sku, dual dispatch, progress, status, batch metadata, or cross-service router behavior across Scraper and API Diversos.
+---
+
 # Skill: Change dual pipeline behavior
 
 Use when modifying `.analisar`, `.sku`, parallel dispatch, batch limits, or cross-service metadata.
@@ -17,13 +22,16 @@ Use when modifying `.analisar`, `.sku`, parallel dispatch, batch limits, or cros
 | StokAPI callback query params | `n8n/src/router_stokapi.js` + `muvstok-api/app/schemas/` |
 | Sheet PROCESSADO timing | `n8n/src/emparelhar_scraper.js` |
 | Receiver sheets/Telegram | Service workflow JSON only |
+| Aggregate final notification | `cdp_notifier` workflow + receiver handoff patches |
 
 ## Parallelism model
 
 Both arms fire from **one** router execution. They are independent HTTP jobs:
 
 - Different `job_id` / `batch_group_id` links them in metadata
-- Two completion messages (one per webhook) are expected
+- Receiver callbacks arrive independently and write Sheets
+- User-facing final delivery is aggregated by `cdp_notifier` when
+  `delivery_mode: aggregate`
 - Do not block Scraper on StokAPI or vice versa in n8n
 
 ## Testing

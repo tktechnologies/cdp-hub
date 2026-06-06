@@ -17,7 +17,8 @@ workspace unless the platform architecture changes.
   workflow JSON code.
 - `lib/`: receiver helper modules.
 - `workflows/`: canonical workflow JSON for `cdp_router`, `cdp_scraper`,
-  `cdp_stokapi`, and local-only `cdp_progress`.
+  `cdp_stokapi`, `cdp_progress`, `cdp_notifier`, and DEV copies under
+  `workflows/dev/`.
 - `settings/`: workflow settings snapshots.
 
 ## Rules
@@ -25,6 +26,8 @@ workspace unless the platform architecture changes.
 - Router Code edits require `python3 scripts/sync_workflow_code_from_shared.py`
   from the repo root.
 - `make sync-n8n` publishes live workflows and requires explicit user approval.
+- `make n8n-dev-workflows` regenerates DEV copies; `make sync-n8n-dev` publishes
+  those copies when explicitly approved.
 - Never use Execute Workflow for API Diversos production dispatch.
 - Receiver-only behavior still belongs to the owning service agent workspace:
   scraper receiver -> `scrapers/.agent`; API Diversos receiver ->

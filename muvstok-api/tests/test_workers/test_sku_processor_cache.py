@@ -146,3 +146,32 @@ async def test_nonempty_rows_without_positive_sale_price_are_no_price(deps):
     assert result.sku_result == "NO_PRICE"
     assert result.source_health == "WORKING"
     assert result.has_valid_price is False
+
+
+async def test_live_fetch_enriches_dealership_fields(deps):
+    _, client, _, _, _ = deps
+    client.fetch_sku = AsyncMock(
+        return_value=([{"sku": "ABC", "codigoFilial": "917", "valorPrecoVenda": 10}], 200)
+    )
+    directory = AsyncMock()
+    directory.enrich_rows = AsyncMock(
+        return_value=[
+            {
+                "sku": "ABC",
+                "codigoFilial": "917",
+                "valorPrecoVenda": 10,
+                "uf": "RJ",
+                "cnpj": "68743038000864",
+                "empresa": "AZZURRA JEEP BOTAFOGO",
+            }
+        ]
+    )
+    processor = _build(deps, sku_cache=None)
+    processor._dealership_directory = directory  # noqa: SLF001 - focused injection
+
+    result, _ = await processor.process_item(
+        job_id=uuid4(), correlation_id="c", item=_make_item("ABC"), token="t"
+    )
+
+    assert result.rows[0]["uf"] == "RJ"
+    assert result.rows[0]["cnpj"] == "68743038000864"

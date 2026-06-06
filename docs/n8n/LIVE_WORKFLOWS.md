@@ -1,6 +1,6 @@
 # CDP n8n — Live workflows
 
-Last verified: 2026-06-05.
+Last verified: 2026-06-06.
 
 Production truth lives in this document. DEV workflow copies run in the same
 n8n instance under names prefixed `DEV - ...`; their IDs are tracked in
@@ -34,7 +34,18 @@ DEV Telegram credential, and DEV Google Sheets IDs.
 
 For one-off structural patches that are awkward as full JSON replace, use MCP `update_workflow` `operations` + `publish_workflow`.
 
+MCP access is enabled for `cdp_router`, `cdp_scraper`, and `cdp_stokapi`.
+As of 2026-06-06, MCP access is not enabled for `cdp_progress`,
+`cdp_notifier`, or the DEV workflow copies; MCP calls return "Workflow is not
+available in MCP" until access is enabled on each workflow card/settings.
+
 Latest full sync (2026-06-05): `cdp_router` `bb52096d-aff9-4895-941b-0391643a75d7` (53 nodes); `cdp_scraper` `67be3cf3-fb6b-425a-a55a-340cb713b5f9` (47 nodes); `cdp_stokapi` `c6eca24d-eefa-4932-90e2-9292614d8667` (19 nodes); `cdp_progress` REST activation (10 nodes; MCP publish unavailable until MCP enabled on workflow card). **Last known active version** per workflow (including targeted publishes that supersede a full sync) is in [.agent/memory/implementation-state.md](../../.agent/memory/implementation-state.md).
+
+Latest MCP publish check (2026-06-06): `cdp_router`
+`65dea47b-8cba-4db5-9969-da9493eec252`; `cdp_scraper`
+`0086a065-8369-48d3-b33a-4de4312f76f6`; `cdp_stokapi`
+`e139b97d-0688-4cf1-ba5a-2899d24dcaac`. MCP validation was valid for all
+three workflows.
 
 ## Local files
 

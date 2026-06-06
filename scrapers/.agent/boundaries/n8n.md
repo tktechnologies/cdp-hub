@@ -17,7 +17,7 @@ Paths below are monorepo-root paths unless they are Markdown links.
 
 ## Does not own
 
-- `n8n/workflows/cdp_stokapi.json` — StokAPI / API Diversos receiver
+- `n8n/workflows/cdp_stokapi.json` — API Diversos / StokAPI receiver
 - `n8n/src/router_stokapi.js` and other router-only `n8n/src/*.js`
 
 ## Webhook

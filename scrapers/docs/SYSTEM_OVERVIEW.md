@@ -9,7 +9,10 @@
 
 > **Canonical (2026-06):** `.analisar` / `.sku` dispatch **all valid SKUs** by default (optional `CDP_DISPATCH_SAMPLE_SIZE` in router). Platform truth: [../../docs/architecture/DUAL_PIPELINE.md](../../docs/architecture/DUAL_PIPELINE.md).
 
-One Telegram/e-mail command runs **scraper (sites)** and **Muvstok (stock)** in parallel. Historical meeting deck: `docs/meetings/MEETING_DUAL_ANALISE_NOVA_ARQUITETURA.md` (may mention legacy 5-SKU sampling).
+One Telegram/e-mail command runs **Scraper (sites)** and **API Diversos
+(stock)** in parallel. Historical meeting material was removed because it
+described legacy 5-SKU sampling; use the platform dual-pipeline doc above for
+current behavior.
 
 ## Production status
 

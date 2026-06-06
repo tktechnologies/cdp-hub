@@ -645,11 +645,11 @@ def patch_detalhado(code: str, helpers: str) -> str:
     )
     code = code.replace(
         "failed_sku_count: failed,\n    detail_rows: rows.length,",
-        "failed_sku_count: failed,\n    found_sku_count: foundPriceCount,\n    no_price_sku_count: noPriceCount,\n    not_found_sku_count: notFoundCount,\n    blocked_sku_count: blockedCount,\n    error_sku_count: errorCount,\n    reply_channel: replyChannel || notify,\n    command_origin: commandOrigin || replyChannel || notify,\n    reply_email: replyEmail,\n    detail_rows: rows.length,",
+        "failed_sku_count: failed,\n    found_sku_count: foundPriceCount,\n    no_price_sku_count: noPriceCount,\n    not_found_sku_count: notFoundCount,\n    blocked_sku_count: blockedCount,\n    error_sku_count: errorCount,\n    delivery_mode: String(meta.delivery_mode || q.delivery_mode || '').trim().toLowerCase(),\n    batch_group_id: String(meta.batch_group_id || q.batch_group_id || '').trim(),\n    reply_channel: replyChannel || notify,\n    command_origin: commandOrigin || replyChannel || notify,\n    reply_email: replyEmail,\n    duration_seconds: jobDuration,\n    detail_rows: rows.length,\n    error: errorText,",
     )
     code = code.replace(
         "error_sku_count: errorCount,\n    detail_rows: rows.length,",
-        "error_sku_count: errorCount,\n    reply_channel: replyChannel || notify,\n    command_origin: commandOrigin || replyChannel || notify,\n    reply_email: replyEmail,\n    detail_rows: rows.length,",
+        "error_sku_count: errorCount,\n    delivery_mode: String(meta.delivery_mode || q.delivery_mode || '').trim().toLowerCase(),\n    batch_group_id: String(meta.batch_group_id || q.batch_group_id || '').trim(),\n    reply_channel: replyChannel || notify,\n    command_origin: commandOrigin || replyChannel || notify,\n    reply_email: replyEmail,\n    duration_seconds: jobDuration,\n    detail_rows: rows.length,\n    error: errorText,",
     )
     code = code.replace(
         "ENCONTRADO: s.found ? '✅ Encontrado' : '❌ Não encontrado'",

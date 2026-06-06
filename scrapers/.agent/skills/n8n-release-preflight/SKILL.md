@@ -1,3 +1,8 @@
+---
+name: scraper-n8n-release-preflight
+description: Run preflight checks before publishing CDP n8n workflows that affect the scraper dispatch arm or cdp_scraper receiver.
+---
+
 # Skill: CDP n8n Release Preflight
 
 Run before publishing or updating live n8n workflows through MCP.

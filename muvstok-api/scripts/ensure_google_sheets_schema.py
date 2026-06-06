@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ensure cdp_resultados Detalhado tab has required canonical result headers.
+"""Ensure cdp_resultados Detalhado headers and Painel formulas.
 
 Requires: pip install google-api-python-client google-auth
 Auth: GOOGLE_APPLICATION_CREDENTIALS
@@ -40,6 +40,133 @@ HEADER_RENAMES = {
     "id_job": "job_id",
     "estado": "uf",
 }
+
+PAINEL_TAB = "Painel"
+PAINEL_SITE_TABLE_FORMULA = (
+    '=LET('
+    'sites,SORT(UNIQUE(FILTER(Detalhado!E2:E,Detalhado!E2:E<>""))),'
+    'valid,REGEXMATCH(TO_TEXT(Detalhado!Y2:Y),"(?i)^(true|1|sim)$"),'
+    'prices,ARRAYFORMULA(IFERROR(IF(REGEXMATCH(TO_TEXT(Detalhado!F2:F),","),'
+    'VALUE(SUBSTITUTE(SUBSTITUTE(TO_TEXT(Detalhado!F2:F),".",""),",",".")),'
+    'VALUE(Detalhado!F2:F)),)),'
+    'found,MAP(sites,LAMBDA(s,IFERROR(COUNTUNIQUE(FILTER(Detalhado!B2:B,'
+    'Detalhado!E2:E=s,Detalhado!W2:W="FOUND_PRICE",valid)),0))),'
+    'total,MAP(sites,LAMBDA(s,IFERROR(COUNTUNIQUE(FILTER(Detalhado!B2:B,'
+    'Detalhado!E2:E=s,Detalhado!B2:B<>"")),0))),'
+    'HSTACK('
+    'sites,found,total,IFERROR(found/total,0),'
+    'MAP(sites,LAMBDA(s,COUNTIF(Detalhado!E2:E,s))),'
+    'MAP(sites,LAMBDA(s,IFERROR(MIN(FILTER(prices,Detalhado!E2:E=s,'
+    'Detalhado!W2:W="FOUND_PRICE",valid,prices>0)),""))),'
+    'MAP(sites,LAMBDA(s,IFERROR(AVERAGE(FILTER(prices,Detalhado!E2:E=s,'
+    'Detalhado!W2:W="FOUND_PRICE",valid,prices>0)),""))),'
+    'MAP(sites,LAMBDA(s,IFERROR(MAX(FILTER(prices,Detalhado!E2:E=s,'
+    'Detalhado!W2:W="FOUND_PRICE",valid,prices>0)),"")))'
+    '))'
+)
+
+PAINEL_UPDATES: list[tuple[str, list[list[str]]]] = [
+    (
+        "A1:H2",
+        [
+            ["🔍  PAINEL — CDP RESULTADOS", "", "", "", "", "", "", ""],
+            [
+                '=IFERROR("Atualizado automaticamente | "&TEXT(INDEX(Historico!E:E,COUNTA(Historico!E:E)),"DD/MM/YYYY HH:MM")&" | KPIs por FOUND_PRICE + has_valid_price","—")',
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+            ],
+        ],
+    ),
+    (
+        "A4:H12",
+        [
+            [
+                "🗂️  TOTAL SKUs PESQUISADOS",
+                "",
+                "✅  SKUs COM PREÇO",
+                "",
+                "❌  SEM PREÇO / BLOQUEIO / ERRO",
+                "",
+                "⏱️  DURAÇÃO",
+                "",
+            ],
+            [
+                '=IFERROR(COUNTUNIQUE(FILTER(Detalhado!B2:B,Detalhado!B2:B<>"",Detalhado!B2:B<>"SEM_DADOS")),0)',
+                "",
+                '=IFERROR(COUNTUNIQUE(FILTER(Detalhado!B2:B,Detalhado!B2:B<>"",Detalhado!W2:W="FOUND_PRICE",REGEXMATCH(TO_TEXT(Detalhado!Y2:Y),"(?i)^(true|1|sim)$"))),0)',
+                "",
+                "=MAX(A5-C5,0)",
+                "",
+                "=IFERROR(ROUND(VALUE(INDEX(Historico!F:F,COUNTA(Historico!F:F)))/60,1),0)",
+                "",
+            ],
+            [
+                "SKUs únicos",
+                "",
+                "FOUND_PRICE + preço válido",
+                "",
+                "demais status canônicos",
+                "",
+                "minutos (último job)",
+                "",
+            ],
+            [
+                '=IFERROR("Jobs: "&(COUNTA(Historico!A:A)-1)&"   |   Último: "&INDEX(Historico!B:B,COUNTA(Historico!B:B)),"—")',
+                "",
+                '=IFERROR(TEXT(C5/A5,"0.0%")&" com preço","—")',
+                "",
+                '=IFERROR(TEXT(E5/A5,"0.0%")&" sem preço válido","—")',
+                "",
+                '=IFERROR(TEXT(SUM(FILTER(Historico!F2:F,Historico!F2:F<>""))/3600,"0.0")&"h total","—")',
+                "",
+            ],
+            ["📊  TAXA SUCESSO SKU", "", "🎯  % COBERTURA POR SITE", "", "🌐  SITES", "", "📋  JOBS TOTAL", ""],
+            [
+                "=IFERROR(C5/A5,0)",
+                "",
+                '=IFERROR(AVERAGE(FILTER(D16:D,D16:D<>"")),0)',
+                "",
+                '=IFERROR(COUNTA(UNIQUE(FILTER(Detalhado!E2:E,Detalhado!E2:E<>""))),0)',
+                "",
+                "=IFERROR(COUNTA(Historico!A:A)-1,0)",
+                "",
+            ],
+            ["via Detalhado canônico", "", "média de cobertura por site", "", "sites no Detalhado", "", "jobs no histórico", ""],
+            [
+                '=IFERROR("🔗  Job: "&INDEX(Historico!A:A,COUNTA(Historico!A:A))&"   |   Status: "&INDEX(Historico!G:G,COUNTA(Historico!G:G))&"   |   SKUs Lidos: "&INDEX(Historico!H:H,COUNTA(Historico!H:H))&"   |   Origem: "&INDEX(Historico!B:B,COUNTA(Historico!B:B)),"—")',
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+            ],
+        ],
+    ),
+    (
+        "A14:H16",
+        [
+            ["📡  COBERTURA POR SITE — FOUND_PRICE + has_valid_price (via Detalhado)", "", "", "", "", "", "", ""],
+            [
+                "Site",
+                "SKUs c/ Preço",
+                "Total SKUs",
+                "% Cobertura",
+                "Linhas Detalhado",
+                "Preço Mín (R$)",
+                "Preço Médio (R$)",
+                "Preço Máx (R$)",
+            ],
+            [PAINEL_SITE_TABLE_FORMULA, "", "", "", "", "", "", ""],
+        ],
+    ),
+]
 
 
 def resolve_sheet(sheet_api: Any, spreadsheet_id: str, gid: int | None) -> tuple[str, int | None]:
@@ -148,9 +275,31 @@ def apply_column_changes(
         sheet_api.batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests}).execute()
 
 
+def apply_painel_formulas(sheet_api: Any, spreadsheet_id: str, *, dry_run: bool) -> None:
+    """Rewrite the Painel dashboard formulas from canonical Detalhado fields."""
+    print(f"Will refresh {PAINEL_TAB} formulas from Detalhado canonical result columns.")
+    if not dry_run:
+        sheet_api.values().clear(
+            spreadsheetId=spreadsheet_id,
+            range=f"'{PAINEL_TAB}'!A17:H80",
+            body={},
+        ).execute()
+    for range_suffix, values in PAINEL_UPDATES:
+        print(f"- set {PAINEL_TAB}!{range_suffix}")
+        if not dry_run:
+            sheet_api.values().update(
+                spreadsheetId=spreadsheet_id,
+                range=f"'{PAINEL_TAB}'!{range_suffix}",
+                valueInputOption="USER_ENTERED",
+                body={"values": values},
+            ).execute()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--skip-detalhado", action="store_true")
+    parser.add_argument("--skip-painel", action="store_true")
     parser.add_argument("--spreadsheet-id", default=SPREADSHEET_ID)
     parser.add_argument(
         "--gid",
@@ -171,7 +320,8 @@ def main() -> int:
             "Set GOOGLE_APPLICATION_CREDENTIALS to a service account JSON with edit access.\n"
             "Manual alternative: add `preco-medio` after `preco`, "
             "`uf`/`empresa`/`cnpj` after `vendedor`, remove `melibox_*`, "
-            "and add canonical status headers after `codigo_site`.",
+            "add canonical status headers after `codigo_site`, and rebuild "
+            "`Painel` from FOUND_PRICE + has_valid_price formulas.",
             file=sys.stderr,
         )
         return 1
@@ -190,51 +340,54 @@ def main() -> int:
     service = build("sheets", "v4", credentials=creds, cache_discovery=False)
     sheet_api = service.spreadsheets()
 
-    tab_name, sheet_id = (
-        (args.tab.strip(), args.gid)
-        if args.tab.strip()
-        else resolve_sheet(sheet_api, args.spreadsheet_id, args.gid)
-    )
-    print(f"Target tab: {tab_name!r} (gid={args.gid})")
+    if not args.skip_detalhado:
+        tab_name, sheet_id = (
+            (args.tab.strip(), args.gid)
+            if args.tab.strip()
+            else resolve_sheet(sheet_api, args.spreadsheet_id, args.gid)
+        )
+        print(f"Target tab: {tab_name!r} (gid={args.gid})")
 
-    header_row = (
-        sheet_api.values()
-        .get(spreadsheetId=args.spreadsheet_id, range=f"'{tab_name}'!1:1")
-        .execute()
-        .get("values")
-        or [[]]
-    )[0]
-    headers = [str(h).strip() for h in header_row]
+        header_row = (
+            sheet_api.values()
+            .get(spreadsheetId=args.spreadsheet_id, range=f"'{tab_name}'!1:1")
+            .execute()
+            .get("values")
+            or [[]]
+        )[0]
+        headers = [str(h).strip() for h in header_row]
 
-    new_headers, operations, notes = migrate_headers(headers)
-    if new_headers == headers:
-        print(f"{tab_name} headers OK:", ", ".join(headers))
-        return 0
+        new_headers, operations, notes = migrate_headers(headers)
+        if new_headers == headers:
+            print(f"{tab_name} headers OK:", ", ".join(headers))
+        else:
+            for op in operations:
+                cols = ", ".join(f"`{h}`" for h in op["headers"])
+                if op.get("type") == "insert":
+                    notes.append(f"insert {cols} at 1-based column {int(op['start_index']) + 1}")
+            for note in notes:
+                print("-", note)
+            print(f"Will set {tab_name} row 1 to:", new_headers)
 
-    for op in operations:
-        cols = ", ".join(f"`{h}`" for h in op["headers"])
-        if op.get("type") == "insert":
-            notes.append(f"insert {cols} at 1-based column {int(op['start_index']) + 1}")
-    for note in notes:
-        print("-", note)
-    print(f"Will set {tab_name} row 1 to:", new_headers)
+            if not args.dry_run:
+                if operations:
+                    if sheet_id is None:
+                        raise SystemExit("Sheet gid is required to insert columns safely.")
+                    apply_column_changes(sheet_api, args.spreadsheet_id, int(sheet_id), operations)
+
+                sheet_api.values().update(
+                    spreadsheetId=args.spreadsheet_id,
+                    range=f"'{tab_name}'!1:1",
+                    valueInputOption="RAW",
+                    body={"values": [new_headers]},
+                ).execute()
+                print(f"Updated {tab_name} header row.")
+
+    if not args.skip_painel:
+        apply_painel_formulas(sheet_api, args.spreadsheet_id, dry_run=args.dry_run)
 
     if args.dry_run:
         print("(dry-run, no changes written)")
-        return 0
-
-    if operations:
-        if sheet_id is None:
-            raise SystemExit("Sheet gid is required to insert columns safely.")
-        apply_column_changes(sheet_api, args.spreadsheet_id, int(sheet_id), operations)
-
-    sheet_api.values().update(
-        spreadsheetId=args.spreadsheet_id,
-        range=f"'{tab_name}'!1:1",
-        valueInputOption="RAW",
-        body={"values": [new_headers]},
-    ).execute()
-    print(f"Updated {tab_name} header row.")
     return 0
 
 

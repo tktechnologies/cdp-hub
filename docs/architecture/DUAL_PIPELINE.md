@@ -1,6 +1,6 @@
 # CDP dual pipeline — Router + Scraper + StokAPI
 
-**Updated:** 2026-06-03
+**Updated:** 2026-06-06
 
 ## Workflows
 
@@ -9,7 +9,8 @@
 | **cdp_router** | `6id6dkinK9xTLfsb` | `.analisar` / `.sku` / `.status` → POST Scraper + StokAPI |
 | **cdp_scraper** | `VfBSV3WU6on8BXm8` | Webhook `scraper-result` |
 | **cdp_stokapi** | `t160mzGPYYlJcrjZ` | Webhook `muvstok-result` |
-| **cdp_progress** | _(import)_ | Scheduled proactive progress (Telegram) |
+| **cdp_progress** | `V9I6o32XDoPIRarz` | Scheduled proactive progress (Telegram) |
+| **cdp_notifier** | `ennI9nKin9ruPaLO` | Aggregate final Telegram/email delivery |
 
 Router dispatch uses n8n HTTP Request nodes for both background APIs. Code nodes
 prepare payloads only; n8n Code nodes must not make outbound HTTP requests.
@@ -43,7 +44,10 @@ unique dispatch list; `sheet_rows` preserves every valid source row with
   per-SKU cache (`muvstok:sku:v1:`, `MUVSTOK_CACHE_TTL_SECONDS=86400` success /
   6h not_found).
 
-Sheet writeback (`cdp_stokapi` / `cdp_scraper`) maps each unique SKU result to **all** duplicate `CODIGO` rows by `row_number`.
+Sheet writeback (`cdp_stokapi` / `cdp_scraper`) maps each unique SKU result to
+**all** duplicate `CODIGO` rows by `row_number`. Receivers hand off final
+delivery context to `cdp_notifier`, which sends the aggregate user-facing
+Telegram/email completion message.
 
 ## Result semantics (Sheets and notifications)
 
@@ -85,3 +89,7 @@ Env (n8n): `CDP_PROGRESS_INTERVAL_MIN`, `CDP_PROGRESS_MIN_SKUS`, `CDP_PROGRESS_M
 ```bash
 cd cdp-app && make sync-n8n
 ```
+
+Publish requires explicit approval. DEV workflow copies are generated with
+`make n8n-dev-workflows` and updated with `make sync-n8n-dev` after
+`CDP_DEV_*_WORKFLOW_ID` values are exported.

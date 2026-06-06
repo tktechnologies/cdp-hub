@@ -27,7 +27,7 @@ Does the task touch n8n/src, cdp_router dispatch, or all 3 workflows?
 
 | Task | Skill / path |
 |------|----------------|
-| Edit router, inject, sync/publish n8n | [skills/n8n-router-sync/SKILL.md](skills/n8n-router-sync/SKILL.md) |
+| Edit router, inject, sync/publish n8n PROD/DEV workflows | [skills/n8n-router-sync/SKILL.md](skills/n8n-router-sync/SKILL.md) |
 | Change `.analisar` / `.sku` / dual behavior | [skills/dual-pipeline-change/SKILL.md](skills/dual-pipeline-change/SKILL.md) |
 | Google Sheets dashboards, formulas, pivots, reports | [skills/google-sheets-dashboard/SKILL.md](skills/google-sheets-dashboard/SKILL.md) |
 | Understand n8n + API + scraper ownership | [knowledge/service-catalog.md](knowledge/service-catalog.md) |

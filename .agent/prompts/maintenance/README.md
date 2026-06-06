@@ -5,7 +5,7 @@ Copy the **Prompt** block from the file that matches your task into a new agent 
 | Maintenance type | Prompt file |
 |------------------|-------------|
 | **Scraper** (Playwright, Celery, cache, scrape API) | [scraper.md](scraper.md) |
-| **StokAPI / API Diversos** (jobs, worker, upstream stock integration) | [stokapi.md](stokapi.md) |
+| **API Diversos / StokAPI** (jobs, worker, upstream stock integration) | [stokapi.md](stokapi.md) |
 | **n8n** (router, receivers, sync — no publish without approval) | [n8n.md](n8n.md) |
 | **Google Sheets reporting** (dashboards, formulas, pivots, `.xlsx`) | [google-sheets.md](google-sheets.md) |
 | **Infrastructure** (Azure, Bicep, deploy, Key Vault) | [infrastructure.md](infrastructure.md) |

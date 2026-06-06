@@ -1,13 +1,12 @@
 # Workflows in `.agent/workflows/`
 
-## `cdp/` — CDP platform
+Release checklists and operational flows for the CDP monorepo. Keep workflow
+docs here only when they are reusable across tasks; one-off audit notes belong
+in the final chat summary, not as durable files.
 
-Release checklists and operational flows for the CDP monorepo (n8n, dual pipeline). **Use these for production CDP work.**
-
-Example: [cdp/n8n-release-checklist.md](cdp/n8n-release-checklist.md).
-
-## AIOX IDE personas (optional)
-
-Synkra AIOX workflow personas (`dev.md`, `architect.md`, `qa.md`, etc.) are **not** checked into this repo. They are general IDE tooling, not CDP runtime.
+| Path | Purpose |
+|------|---------|
+| [cdp/n8n-release-checklist.md](cdp/n8n-release-checklist.md) | Production n8n sync/publish checklist |
+| [cdp/promote-dev-to-prod.md](cdp/promote-dev-to-prod.md) | DEV workflow copy promotion checklist |
 
 For CDP tasks, start at [../index.md](../index.md) or a service `AGENTS.md`.

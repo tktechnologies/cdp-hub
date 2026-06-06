@@ -10,7 +10,10 @@
 | `cdp_progress` | `V9I6o32XDoPIRarz` | `n8n/workflows/cdp_progress.json` | Schedule: proactive progress Telegram |
 | `cdp_notifier` | `ennI9nKin9ruPaLO` | `n8n/workflows/cdp_notifier.json` | Receives receiver handoff → single aggregate final notification |
 
-`make sync-n8n` pushes router + receivers + notifier via `scripts/n8n_publish.py` (REST). Set `CDP_PROGRESS_WORKFLOW_ID` and `CDP_NOTIFIER_WORKFLOW_ID` to include progress and notifier workflows.
+`make sync-n8n` pushes router + receivers + progress + notifier via
+`scripts/n8n_publish.py` (REST) when the corresponding workflow IDs are
+exported. Set `CDP_PROGRESS_WORKFLOW_ID` and `CDP_NOTIFIER_WORKFLOW_ID` to
+include progress and notifier workflows.
 
 ## Legacy docs (do not edit for workflow truth)
 
@@ -24,6 +27,8 @@
 | File | Node purpose |
 |------|----------------|
 | `n8n/src/router_limitar_skus.js` | Optional sample (`CDP_DISPATCH_SAMPLE_SIZE`, default 0 = all) |
+| `n8n/src/router_dq.js` | Normalize, validate, and deduplicate dispatch SKUs |
+| `n8n/src/router_save_context.js` | Persist router context for downstream branches |
 | `n8n/src/formatar_payload_scraper.js` | Scraper `POST /api/v1/jobs` bodies |
 | `n8n/src/router_stokapi.js` | StokAPI `POST /api/v1/muvstok/jobs` |
 | `n8n/src/emparelhar_scraper.js` | Sheet `PROCESSADO` |
@@ -36,15 +41,13 @@
 | `n8n/src/router_status.js` | Format dual-pipeline status reply |
 | `n8n/src/progress_poll.js` | `cdp_progress`: list active runs, fetch thresholds |
 | `n8n/src/progress_format.js` | `cdp_progress`: format message + PATCH run |
-| `n8n/src/notifier_handoff.js` | `cdp_notifier`: parse receiver webhook handoff |
-| `n8n/src/notifier_format.js` | `cdp_notifier`: format final Telegram/email |
-| `n8n/src/notifier_mark_notificado.js` | `cdp_notifier`: expand `NOTIFICADO` sheet updates |
-| `n8n/src/scraper_notifier_handoff.js` | `cdp_scraper`: POST aggregate handoff to notifier |
-| `n8n/src/stokapi_notifier_handoff.js` | `cdp_stokapi`: POST aggregate handoff to notifier |
 
 Do not treat `scrapers/n8n/shared/dual_dispatch/` (if present) as source of truth.
 
-Inject: `python3 scripts/sync_workflow_code_from_shared.py` (router + `cdp_progress.json`); build notifier via `scripts/build_cdp_notifier_workflow.py`.
+Inject: `python3 scripts/sync_workflow_code_from_shared.py` (router +
+`cdp_progress.json`). `cdp_notifier` is built from
+`scripts/build_cdp_notifier_workflow.py`; receiver handoff nodes are patched by
+`scripts/patch_receiver_notifier_handoff.py`.
 
 ## Rules
 

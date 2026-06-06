@@ -83,10 +83,10 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_RESULTADOS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_resultados",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
@@ -165,17 +165,17 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_skus",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": 843035952,
           "mode": "list",
           "cachedResultName": "SKUs",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=843035952"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=843035952"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -238,7 +238,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// User-facing same-channel notification for API Diversos completion (injected into cdp_stokapi).\nconst ASSISTANT_NAME = 'Assistente CDP';\nconst WEBSCRAPERS_LABEL = 'WEBSCRAPERS';\nconst ESTOQUE_LABEL = 'ESTOQUE ONLINE';\n\nlet j = {};\ntry {\n  if (typeof $getWorkflowStaticData === 'function') {\n    j = $getWorkflowStaticData('global').muvstok_last_callback || {};\n  }\n} catch (e) {}\n\nfunction env(name) {\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));\n}\n\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const map = {\n    CDP_RESULTADOS_SHEETS_URL: 'CDP_DEV_RESULTADOS_SHEETS_URL',\n  };\n  const mapped = map[name] || '';\n  return mapped ? env(mapped) : '';\n}\n\nconst configuredReportUrl = envFor('CDP_RESULTADOS_SHEETS_URL');\nconst reportUrl =\n  configuredReportUrl || (isDevWorkflow()\n    ? ''\n    : 'https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit#gid=533358674');\n\nif (String(j.delivery_mode || '').trim().toLowerCase() === 'aggregate') {\n  return [{ json: { skip: true, reason: 'aggregate_delivery' } }];\n}\n\nconst ok = Number(j.succeeded_sku_count) || 0;\nconst fail = Number(j.failed_sku_count) || 0;\nconst total = Number(j.submitted_sku_count) || ok + fail;\nconst linhas = Number(j.detail_rows) || 0;\nconst found = Number(j.found_sku_count) || 0;\nconst noPrice = Number(j.no_price_sku_count) || 0;\nconst notFound = Number(j.not_found_sku_count) || 0;\nconst blocked = Number(j.blocked_sku_count) || 0;\nconst errors = Number(j.error_sku_count) || 0;\nlet notify = String(j.notify || j.reply_channel || '').trim().toLowerCase();\nlet chatId = String(j.chat_id || '').trim();\nlet replyEmail = String(j.reply_email || '').trim();\n\nif (!notify) {\n  if (replyEmail) notify = 'email';\n  else if (chatId) notify = 'telegram';\n}\nif (notify === 'email') {\n  chatId = '';\n} else if (notify === 'telegram') {\n  replyEmail = '';\n}\n\nlet resumo;\nif (fail > 0 && ok === 0) {\n  resumo = 'Não foi possível consultar o estoque desta vez.';\n} else if (total === 1) {\n  resumo = '1 peça consultada.';\n} else {\n  resumo = total + ' peças consultadas.';\n}\n\nresumo += ' Com preço: ' + found + '.';\nif (noPrice > 0) resumo += ' Sem preço: ' + noPrice + '.';\nif (notFound > 0) resumo += ' Não encontradas: ' + notFound + '.';\nif (blocked > 0) resumo += ' Bloqueadas: ' + blocked + '.';\nif (errors > 0) resumo += ' Erros: ' + errors + '.';\n\nif (linhas > 0) {\n  resumo += ' ' + (linhas === 1 ? '1 oferta registrada' : linhas + ' ofertas registradas') + ' no relatório.';\n} else if (found > 0 || noPrice > 0) {\n  resumo += ' Nenhuma oferta nova no relatório.';\n}\n\nconst lines = [\n  '🤖 *' + ASSISTANT_NAME + '*',\n  '',\n  '✅ *' + ESTOQUE_LABEL + ': consulta concluída*',\n  '',\n  resumo,\n  '',\n  '📎 Relatório: ' + reportUrl,\n];\n\nif (blocked > 0 || errors > 0) {\n  lines.splice(4, 0, '⚠️ Algumas fontes tiveram bloqueio ou erro.');\n}\n\nfunction escapeHtml(value) {\n  return String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n}\n\nfunction pctLabel(value, divisor) {\n  const n = Number(value) || 0;\n  const d = Number(divisor) || 0;\n  return d > 0 ? ((n / d) * 100).toFixed(1) + '%' : '0.0%';\n}\n\nif (notify === 'email' && replyEmail) {\n  const pct = pctLabel(found, total);\n  const tone = errors > 0 || blocked > 0 ? '#b45309' : '#047857';\n  const status = errors > 0 || blocked > 0 ? 'Concluída com avisos' : 'Consulta concluída';\n  const html =\n    '<div style=\"margin:0;padding:0;background:#f6f8fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937\">' +\n    '<div style=\"max-width:640px;margin:0 auto;padding:28px 18px\">' +\n    '<div style=\"background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden\">' +\n    '<div style=\"padding:22px 24px;border-bottom:1px solid #eef2f7\">' +\n    '<div style=\"font-size:12px;text-transform:uppercase;letter-spacing:0;color:#64748b;font-weight:700\">' +\n    escapeHtml(ESTOQUE_LABEL) +\n    '</div>' +\n    '<h1 style=\"font-size:24px;line-height:1.25;margin:8px 0 0;color:#111827\">' +\n    escapeHtml(status) +\n    '</h1>' +\n    '</div>' +\n    '<div style=\"padding:22px 24px\">' +\n    '<p style=\"font-size:15px;line-height:1.6;margin:0 0 18px\">A consulta no Estoque Online foi finalizada.</p>' +\n    '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;margin:0 0 20px\">' +\n    '<tr>' +\n    '<td style=\"padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px\">' +\n    '<div style=\"font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700\">Peças consultadas</div>' +\n    '<div style=\"font-size:26px;font-weight:700;color:#111827;margin-top:4px\">' +\n    total +\n    '</div>' +\n    '</td>' +\n    '<td width=\"12\"></td>' +\n    '<td style=\"padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px\">' +\n    '<div style=\"font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700\">Com preço</div>' +\n    '<div style=\"font-size:26px;font-weight:700;color:' +\n    tone +\n    ';margin-top:4px\">' +\n    found +\n    '</div>' +\n    '</td>' +\n    '</tr>' +\n    '</table>' +\n    '<div style=\"font-size:14px;line-height:1.7;color:#475569\">' +\n    '<strong>Taxa com preço:</strong> ' +\n    pct +\n    '<br><strong>Sem preço:</strong> ' +\n    noPrice +\n    '<br><strong>Não encontradas:</strong> ' +\n    notFound +\n    '<br><strong>Bloqueadas:</strong> ' +\n    blocked +\n    '<br><strong>Erros:</strong> ' +\n    errors +\n    '</div>' +\n    '<div style=\"background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin:20px 0 0;font-size:13px;line-height:1.6;color:#475569\">Este é o resultado de <strong>' +\n    escapeHtml(ESTOQUE_LABEL) +\n    '</strong>. O resultado de <strong>' +\n    escapeHtml(WEBSCRAPERS_LABEL) +\n    '</strong> chega em um e-mail separado quando a busca nos sites terminar.</div>' +\n    '<p style=\"margin:22px 0 0\"><a href=\"' +\n    escapeHtml(reportUrl) +\n    '\" style=\"display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;padding:12px 18px;font-weight:700;font-size:14px\">Abrir relatório</a></p>' +\n    '</div>' +\n    '</div>' +\n    '<div style=\"font-size:12px;line-height:1.5;color:#94a3b8;text-align:center;padding:14px 0 0\">Mensagem automática do Assistente CDP.</div>' +\n    '</div>' +\n    '</div>';\n\n  return [\n    {\n      json: {\n        skip: false,\n        notify: 'email',\n        email_to: replyEmail,\n        email_subject: ASSISTANT_NAME + ' - ' + ESTOQUE_LABEL + ': consulta concluída (' + found + '/' + total + ' com preço)',\n        email_html: html,\n      },\n    },\n  ];\n}\n\nif (notify !== 'telegram' || !chatId) {\n  return [{ json: { skip: true, reason: 'no_notification_target' } }];\n}\n\nreturn [\n  {\n    json: {\n      skip: false,\n      notify: 'telegram',\n      telegram_chat_id: chatId,\n      telegram_text: lines.join('\\n'),\n    },\n  },\n];\n"
+        "jsCode": "// User-facing same-channel notification for API Diversos completion (injected into cdp_stokapi).\nconst ASSISTANT_NAME = 'Assistente CDP';\nconst WEBSCRAPERS_LABEL = 'WEBSCRAPERS';\nconst ESTOQUE_LABEL = 'ESTOQUE ONLINE';\n\nlet j = {};\ntry {\n  if (typeof $getWorkflowStaticData === 'function') {\n    j = $getWorkflowStaticData('global').muvstok_last_callback || {};\n  }\n} catch (e) {}\n\nfunction env(name) {\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));\n}\n\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const map = {\n    CDP_RESULTADOS_SHEETS_URL: 'CDP_DEV_RESULTADOS_SHEETS_URL',\n  };\n  const mapped = map[name] || '';\n  return mapped ? env(mapped) : '';\n}\n\nconst configuredReportUrl = envFor('CDP_RESULTADOS_SHEETS_URL');\nconst reportUrl =\n  configuredReportUrl || (isDevWorkflow()\n    ? ''\n    : 'https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=533358674');\n\nif (String(j.delivery_mode || '').trim().toLowerCase() === 'aggregate') {\n  return [{ json: { skip: true, reason: 'aggregate_delivery' } }];\n}\n\nconst ok = Number(j.succeeded_sku_count) || 0;\nconst fail = Number(j.failed_sku_count) || 0;\nconst total = Number(j.submitted_sku_count) || ok + fail;\nconst linhas = Number(j.detail_rows) || 0;\nconst found = Number(j.found_sku_count) || 0;\nconst noPrice = Number(j.no_price_sku_count) || 0;\nconst notFound = Number(j.not_found_sku_count) || 0;\nconst blocked = Number(j.blocked_sku_count) || 0;\nconst errors = Number(j.error_sku_count) || 0;\nlet notify = String(j.notify || j.reply_channel || '').trim().toLowerCase();\nlet chatId = String(j.chat_id || '').trim();\nlet replyEmail = String(j.reply_email || '').trim();\n\nif (!notify) {\n  if (replyEmail) notify = 'email';\n  else if (chatId) notify = 'telegram';\n}\nif (notify === 'email') {\n  chatId = '';\n} else if (notify === 'telegram') {\n  replyEmail = '';\n}\n\nlet resumo;\nif (fail > 0 && ok === 0) {\n  resumo = 'Não foi possível consultar o estoque desta vez.';\n} else if (total === 1) {\n  resumo = '1 peça consultada.';\n} else {\n  resumo = total + ' peças consultadas.';\n}\n\nresumo += ' Com preço: ' + found + '.';\nif (noPrice > 0) resumo += ' Sem preço: ' + noPrice + '.';\nif (notFound > 0) resumo += ' Não encontradas: ' + notFound + '.';\nif (blocked > 0) resumo += ' Bloqueadas: ' + blocked + '.';\nif (errors > 0) resumo += ' Erros: ' + errors + '.';\n\nif (linhas > 0) {\n  resumo += ' ' + (linhas === 1 ? '1 oferta registrada' : linhas + ' ofertas registradas') + ' no relatório.';\n} else if (found > 0 || noPrice > 0) {\n  resumo += ' Nenhuma oferta nova no relatório.';\n}\n\nconst lines = [\n  '🤖 *' + ASSISTANT_NAME + '*',\n  '',\n  '✅ *' + ESTOQUE_LABEL + ': consulta concluída*',\n  '',\n  resumo,\n  '',\n  '📎 Relatório: ' + reportUrl,\n];\n\nif (blocked > 0 || errors > 0) {\n  lines.splice(4, 0, '⚠️ Algumas fontes tiveram bloqueio ou erro.');\n}\n\nfunction escapeHtml(value) {\n  return String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n}\n\nfunction pctLabel(value, divisor) {\n  const n = Number(value) || 0;\n  const d = Number(divisor) || 0;\n  return d > 0 ? ((n / d) * 100).toFixed(1) + '%' : '0.0%';\n}\n\nif (notify === 'email' && replyEmail) {\n  const pct = pctLabel(found, total);\n  const tone = errors > 0 || blocked > 0 ? '#b45309' : '#047857';\n  const status = errors > 0 || blocked > 0 ? 'Concluída com avisos' : 'Consulta concluída';\n  const html =\n    '<div style=\"margin:0;padding:0;background:#f6f8fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937\">' +\n    '<div style=\"max-width:640px;margin:0 auto;padding:28px 18px\">' +\n    '<div style=\"background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden\">' +\n    '<div style=\"padding:22px 24px;border-bottom:1px solid #eef2f7\">' +\n    '<div style=\"font-size:12px;text-transform:uppercase;letter-spacing:0;color:#64748b;font-weight:700\">' +\n    escapeHtml(ESTOQUE_LABEL) +\n    '</div>' +\n    '<h1 style=\"font-size:24px;line-height:1.25;margin:8px 0 0;color:#111827\">' +\n    escapeHtml(status) +\n    '</h1>' +\n    '</div>' +\n    '<div style=\"padding:22px 24px\">' +\n    '<p style=\"font-size:15px;line-height:1.6;margin:0 0 18px\">A consulta no Estoque Online foi finalizada.</p>' +\n    '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;margin:0 0 20px\">' +\n    '<tr>' +\n    '<td style=\"padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px\">' +\n    '<div style=\"font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700\">Peças consultadas</div>' +\n    '<div style=\"font-size:26px;font-weight:700;color:#111827;margin-top:4px\">' +\n    total +\n    '</div>' +\n    '</td>' +\n    '<td width=\"12\"></td>' +\n    '<td style=\"padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px\">' +\n    '<div style=\"font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700\">Com preço</div>' +\n    '<div style=\"font-size:26px;font-weight:700;color:' +\n    tone +\n    ';margin-top:4px\">' +\n    found +\n    '</div>' +\n    '</td>' +\n    '</tr>' +\n    '</table>' +\n    '<div style=\"font-size:14px;line-height:1.7;color:#475569\">' +\n    '<strong>Taxa com preço:</strong> ' +\n    pct +\n    '<br><strong>Sem preço:</strong> ' +\n    noPrice +\n    '<br><strong>Não encontradas:</strong> ' +\n    notFound +\n    '<br><strong>Bloqueadas:</strong> ' +\n    blocked +\n    '<br><strong>Erros:</strong> ' +\n    errors +\n    '</div>' +\n    '<div style=\"background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin:20px 0 0;font-size:13px;line-height:1.6;color:#475569\">Este é o resultado de <strong>' +\n    escapeHtml(ESTOQUE_LABEL) +\n    '</strong>. O resultado de <strong>' +\n    escapeHtml(WEBSCRAPERS_LABEL) +\n    '</strong> chega em um e-mail separado quando a busca nos sites terminar.</div>' +\n    '<p style=\"margin:22px 0 0\"><a href=\"' +\n    escapeHtml(reportUrl) +\n    '\" style=\"display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;padding:12px 18px;font-weight:700;font-size:14px\">Abrir relatório</a></p>' +\n    '</div>' +\n    '</div>' +\n    '<div style=\"font-size:12px;line-height:1.5;color:#94a3b8;text-align:center;padding:14px 0 0\">Mensagem automática do Assistente CDP.</div>' +\n    '</div>' +\n    '</div>';\n\n  return [\n    {\n      json: {\n        skip: false,\n        notify: 'email',\n        email_to: replyEmail,\n        email_subject: ASSISTANT_NAME + ' - ' + ESTOQUE_LABEL + ': consulta concluída (' + found + '/' + total + ' com preço)',\n        email_html: html,\n      },\n    },\n  ];\n}\n\nif (notify !== 'telegram' || !chatId) {\n  return [{ json: { skip: true, reason: 'no_notification_target' } }];\n}\n\nreturn [\n  {\n    json: {\n      skip: false,\n      notify: 'telegram',\n      telegram_chat_id: chatId,\n      telegram_text: lines.join('\\n'),\n    },\n  },\n];\n"
       },
       "id": "31ddb84a-7f5a-4b4f-a972-aaf3eb7328a8",
       "name": "📣 Formatar Telegram",
@@ -303,7 +303,7 @@
       "credentials": {
         "telegramApi": {
           "id": "OCT6L7sDZffEbhJ9",
-          "name": "NoxTKTech_bot"
+          "name": "Telegram DEV account"
         }
       },
       "retryOnFail": true,
@@ -341,10 +341,10 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_RESULTADOS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_resultados",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
@@ -403,10 +403,10 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_RESULTADOS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_resultados",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
@@ -473,17 +473,17 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_skus",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": 843035952,
           "mode": "list",
           "cachedResultName": "SKUs",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=843035952"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=843035952"
         },
         "options": {}
       },

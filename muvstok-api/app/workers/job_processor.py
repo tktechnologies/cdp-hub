@@ -19,6 +19,7 @@ from app.repositories.muvstok_api_data_repository import MuvstokApiDataRepositor
 from app.repositories.snapshot_repository import SnapshotRepository
 from app.services.auth_service import AuthService
 from app.services.callback_service import CallbackService
+from app.services.dealership_directory import DealershipDirectory
 from app.services.sku_cache import SkuCache
 from app.workers.sku_processor import SkuProcessor
 
@@ -37,6 +38,7 @@ class JobProcessor:
         muvstok_client = MuvstokClient(self._settings)
         callback_client = CallbackClient(self._settings)
         sku_cache = SkuCache(self._settings)
+        dealership_directory = DealershipDirectory(self._settings)
 
         try:
             async with AsyncSessionLocal() as session:
@@ -65,6 +67,7 @@ class JobProcessor:
                     api_data_repository=MuvstokApiDataRepository(session),
                     error_repository=ErrorRepository(session),
                     sku_cache=sku_cache,
+                    dealership_directory=dealership_directory,
                 )
                 callback_service = CallbackService(
                     self._settings,

@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -443,8 +444,8 @@ class DispatchRunResponse(BaseModel):
     progress_enabled: bool = True
     delivery_mode: str = "legacy"
     sheet_row_numbers: list[int] = Field(default_factory=list)
-    scraper_summary: dict | None = None
-    stokapi_summary: dict | None = None
+    scraper_summary: dict[str, Any] | None = None
+    stokapi_summary: dict[str, Any] | None = None
     scraper_completed_at: datetime | None = None
     stokapi_completed_at: datetime | None = None
     final_notification_status: str | None = None
@@ -494,7 +495,7 @@ class PipelineResultResponse(BaseModel):
     both_terminal: bool = False
     ready_for_final: bool = False
     already_notified: bool = False
-    claim: dict | None = None
+    claim: dict[str, Any] | None = None
 
 
 class FinalNotificationPatch(BaseModel):

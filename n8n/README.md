@@ -9,9 +9,9 @@ workspace.
 
 | Path | Purpose |
 |------|---------|
-| `src/` | Router Code node JavaScript (edit here) |
+| `src/` | Router/progress Code node JavaScript (edit here) |
 | `lib/` | Receiver helpers (Telegram, Sheets) |
-| `workflows/` | Compiled workflow JSON (injected + synced to n8n) |
+| `workflows/` | Compiled PROD workflow JSON plus DEV copies under `workflows/dev/` |
 | `settings/` | Active workflow settings JSON |
 | `sdk/` | Generated TypeScript for MCP push (`make sync-n8n`) |
 
@@ -22,9 +22,12 @@ workspace.
 make sync-n8n
 ```
 
-Steps: `scripts/sync_workflow_code_from_shared.py` → patch receivers → `scripts/n8n_publish.py` (REST) → MCP publish.
+Steps: `scripts/sync_workflow_code_from_shared.py` → patch receivers/build
+notifier → `scripts/n8n_publish.py` (REST) → MCP publish where available.
 
-See [docs/n8n/LIVE_WORKFLOWS.md](../docs/n8n/LIVE_WORKFLOWS.md) for workflow IDs and `cdp_progress` setup (`CDP_PROGRESS_WORKFLOW_ID`).
+See [docs/n8n/LIVE_WORKFLOWS.md](../docs/n8n/LIVE_WORKFLOWS.md) for workflow
+IDs and optional sync IDs (`CDP_PROGRESS_WORKFLOW_ID`,
+`CDP_NOTIFIER_WORKFLOW_ID`, and DEV `CDP_DEV_*_WORKFLOW_ID` values).
 
 ## Rules
 

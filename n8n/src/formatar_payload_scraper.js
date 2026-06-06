@@ -2,7 +2,17 @@
 
 const DEFAULT_BATCH_SIZE = 100;
 const MAX_BATCH_SIZE = 100;
-const DEFAULT_SITES = ['gm', 'ml', 'vw', 'eu', 'pecadireta'];
+const DEFAULT_SITES = [
+  'gm',
+  'ml',
+  'vw',
+  'eu',
+  'pecadireta',
+  'melibox',
+  'goparts',
+  'procurapecas',
+  'ebay',
+];
 const DEFAULT_SCRAPER_API_BASE =
   'https://cdp-scrapers-api-prod.bravecoast-b14d791e.eastus2.azurecontainerapps.io';
 const DEFAULT_N8N_WEBHOOK_BASE = 'https://automacao.tktechnologies.com.br';
@@ -128,7 +138,6 @@ if (ctx) {
   const inputIsEmail = commandOrigin === 'email' || replyChannel === 'email' || emailFrom;
   if (!inputIsEmail && !chatId && ctx.chat_id) chatId = String(ctx.chat_id).trim();
 }
-const adHoc = !!(chatId || emailFrom);
 let notify = 'none';
 if (!replyChannel) {
   if (commandOrigin === 'email' || emailFrom) replyChannel = 'email';
@@ -156,6 +165,7 @@ if (replyChannel === 'email') {
 const batchGroupId =
   String(data.batch_group_id || '').trim() ||
   'bg-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+const adHoc = String(commandRoute || '').startsWith('sku');
 
 let callbackUrl = envFor('CDP_N8N_WEBHOOK_URL');
 if (!callbackUrl) {
@@ -173,7 +183,7 @@ function encodeQueryParam(key, value) {
 function buildQueryString(parts) {
   return parts.map(([k, v]) => encodeQueryParam(k, v)).join('&');
 }
-const deliveryMode = adHoc ? 'legacy' : 'aggregate';
+const deliveryMode = notify === 'none' ? 'legacy' : 'aggregate';
 const queryParts = [
   ['notify', notify],
   ['reply_channel', replyChannel || notify],
@@ -233,7 +243,7 @@ return batches.map((batch, index) => {
         command_origin: commandOrigin || replyChannel || notify,
         reply_channel: replyChannel || notify,
         notify,
-        delivery_mode: adHoc ? 'legacy' : 'aggregate',
+        delivery_mode: deliveryMode,
         chat_id: notify === 'telegram' ? chatId : '',
         reply_email: notify === 'email' ? emailFrom : '',
         batch_group_id: batchGroupId,

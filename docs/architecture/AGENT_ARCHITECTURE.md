@@ -1,8 +1,9 @@
 # CDP agent architecture
 
-**Updated:** 2026-06-01
+**Updated:** 2026-06-06
 
-How AI agents should navigate the CDP monorepo: **platform**, **service**, and **n8n** layers.
+How AI agents should navigate the CDP monorepo: **platform**, **service**, and
+**n8n workflow** layers.
 
 ## Three tiers
 
@@ -10,7 +11,7 @@ How AI agents should navigate the CDP monorepo: **platform**, **service**, and *
 ┌─────────────────────────────────────────────────────────────┐
 │  Tier 1 — Platform (cdp-app/)                               │
 │  .agent/  AGENTS.md  docs/ARCHITECTURE.md                    │
-│  Owns: dual pipeline, n8n/src/, sync-all-n8n, boundaries │
+│  Owns: dual pipeline, n8n/src/, sync-n8n, boundaries     │
 └───────────────────────────┬─────────────────────────────────┘
                             │
          ┌──────────────────┴──────────────────┐
@@ -28,7 +29,7 @@ How AI agents should navigate the CDP monorepo: **platform**, **service**, and *
                           ▼
               ┌───────────────────────┐
               │ Tier 3 — n8n contracts │
-              │ 3 workflows, 2 webhooks │
+              │ workflows + webhooks    │
               │ n8n/src → cdp_router  │
               └───────────────────────┘
 ```
@@ -38,7 +39,7 @@ How AI agents should navigate the CDP monorepo: **platform**, **service**, and *
 | Your task | Start here |
 |-----------|------------|
 | Any cross-service or “whole CDP” work | [AGENTS.md](../../AGENTS.md) → [.agent/index.md](../../.agent/index.md) |
-| Router, `.analisar`, dual dispatch, sync all workflows | Platform [.agent/skills/n8n-router-sync/SKILL.md](../../.agent/skills/n8n-router-sync/SKILL.md) |
+| Router, `.analisar`, dual dispatch, sync platform workflows | Platform [.agent/skills/n8n-router-sync/SKILL.md](../../.agent/skills/n8n-router-sync/SKILL.md) |
 | Scraper code, cache, Celery, Playwright | [scrapers/AGENTS.md](../../scrapers/AGENTS.md) |
 | StokAPI jobs, worker, callbacks | [muvstok-api/AGENTS.md](../../muvstok-api/AGENTS.md) |
 | Only receiver JSON (no router) | Service n8n path + platform boundaries |
@@ -62,7 +63,7 @@ Edit:     cdp-app/n8n/src/*.js
 Inject:   python3 scripts/sync_workflow_code_from_shared.py
           → n8n/workflows/cdp_router.json
 SDK+push: make sync-n8n
-          → cdp_router, cdp_scraper, cdp_stokapi
+          → cdp_router, cdp_scraper, cdp_stokapi, cdp_progress, cdp_notifier
 ```
 
 Receivers are owned by services but **published together** in one sync script.
@@ -77,7 +78,6 @@ Receivers are owned by services but **published together** in one sync script.
 | `scrapers/.agent/` | Scraper index, rules, memory, skills, commands |
 | `muvstok-api/.agent/` | Full StokAPI workspace (skills, sub-agents, specs) |
 | `n8n/AGENTS.md` | Folder-local redirect to platform `.agent` ownership |
-| `cdp-app/.agent/workflows/` (top-level `*.md`) | AIOX IDE personas — **not** CDP runtime |
 | `cdp-app/.agent/workflows/cdp/` | CDP platform workflows (n8n release, etc.) |
 
 ## Change checklist (any tier)

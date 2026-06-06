@@ -1,8 +1,13 @@
+---
+name: scraper-n8n-audit
+description: Audit scraper-related n8n behavior, including the cdp_router scraper dispatch arm, cdp_scraper receiver, live workflow state, and Sheets mappings.
+---
+
 # Skill: Audit CDP n8n Workflows (scraper)
 
 Use when auditing scraper-related n8n: **cdp_router** dispatch arm and **cdp_scraper** receiver.
 
-For router Code edits or syncing all three workflows, use platform skill: `cdp-app/.agent/skills/n8n-router-sync/SKILL.md`.
+For router Code edits or platform workflow sync, use platform skill: `cdp-app/.agent/skills/n8n-router-sync/SKILL.md`.
 
 ## Goal
 

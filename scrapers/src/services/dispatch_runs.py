@@ -16,7 +16,7 @@ from src.models.schemas import (
 )
 
 SCRAPER_TERMINAL = frozenset({"completed", "partial", "failed"})
-STOKAPI_TERMINAL = frozenset({"succeeded", "partially_succeeded", "failed", "completed", "failed"})
+STOKAPI_TERMINAL = frozenset({"succeeded", "partially_succeeded", "failed", "completed"})
 FINAL_OPEN = frozenset({None, "", "pending"})
 FINAL_CLAIMED = frozenset({"claiming"})
 
@@ -79,9 +79,7 @@ def _has_recipient(row: DispatchRun) -> bool:
         return True
     if row.chat_id:
         return True
-    if row.reply_email:
-        return True
-    return False
+    return bool(row.reply_email)
 
 
 def _build_claim(row: DispatchRun) -> dict:

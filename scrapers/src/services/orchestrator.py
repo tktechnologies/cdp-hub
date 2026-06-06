@@ -23,7 +23,7 @@ from src.models.schemas import (
     SKUResultStatus,
     SourceHealth,
 )
-from src.scrapers import get_scraper
+from src.scrapers import archived_scraper_label, get_scraper, is_archived_scraper_site
 from src.services.result_formatter import _find_best_price
 from src.utils.job_estimate import estimate_job_duration_seconds
 
@@ -461,6 +461,14 @@ class Orchestrator:
 
     async def _scrape_one_site(self, site_id: SiteId, item: SKUItem) -> SiteResult:
         """Run a live scraper for one site."""
+        if is_archived_scraper_site(site_id):
+            return SiteResult(
+                site=site_id,
+                site_name=archived_scraper_label(site_id),
+                status="blocked",
+                error_message="Archived scraper: blocked until proxy smoke validates reactivation.",
+                blocked_reason="Archived scraper requires proxy smoke before live execution.",
+            )
         try:
             scraper = await get_scraper(site_id)
             return await scraper.scrape_sku(item.sku, item.brand)

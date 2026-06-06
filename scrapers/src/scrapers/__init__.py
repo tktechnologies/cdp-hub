@@ -37,6 +37,12 @@ ARCHIVED_SCRAPER_REGISTRY: dict[SiteId, type[BaseScraper]] = {
     SiteId.EBAY: EbayScraper,
 }
 
+ARCHIVED_SCRAPER_LABELS: dict[SiteId, str] = {
+    SiteId.GOPARTS: "GoParts",
+    SiteId.PROCURA_PECAS: "Procura Peças",
+    SiteId.EBAY: "eBay",
+}
+
 # Mock registry (remove when real credentials are available)
 MOCK_REGISTRY: dict[SiteId, type[BaseScraper]] = {
     SiteId.GM: MockGMScraper,
@@ -77,6 +83,14 @@ async def get_scraper(site_id: SiteId) -> BaseScraper:
         logger.info("Scraper initialized", site=site_id.value, mock=use_mock)
 
     return _active_scrapers[site_id]
+
+
+def is_archived_scraper_site(site_id: SiteId) -> bool:
+    return site_id in ARCHIVED_SCRAPER_REGISTRY
+
+
+def archived_scraper_label(site_id: SiteId) -> str:
+    return ARCHIVED_SCRAPER_LABELS.get(site_id, site_id.value)
 
 
 async def shutdown_all_scrapers() -> None:

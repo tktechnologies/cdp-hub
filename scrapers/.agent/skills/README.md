@@ -2,6 +2,9 @@
 
 Linked from [`.agent/index.md`](../index.md). Platform n8n sync: [`../../../.agent/skills/n8n-router-sync/SKILL.md`](../../../.agent/skills/n8n-router-sync/SKILL.md).
 
+Each skill folder should contain a `SKILL.md` with YAML frontmatter
+(`name`, `description`) and concise workflow instructions.
+
 | Skill | Use when |
 |-------|----------|
 | [scraper-implementation/SKILL.md](scraper-implementation/SKILL.md) | New or changed site scraper |

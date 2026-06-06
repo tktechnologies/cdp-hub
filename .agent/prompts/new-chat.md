@@ -2,7 +2,7 @@
 
 Use this at the **start of every new Cursor chat** on the CDP monorepo. Paste the block below, then add your task on the next line.
 
-**Maintainers:** keep this file aligned with [platform-startup.md](platform-startup.md) and [../index.md](../index.md). Last reviewed: 2026-06-05.
+**Maintainers:** keep this file aligned with [platform-startup.md](platform-startup.md) and [../index.md](../index.md). Last reviewed: 2026-06-06.
 
 ---
 
@@ -51,7 +51,7 @@ Task-scoped rules: .agent/rules/<domain>.md · Ownership: .agent/knowledge/servi
 ## n8n publish (critical)
 - Code in n8n/src/*.js → python3 scripts/sync_workflow_code_from_shared.py → commit JSON → make sync-n8n (with approval).
 - Structural workflow changes (nodes, connections): MCP update_workflow operations + publish_workflow — make sync-n8n alone may NOT update the live graph (see LIVE_WORKFLOWS.md).
-- cdp_progress / cdp_notifier: import once in n8n, set CDP_PROGRESS_WORKFLOW_ID and CDP_NOTIFIER_WORKFLOW_ID, then included in make sync-n8n.
+- cdp_progress / cdp_notifier: live IDs exist; export CDP_PROGRESS_WORKFLOW_ID and CDP_NOTIFIER_WORKFLOW_ID before make sync-n8n to include them.
 
 Live IDs: cdp_router 6id6dkinK9xTLfsb · cdp_scraper VfBSV3WU6on8BXm8 · cdp_stokapi t160mzGPYYlJcrjZ · cdp_progress V9I6o32XDoPIRarz · cdp_notifier ennI9nKin9ruPaLO
 

@@ -111,17 +111,17 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_RESULTADOS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_resultados",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "Detalhado",
           "mode": "name",
           "cachedResultName": "Detalhado",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -180,7 +180,7 @@
     },
     {
       "parameters": {
-        "jsCode": "function parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') {\n    try { p = JSON.parse(p); } catch (e) { p = {}; }\n  }\n  return p && typeof p === 'object' ? p : {};\n}\nconst wh = $('🔔 Webhook: Receber Resultados').first().json;\nconst q = wh.query || {};\nconst meta = parseBody(wh.body);\nconst items = meta.results || [];\nconst errs = meta.errors || [];\nconst jm = typeof meta.job_metadata === 'object' && meta.job_metadata !== null ? meta.job_metadata : {};\n\nlet job_error = '';\nif (errs.length) job_error = errs.join(' | ');\nif (meta.warning_messages && meta.warning_messages.length) {\n  job_error = job_error ? job_error + ' | ' : '';\n  job_error += meta.warning_messages.join(' | ');\n}\nconst dupCsv = String(jm.duplicate_skus_csv || q.duplicate_skus_csv || '').trim();\nconst dupCount = Number(jm.duplicates_count || (dupCsv ? dupCsv.split(',').filter(Boolean).length : 0));\nif (dupCount > 0) {\n  const dupMsg = `SKUs repetidos: ${dupCount}${dupCsv ? ' (' + dupCsv + ')' : ''}`;\n  job_error = job_error ? job_error + ' | ' + dupMsg : dupMsg;\n}\nif (!job_error) job_error = '—';\n\nconst skus_csv = [...new Set(items.map((s) => String(s.sku || '').trim()).filter(Boolean))].join(', ');\nconst dur = meta.duration_seconds != null ? Number(meta.duration_seconds) : 0;\nconst notify = String(jm.notify || q.notify || 'none').toLowerCase();\nconst origem = notify === 'telegram' ? 'telegram' : notify === 'email' ? 'email' : 'auto';\nconst solicitante = String(jm.reply_email || q.reply_email || jm.chat_id || q.chat_id || '').trim() || '—';\nconst disparado_em = meta.started_at\n  ? String(meta.started_at)\n  : new Date(Date.now() - dur * 1000).toISOString();\nconst concluido_em = meta.completed_at ? String(meta.completed_at) : new Date().toISOString();\nconst totalItems = Number(meta.total_items || jm.total_read || items.length || 0);\nconst skus_validos = totalItems > 0 ? totalItems : Number(jm.valid_skus || items.length || 0);\n\nfunction partHasValidPrice(part) {\n  const n = Number(part?.price);\n  return !!(part && part.exact_match && Number.isFinite(n) && n > 0);\n}\nfunction siteHasValidPrice(sr) {\n  if (sr.has_valid_price === true) return true;\n  return (Array.isArray(sr.results) ? sr.results : []).some(partHasValidPrice);\n}\n\nconst pricedSkus = Number(meta.priced_sku_count || 0);\nconst evidenceSkus = Number(meta.any_evidence_sku_count || meta.sku_success_count || 0);\nconst noPriceSkus = Number(meta.no_price_sku_count || Math.max(0, evidenceSkus - pricedSkus));\nconst blockedSkus = Number(meta.blocked_sku_count || 0);\nconst errorSkus = Number(meta.error_sku_count || 0);\nconst notFoundSkus = Number(meta.all_sites_not_found_count || Math.max(0, skus_validos - evidenceSkus - blockedSkus - errorSkus));\nconst skuHit = skus_validos > 0 ? ((pricedSkus / skus_validos) * 100).toFixed(1) + '%' : '0.0%';\nconst status =\n  errs.length > 0 || errorSkus > 0\n    ? '❌ ERRO_JOB'\n    : blockedSkus > 0 || noPriceSkus > 0 || notFoundSkus > 0\n      ? '⚠️ AVISOS'\n      : '✅ CONCLUIDO';\n\nconst siteTotals = {};\nlet checks = 0;\nlet hits = 0;\nfor (const skuResult of items) {\n  for (const sr of (skuResult.site_results || [])) {\n    const key = String(sr.site || sr.site_name || 'site').trim() || 'site';\n    checks += 1;\n    if (!siteTotals[key]) siteTotals[key] = { total: 0, hits: 0 };\n    siteTotals[key].total += 1;\n    if (siteHasValidPrice(sr)) {\n      hits += 1;\n      siteTotals[key].hits += 1;\n    }\n  }\n}\nconst taxaSite = checks > 0 ? ((hits / checks) * 100).toFixed(1) + '%' : 'N/A';\nconst resumoSitesObj = {};\nfor (const [k, v] of Object.entries(siteTotals)) {\n  resumoSitesObj[k] = v.total > 0 ? Number(((v.hits / v.total) * 100).toFixed(1)) : 0;\n}\n\nreturn [{\n  json: {\n    job_id: meta.job_id || 'unknown',\n    origem,\n    solicitante,\n    disparado_em,\n    concluido_em,\n    tempo_segundos: dur,\n    status,\n    skus_lidos: totalItems,\n    skus_validos,\n    skus_encontrados: pricedSkus,\n    skus_falhos: notFoundSkus + blockedSkus + errorSkus,\n    taxa_sucesso_sku: skuHit,\n    taxa_sucesso_sites: taxaSite,\n    sites_pesquisados: Object.keys(siteTotals).length || 5,\n    resumo_sites: JSON.stringify({\n      ...resumoSitesObj,\n      no_price: noPriceSkus,\n      not_found: notFoundSkus,\n      blocked: blockedSkus,\n      error: errorSkus,\n    }),\n    lista_skus_csv: skus_csv || '—',\n    skus_repetidos: dupCsv || '—',\n    job_error,\n  },\n}];\n"
+        "jsCode": "function parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') {\n    try { p = JSON.parse(p); } catch (e) { p = {}; }\n  }\n  return p && typeof p === 'object' ? p : {};\n}\nconst wh = $('🔔 Webhook: Receber Resultados').first().json;\nconst q = wh.query || {};\nconst meta = parseBody(wh.body);\nconst items = meta.results || [];\nconst errs = meta.errors || [];\nconst jm = typeof meta.job_metadata === 'object' && meta.job_metadata !== null ? meta.job_metadata : {};\n\nlet job_error = '';\nif (errs.length) job_error = errs.join(' | ');\nif (meta.warning_messages && meta.warning_messages.length) {\n  job_error = job_error ? job_error + ' | ' : '';\n  job_error += meta.warning_messages.join(' | ');\n}\nconst dupCsv = String(jm.duplicate_skus_csv || q.duplicate_skus_csv || '').trim();\nconst dupCount = Number(jm.duplicates_count || (dupCsv ? dupCsv.split(',').filter(Boolean).length : 0));\nif (dupCount > 0) {\n  const dupMsg = `SKUs repetidos: ${dupCount}${dupCsv ? ' (' + dupCsv + ')' : ''}`;\n  job_error = job_error ? job_error + ' | ' + dupMsg : dupMsg;\n}\nif (!job_error) job_error = '—';\n\nconst skus_csv = [...new Set(items.map((s) => String(s.sku || '').trim()).filter(Boolean))].join(', ');\nconst dur = meta.duration_seconds != null ? Number(meta.duration_seconds) : 0;\nconst notify = String(jm.notify || q.notify || 'none').toLowerCase();\nconst origem = notify === 'telegram' ? 'telegram' : notify === 'email' ? 'email' : 'auto';\nconst solicitante = String(jm.reply_email || q.reply_email || jm.chat_id || q.chat_id || '').trim() || '—';\nconst disparado_em = meta.started_at\n  ? String(meta.started_at)\n  : new Date(Date.now() - dur * 1000).toISOString();\nconst concluido_em = meta.completed_at ? String(meta.completed_at) : new Date().toISOString();\nconst totalItems = Number(meta.total_items || jm.total_read || items.length || 0);\nconst skus_validos = totalItems > 0 ? totalItems : Number(jm.valid_skus || items.length || 0);\n\nfunction partHasValidPrice(part) {\n  const n = Number(part?.price);\n  return !!(part && part.exact_match && Number.isFinite(n) && n > 0);\n}\nfunction siteHasValidPrice(sr) {\n  if (sr.has_valid_price === true) return true;\n  return (Array.isArray(sr.results) ? sr.results : []).some(partHasValidPrice);\n}\nfunction siteHasNoPriceEvidence(sr) {\n  const parts = Array.isArray(sr.results) ? sr.results : [];\n  return String(sr.sku_result || '').toUpperCase() === 'NO_PRICE'\n    || String(sr.status || '').toLowerCase() === 'no_price'\n    || parts.some((part) => !!part.exact_match);\n}\nfunction skuHasValidPrice(skuResult) {\n  if (skuResult.has_valid_price === true || String(skuResult.sku_result || '').toUpperCase() === 'FOUND_PRICE') return true;\n  const best = skuResult.best_price || null;\n  if (best && best.exact_match !== false) {\n    const n = Number(best.price);\n    if (Number.isFinite(n) && n > 0) return true;\n  }\n  return (Array.isArray(skuResult.site_results) ? skuResult.site_results : []).some(siteHasValidPrice);\n}\nfunction skuHasNoPriceEvidence(skuResult) {\n  if (skuResult.has_any_exact_evidence === true || String(skuResult.sku_result || '').toUpperCase() === 'NO_PRICE') return true;\n  return (Array.isArray(skuResult.site_results) ? skuResult.site_results : []).some(siteHasNoPriceEvidence);\n}\nfunction numberOrNull(value) {\n  if (value === null || value === undefined || value === '') return null;\n  const n = Number(value);\n  return Number.isFinite(n) ? n : null;\n}\n\nconst pricedSkusFromPayload = numberOrNull(meta.priced_sku_count);\nconst evidenceSkusFromPayload = numberOrNull(meta.any_evidence_sku_count ?? meta.sku_success_count);\nconst noPriceSkusFromPayload = numberOrNull(meta.no_price_sku_count);\nconst blockedSkusFromPayload = numberOrNull(meta.blocked_sku_count);\nconst errorSkusFromPayload = numberOrNull(meta.error_sku_count);\nconst notFoundSkusFromPayload = numberOrNull(meta.all_sites_not_found_count);\nconst pricedSkus = pricedSkusFromPayload ?? items.filter(skuHasValidPrice).length;\nconst evidenceSkus = evidenceSkusFromPayload ?? items.filter((item) => skuHasValidPrice(item) || skuHasNoPriceEvidence(item)).length;\nconst noPriceSkus = noPriceSkusFromPayload ?? Math.max(0, items.filter(skuHasNoPriceEvidence).length - pricedSkus);\nconst blockedSkus = blockedSkusFromPayload ?? items.filter((item) =>\n  (item.site_results || []).some((sr) => String(sr.sku_result || sr.status || '').toUpperCase() === 'BLOCKED' || String(sr.status || '').toLowerCase() === 'blocked')\n).length;\nconst errorSkus = errorSkusFromPayload ?? items.filter((item) =>\n  (item.site_results || []).some((sr) => ['TIMEOUT', 'ERROR'].includes(String(sr.sku_result || '').toUpperCase()) || ['timeout', 'error'].includes(String(sr.status || '').toLowerCase()))\n).length;\nconst notFoundSkus = notFoundSkusFromPayload ?? Math.max(0, skus_validos - evidenceSkus - blockedSkus - errorSkus);\nconst skuHit = skus_validos > 0 ? ((pricedSkus / skus_validos) * 100).toFixed(1) + '%' : '0.0%';\nconst status =\n  errs.length > 0 || errorSkus > 0\n    ? '❌ ERRO_JOB'\n    : blockedSkus > 0 || noPriceSkus > 0 || notFoundSkus > 0\n      ? '⚠️ AVISOS'\n      : '✅ CONCLUIDO';\n\nconst siteTotals = {};\nlet checks = 0;\nlet hits = 0;\nfor (const skuResult of items) {\n  for (const sr of (skuResult.site_results || [])) {\n    const key = String(sr.site || sr.site_name || 'site').trim() || 'site';\n    checks += 1;\n    if (!siteTotals[key]) siteTotals[key] = { total: 0, hits: 0 };\n    siteTotals[key].total += 1;\n    if (siteHasValidPrice(sr)) {\n      hits += 1;\n      siteTotals[key].hits += 1;\n    }\n  }\n}\nconst taxaSite = checks > 0 ? ((hits / checks) * 100).toFixed(1) + '%' : 'N/A';\nconst resumoSitesObj = {};\nfor (const [k, v] of Object.entries(siteTotals)) {\n  resumoSitesObj[k] = v.total > 0 ? Number(((v.hits / v.total) * 100).toFixed(1)) : 0;\n}\n\nreturn [{\n  json: {\n    job_id: meta.job_id || 'unknown',\n    origem,\n    solicitante,\n    disparado_em,\n    concluido_em,\n    tempo_segundos: dur,\n    status,\n    skus_lidos: totalItems,\n    skus_validos,\n    skus_encontrados: pricedSkus,\n    skus_falhos: notFoundSkus + blockedSkus + errorSkus,\n    taxa_sucesso_sku: skuHit,\n    taxa_sucesso_sites: taxaSite,\n    sites_pesquisados: Object.keys(siteTotals).length || 5,\n    resumo_sites: JSON.stringify({\n      ...resumoSitesObj,\n      no_price: noPriceSkus,\n      not_found: notFoundSkus,\n      blocked: blockedSkus,\n      error: errorSkus,\n    }),\n    lista_skus_csv: skus_csv || '—',\n    skus_repetidos: dupCsv || '—',\n    job_error,\n  },\n}];\n"
       },
       "id": "ee541344-b46d-4378-9a68-065bbbcd470a",
       "name": "📊 Construir Relatório Histórico",
@@ -197,17 +197,17 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_RESULTADOS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_resultados",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "Historico",
           "mode": "name",
           "cachedResultName": "Historico",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -340,17 +340,17 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_RESULTADOS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_resultados",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "Resumo",
           "mode": "name",
           "cachedResultName": "Resumo",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -393,17 +393,17 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_skus",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "SKUs",
           "mode": "name",
           "cachedResultName": "SKUs",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -504,7 +504,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Telegram/email notification for cdp_scraper completion (injected into workflow JSON).\nconst ASSISTANT_NAME = 'Assistente CDP';\nconst WEBSCRAPERS_LABEL = 'WEBSCRAPERS';\nconst ESTOQUE_LABEL = 'ESTOQUE ONLINE';\nconst NL = '\\n';\n\nfunction parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') {\n    try {\n      p = JSON.parse(p);\n    } catch (e) {\n      p = {};\n    }\n  }\n  return p && typeof p === 'object' ? p : {};\n}\n\nfunction env(name) {\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));\n}\n\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const map = {\n    CDP_RESULTADOS_SHEETS_URL: 'CDP_DEV_RESULTADOS_SHEETS_URL',\n    NOTIFICATION_EMAIL_TO: 'CDP_DEV_NOTIFICATION_EMAIL_TO',\n  };\n  const mapped = map[name] || '';\n  return mapped ? env(mapped) : '';\n}\n\nfunction durPt(seconds) {\n  const s = Math.max(0, Math.round(Number(seconds) || 0));\n  if (s >= 3600) {\n    const h = Math.floor(s / 3600);\n    const m = Math.floor((s % 3600) / 60);\n    return h + 'h ' + (m ? m + 'min' : '');\n  }\n  if (s >= 60) return Math.floor(s / 60) + ' min';\n  return s + ' s';\n}\n\nfunction pecaLabel(n) {\n  const x = Number(n) || 0;\n  return x === 1 ? '1 peça' : x + ' peças';\n}\n\nfunction reportUrl() {\n  const configured = envFor('CDP_RESULTADOS_SHEETS_URL');\n  if (configured || isDevWorkflow()) return configured;\n  return 'https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_RESULTADOS_SHEET_ID__/edit#gid=533358674';\n}\n\nfunction escapeHtml(value) {\n  return String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n}\n\nconst wh = $('🔔 Webhook: Receber Resultados').first().json;\nconst payload = parseBody(wh.body);\nconst meta = typeof payload.job_metadata === 'object' && payload.job_metadata !== null ? payload.job_metadata : {};\nconst q = wh.query || {};\nif (String(meta.delivery_mode || q.delivery_mode || '').trim().toLowerCase() === 'aggregate') {\n  return [];\n}\nconst results = payload.results || [];\n\nlet notify = String(meta.notify || q.notify || 'none').toLowerCase();\nlet replyChannel = String(\n  meta.reply_channel || q.reply_channel || meta.command_origin || q.command_origin || ''\n)\n  .trim()\n  .toLowerCase();\nlet chatId = String(meta.chat_id || q.chat_id || '').trim();\nlet replyEmail = String(meta.reply_email || q.reply_email || '').trim();\nconst fallbackEmail = envFor('NOTIFICATION_EMAIL_TO');\nif (notify === 'email' && !replyEmail && fallbackEmail) replyEmail = fallbackEmail;\nif (!replyChannel) {\n  if (notify === 'email' || replyEmail) replyChannel = 'email';\n  else if (notify === 'telegram' || chatId) replyChannel = 'telegram';\n}\nif (replyChannel === 'email') {\n  notify = 'email';\n  chatId = '';\n} else if (replyChannel === 'telegram') {\n  notify = 'telegram';\n  replyEmail = '';\n} else if (chatId) {\n  notify = 'telegram';\n  replyChannel = 'telegram';\n} else if (replyEmail) {\n  notify = 'email';\n  replyChannel = 'email';\n}\n\nconst origem = notify === 'telegram' ? 'telegram' : notify === 'email' ? 'email' : 'auto';\n\nfunction numericPrice(value) {\n  if (value === null || value === undefined || value === '') return null;\n  const n = Number(value);\n  return Number.isFinite(n) && n > 0 ? n : null;\n}\n\nfunction hasBestPrice(skuResult) {\n  if (skuResult.has_valid_price === true || String(skuResult.sku_result || '').toUpperCase() === 'FOUND_PRICE') {\n    return true;\n  }\n  const best = skuResult.best_price;\n  if (best && best.exact_match !== false && numericPrice(best.price) !== null) return true;\n  const sites = Array.isArray(skuResult.site_results) ? skuResult.site_results : [];\n  return sites.some((siteResult) => {\n    if (siteResult.has_valid_price === true || String(siteResult.sku_result || '').toUpperCase() === 'FOUND_PRICE') {\n      return true;\n    }\n    const parts = Array.isArray(siteResult.results) ? siteResult.results : [];\n    return parts.some((part) => !!(part && part.exact_match && numericPrice(part.price) !== null));\n  });\n}\n\nfunction hasAnyResult(skuResult) {\n  if (skuResult.has_any_exact_evidence === true || String(skuResult.sku_result || '').toUpperCase() === 'NO_PRICE') return true;\n  const sites = Array.isArray(skuResult.site_results) ? skuResult.site_results : [];\n  return sites.some((siteResult) => {\n    const parts = Array.isArray(siteResult.results) ? siteResult.results : [];\n    const status = String(siteResult.status || '').toLowerCase();\n    return String(siteResult.sku_result || '').toUpperCase() === 'NO_PRICE'\n      || status === 'no_price'\n      || parts.some((part) => !!part.exact_match);\n  });\n}\n\nconst total = Number(payload.total_items || results.length || 0);\nconst resultCount = Number(payload.any_evidence_sku_count ?? results.filter(hasAnyResult).length);\nconst bestPriceCount = Number(payload.priced_sku_count ?? results.filter(hasBestPrice).length);\nconst noPriceCount = Number(payload.no_price_sku_count || 0);\nconst blockedCount = Number(payload.blocked_sku_count || 0);\nconst errorCount = Number(payload.error_sku_count || 0);\nconst pct = total ? ((bestPriceCount / total) * 100).toFixed(1) : '0.0';\nconst dur = Number(payload.duration_seconds ?? 0);\nconst notFound = Math.max(0, total - resultCount - blockedCount - errorCount);\nconst noComparableBestPrice = Math.max(0, resultCount - bestPriceCount);\nconst noPriceTotal = Math.max(noPriceCount, noComparableBestPrice);\nconst relUrl = reportUrl();\n\nconst headerLines = [\n  '🤖 *' + ASSISTANT_NAME + '*',\n  '',\n  '✅ *' + WEBSCRAPERS_LABEL + ': busca concluída*',\n  '',\n  '📊 *' + bestPriceCount + '* de *' + total + '* com preço encontrado',\n];\nif (noPriceTotal > 0) headerLines.push('⚠️ Sem preço: *' + noPriceTotal + '*');\nif (notFound > 0) headerLines.push('⚠️ Sem resultado: *' + notFound + '*');\nif (blockedCount > 0) headerLines.push('🚫 Bloqueados: *' + blockedCount + '*');\nif (errorCount > 0) headerLines.push('⚠️ Erros/timeouts: *' + errorCount + '*');\n\nlet telegramText = headerLines.join(NL);\nif (relUrl) telegramText += NL + NL + '📎 Relatório: ' + relUrl;\nif (telegramText.length > 4000) telegramText = telegramText.slice(0, 3990) + NL + '…';\n\nconst tone = errorCount > 0 || blockedCount > 0 ? '#b45309' : bestPriceCount > 0 ? '#047857' : '#334155';\nconst status = errorCount > 0 || blockedCount > 0 ? 'Concluído com avisos' : 'Busca em sites concluída';\nconst emailHtml =\n  '<div style=\"margin:0;padding:0;background:#f6f8fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937\">' +\n  '<div style=\"max-width:640px;margin:0 auto;padding:28px 18px\">' +\n  '<div style=\"background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden\">' +\n  '<div style=\"padding:22px 24px;border-bottom:1px solid #eef2f7\">' +\n  '<div style=\"font-size:12px;text-transform:uppercase;letter-spacing:0;color:#64748b;font-weight:700\">' +\n  escapeHtml(WEBSCRAPERS_LABEL) +\n  '</div>' +\n  '<h1 style=\"font-size:24px;line-height:1.25;margin:8px 0 0;color:#111827\">' +\n  escapeHtml(status) +\n  '</h1>' +\n  '</div>' +\n  '<div style=\"padding:22px 24px\">' +\n  '<p style=\"font-size:15px;line-height:1.6;margin:0 0 18px\">A busca nos sites públicos foi finalizada.</p>' +\n  '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;margin:0 0 20px\">' +\n  '<tr>' +\n  '<td style=\"padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px\">' +\n  '<div style=\"font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700\">Peças analisadas</div>' +\n  '<div style=\"font-size:26px;font-weight:700;color:#111827;margin-top:4px\">' +\n  pecaLabel(total) +\n  '</div>' +\n  '</td>' +\n  '<td width=\"12\"></td>' +\n  '<td style=\"padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px\">' +\n  '<div style=\"font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700\">Com preço</div>' +\n  '<div style=\"font-size:26px;font-weight:700;color:' +\n  tone +\n  ';margin-top:4px\">' +\n  bestPriceCount +\n  '</div>' +\n  '</td>' +\n  '</tr>' +\n  '</table>' +\n  '<div style=\"font-size:14px;line-height:1.7;color:#475569\">' +\n  '<strong>Taxa com preço:</strong> ' +\n  pct +\n  '%' +\n  '<br><strong>Sem preço:</strong> ' +\n  noPriceTotal +\n  '<br><strong>Sem resultado:</strong> ' +\n  notFound +\n  '<br><strong>Bloqueados:</strong> ' +\n  blockedCount +\n  '<br><strong>Erros/timeouts:</strong> ' +\n  errorCount +\n  '<br><strong>Duração:</strong> ' +\n  escapeHtml(durPt(dur)) +\n  '</div>' +\n  '<div style=\"background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin:20px 0 0;font-size:13px;line-height:1.6;color:#475569\">Este é o resultado de <strong>' +\n  escapeHtml(WEBSCRAPERS_LABEL) +\n  '</strong>. O resultado de <strong>' +\n  escapeHtml(ESTOQUE_LABEL) +\n  '</strong> chega em um e-mail separado quando a consulta de estoque terminar.</div>' +\n  '<p style=\"margin:22px 0 0\"><a href=\"' +\n  escapeHtml(relUrl) +\n  '\" style=\"display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;padding:12px 18px;font-weight:700;font-size:14px\">Abrir relatório</a></p>' +\n  '</div>' +\n  '</div>' +\n  '<div style=\"font-size:12px;line-height:1.5;color:#94a3b8;text-align:center;padding:14px 0 0\">Mensagem automática do Assistente CDP.</div>' +\n  '</div>' +\n  '</div>';\nconst emailSubject =\n  ASSISTANT_NAME + ' - ' + WEBSCRAPERS_LABEL + ': busca concluída (' + bestPriceCount + '/' + total + ' com preço, ' + pct + '%)';\n\nif (notify === 'telegram' && chatId) {\n  return [\n    {\n      json: {\n        notify: 'telegram',\n        origem,\n        telegram_chat_id: chatId,\n        telegram_text: telegramText,\n        email_to: '',\n        email_subject: emailSubject,\n        email_html: '',\n        _total_items: total,\n      },\n    },\n  ];\n}\n\nif (notify === 'email' && replyEmail) {\n  return [\n    {\n      json: {\n        notify: 'email',\n        origem,\n        telegram_chat_id: '',\n        telegram_text: '',\n        email_to: replyEmail,\n        email_subject: emailSubject,\n        email_html: emailHtml,\n        _total_items: total,\n      },\n    },\n  ];\n}\n\nreturn [\n  {\n    json: {\n      notify: 'none',\n      origem,\n      telegram_chat_id: '',\n      telegram_text: '',\n      email_to: '',\n      email_subject: '',\n      email_html: '',\n      _no_delivery: true,\n      _total_items: total,\n    },\n  },\n];\n"
+        "jsCode": "// Telegram/email notification for cdp_scraper completion (injected into workflow JSON).\nconst ASSISTANT_NAME = 'Assistente CDP';\nconst WEBSCRAPERS_LABEL = 'WEBSCRAPERS';\nconst ESTOQUE_LABEL = 'ESTOQUE ONLINE';\nconst NL = '\\n';\n\nfunction parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') {\n    try {\n      p = JSON.parse(p);\n    } catch (e) {\n      p = {};\n    }\n  }\n  return p && typeof p === 'object' ? p : {};\n}\n\nfunction env(name) {\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));\n}\n\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const map = {\n    CDP_RESULTADOS_SHEETS_URL: 'CDP_DEV_RESULTADOS_SHEETS_URL',\n    NOTIFICATION_EMAIL_TO: 'CDP_DEV_NOTIFICATION_EMAIL_TO',\n  };\n  const mapped = map[name] || '';\n  return mapped ? env(mapped) : '';\n}\n\nfunction durPt(seconds) {\n  const s = Math.max(0, Math.round(Number(seconds) || 0));\n  if (s >= 3600) {\n    const h = Math.floor(s / 3600);\n    const m = Math.floor((s % 3600) / 60);\n    return h + 'h ' + (m ? m + 'min' : '');\n  }\n  if (s >= 60) return Math.floor(s / 60) + ' min';\n  return s + ' s';\n}\n\nfunction pecaLabel(n) {\n  const x = Number(n) || 0;\n  return x === 1 ? '1 peça' : x + ' peças';\n}\n\nfunction reportUrl() {\n  const configured = envFor('CDP_RESULTADOS_SHEETS_URL');\n  if (configured || isDevWorkflow()) return configured;\n  return 'https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=533358674';\n}\n\nfunction escapeHtml(value) {\n  return String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n}\n\nconst wh = $('🔔 Webhook: Receber Resultados').first().json;\nconst payload = parseBody(wh.body);\nconst meta = typeof payload.job_metadata === 'object' && payload.job_metadata !== null ? payload.job_metadata : {};\nconst q = wh.query || {};\nif (String(meta.delivery_mode || q.delivery_mode || '').trim().toLowerCase() === 'aggregate') {\n  return [];\n}\nconst results = payload.results || [];\n\nlet notify = String(meta.notify || q.notify || 'none').toLowerCase();\nlet replyChannel = String(\n  meta.reply_channel || q.reply_channel || meta.command_origin || q.command_origin || ''\n)\n  .trim()\n  .toLowerCase();\nlet chatId = String(meta.chat_id || q.chat_id || '').trim();\nlet replyEmail = String(meta.reply_email || q.reply_email || '').trim();\nconst fallbackEmail = envFor('NOTIFICATION_EMAIL_TO');\nif (notify === 'email' && !replyEmail && fallbackEmail) replyEmail = fallbackEmail;\nif (!replyChannel) {\n  if (notify === 'email' || replyEmail) replyChannel = 'email';\n  else if (notify === 'telegram' || chatId) replyChannel = 'telegram';\n}\nif (replyChannel === 'email') {\n  notify = 'email';\n  chatId = '';\n} else if (replyChannel === 'telegram') {\n  notify = 'telegram';\n  replyEmail = '';\n} else if (chatId) {\n  notify = 'telegram';\n  replyChannel = 'telegram';\n} else if (replyEmail) {\n  notify = 'email';\n  replyChannel = 'email';\n}\n\nconst origem = notify === 'telegram' ? 'telegram' : notify === 'email' ? 'email' : 'auto';\n\nfunction numericPrice(value) {\n  if (value === null || value === undefined || value === '') return null;\n  const n = Number(value);\n  return Number.isFinite(n) && n > 0 ? n : null;\n}\n\nfunction hasBestPrice(skuResult) {\n  if (skuResult.has_valid_price === true || String(skuResult.sku_result || '').toUpperCase() === 'FOUND_PRICE') {\n    return true;\n  }\n  const best = skuResult.best_price;\n  if (best && best.exact_match !== false && numericPrice(best.price) !== null) return true;\n  const sites = Array.isArray(skuResult.site_results) ? skuResult.site_results : [];\n  return sites.some((siteResult) => {\n    if (siteResult.has_valid_price === true || String(siteResult.sku_result || '').toUpperCase() === 'FOUND_PRICE') {\n      return true;\n    }\n    const parts = Array.isArray(siteResult.results) ? siteResult.results : [];\n    return parts.some((part) => !!(part && part.exact_match && numericPrice(part.price) !== null));\n  });\n}\n\nfunction hasAnyResult(skuResult) {\n  if (skuResult.has_any_exact_evidence === true || String(skuResult.sku_result || '').toUpperCase() === 'NO_PRICE') return true;\n  const sites = Array.isArray(skuResult.site_results) ? skuResult.site_results : [];\n  return sites.some((siteResult) => {\n    const parts = Array.isArray(siteResult.results) ? siteResult.results : [];\n    const status = String(siteResult.status || '').toLowerCase();\n    return String(siteResult.sku_result || '').toUpperCase() === 'NO_PRICE'\n      || status === 'no_price'\n      || parts.some((part) => !!part.exact_match);\n  });\n}\n\nconst total = Number(payload.total_items || results.length || 0);\nconst resultCount = Number(payload.any_evidence_sku_count ?? results.filter(hasAnyResult).length);\nconst bestPriceCount = Number(payload.priced_sku_count ?? results.filter(hasBestPrice).length);\nconst noPriceCount = Number(payload.no_price_sku_count || 0);\nconst blockedCount = Number(payload.blocked_sku_count || 0);\nconst errorCount = Number(payload.error_sku_count || 0);\nconst pct = total ? ((bestPriceCount / total) * 100).toFixed(1) : '0.0';\nconst dur = Number(payload.duration_seconds ?? 0);\nconst notFound = Math.max(0, total - resultCount - blockedCount - errorCount);\nconst noComparableBestPrice = Math.max(0, resultCount - bestPriceCount);\nconst noPriceTotal = Math.max(noPriceCount, noComparableBestPrice);\nconst relUrl = reportUrl();\n\nconst headerLines = [\n  '🤖 *' + ASSISTANT_NAME + '*',\n  '',\n  '✅ *' + WEBSCRAPERS_LABEL + ': busca concluída*',\n  '',\n  '📊 *' + bestPriceCount + '* de *' + total + '* com preço encontrado',\n];\nif (noPriceTotal > 0) headerLines.push('⚠️ Sem preço: *' + noPriceTotal + '*');\nif (notFound > 0) headerLines.push('⚠️ Sem resultado: *' + notFound + '*');\nif (blockedCount > 0) headerLines.push('🚫 Bloqueados: *' + blockedCount + '*');\nif (errorCount > 0) headerLines.push('⚠️ Erros/timeouts: *' + errorCount + '*');\n\nlet telegramText = headerLines.join(NL);\nif (relUrl) telegramText += NL + NL + '📎 Relatório: ' + relUrl;\nif (telegramText.length > 4000) telegramText = telegramText.slice(0, 3990) + NL + '…';\n\nconst tone = errorCount > 0 || blockedCount > 0 ? '#b45309' : bestPriceCount > 0 ? '#047857' : '#334155';\nconst status = errorCount > 0 || blockedCount > 0 ? 'Concluído com avisos' : 'Busca em sites concluída';\nconst emailHtml =\n  '<div style=\"margin:0;padding:0;background:#f6f8fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937\">' +\n  '<div style=\"max-width:640px;margin:0 auto;padding:28px 18px\">' +\n  '<div style=\"background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden\">' +\n  '<div style=\"padding:22px 24px;border-bottom:1px solid #eef2f7\">' +\n  '<div style=\"font-size:12px;text-transform:uppercase;letter-spacing:0;color:#64748b;font-weight:700\">' +\n  escapeHtml(WEBSCRAPERS_LABEL) +\n  '</div>' +\n  '<h1 style=\"font-size:24px;line-height:1.25;margin:8px 0 0;color:#111827\">' +\n  escapeHtml(status) +\n  '</h1>' +\n  '</div>' +\n  '<div style=\"padding:22px 24px\">' +\n  '<p style=\"font-size:15px;line-height:1.6;margin:0 0 18px\">A busca nos sites públicos foi finalizada.</p>' +\n  '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;margin:0 0 20px\">' +\n  '<tr>' +\n  '<td style=\"padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px\">' +\n  '<div style=\"font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700\">Peças analisadas</div>' +\n  '<div style=\"font-size:26px;font-weight:700;color:#111827;margin-top:4px\">' +\n  pecaLabel(total) +\n  '</div>' +\n  '</td>' +\n  '<td width=\"12\"></td>' +\n  '<td style=\"padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px\">' +\n  '<div style=\"font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700\">Com preço</div>' +\n  '<div style=\"font-size:26px;font-weight:700;color:' +\n  tone +\n  ';margin-top:4px\">' +\n  bestPriceCount +\n  '</div>' +\n  '</td>' +\n  '</tr>' +\n  '</table>' +\n  '<div style=\"font-size:14px;line-height:1.7;color:#475569\">' +\n  '<strong>Taxa com preço:</strong> ' +\n  pct +\n  '%' +\n  '<br><strong>Sem preço:</strong> ' +\n  noPriceTotal +\n  '<br><strong>Sem resultado:</strong> ' +\n  notFound +\n  '<br><strong>Bloqueados:</strong> ' +\n  blockedCount +\n  '<br><strong>Erros/timeouts:</strong> ' +\n  errorCount +\n  '<br><strong>Duração:</strong> ' +\n  escapeHtml(durPt(dur)) +\n  '</div>' +\n  '<div style=\"background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin:20px 0 0;font-size:13px;line-height:1.6;color:#475569\">Este é o resultado de <strong>' +\n  escapeHtml(WEBSCRAPERS_LABEL) +\n  '</strong>. O resultado de <strong>' +\n  escapeHtml(ESTOQUE_LABEL) +\n  '</strong> chega em um e-mail separado quando a consulta de estoque terminar.</div>' +\n  '<p style=\"margin:22px 0 0\"><a href=\"' +\n  escapeHtml(relUrl) +\n  '\" style=\"display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;padding:12px 18px;font-weight:700;font-size:14px\">Abrir relatório</a></p>' +\n  '</div>' +\n  '</div>' +\n  '<div style=\"font-size:12px;line-height:1.5;color:#94a3b8;text-align:center;padding:14px 0 0\">Mensagem automática do Assistente CDP.</div>' +\n  '</div>' +\n  '</div>';\nconst emailSubject =\n  ASSISTANT_NAME + ' - ' + WEBSCRAPERS_LABEL + ': busca concluída (' + bestPriceCount + '/' + total + ' com preço, ' + pct + '%)';\n\nif (notify === 'telegram' && chatId) {\n  return [\n    {\n      json: {\n        notify: 'telegram',\n        origem,\n        telegram_chat_id: chatId,\n        telegram_text: telegramText,\n        email_to: '',\n        email_subject: emailSubject,\n        email_html: '',\n        _total_items: total,\n      },\n    },\n  ];\n}\n\nif (notify === 'email' && replyEmail) {\n  return [\n    {\n      json: {\n        notify: 'email',\n        origem,\n        telegram_chat_id: '',\n        telegram_text: '',\n        email_to: replyEmail,\n        email_subject: emailSubject,\n        email_html: emailHtml,\n        _total_items: total,\n      },\n    },\n  ];\n}\n\nreturn [\n  {\n    json: {\n      notify: 'none',\n      origem,\n      telegram_chat_id: '',\n      telegram_text: '',\n      email_to: '',\n      email_subject: '',\n      email_html: '',\n      _no_delivery: true,\n      _total_items: total,\n    },\n  },\n];\n"
       },
       "id": "0f3e2bc4-7509-443f-90d6-1da20a911325",
       "name": "📣 Formatar Notificação Conclusão",
@@ -604,7 +604,7 @@
       "credentials": {
         "telegramApi": {
           "id": "OCT6L7sDZffEbhJ9",
-          "name": "NoxTKTech_bot"
+          "name": "Telegram DEV account"
         }
       },
       "continueOnFail": true,
@@ -730,17 +730,17 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_skus",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "SKUs",
           "mode": "name",
           "cachedResultName": "SKUs",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -1107,17 +1107,17 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_skus",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "SKUs",
           "mode": "name",
           "cachedResultName": "SKUs",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -1199,7 +1199,7 @@
       "credentials": {
         "telegramApi": {
           "id": "OCT6L7sDZffEbhJ9",
-          "name": "NoxTKTech_bot"
+          "name": "Telegram DEV account"
         }
       },
       "continueOnFail": true,
@@ -1235,17 +1235,17 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_skus",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "SKUs",
           "mode": "name",
           "cachedResultName": "SKUs",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=0"
         },
         "options": {}
       },
@@ -1298,17 +1298,17 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_skus",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "SKUs",
           "mode": "name",
           "cachedResultName": "SKUs",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=0"
         },
         "options": {}
       },
@@ -1361,17 +1361,17 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "__SET_CDP_DEV_SKUS_SHEET_ID__",
+          "value": "1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY",
           "mode": "list",
           "cachedResultName": "cdp_skus",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "SKUs",
           "mode": "name",
           "cachedResultName": "SKUs",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/__SET_CDP_DEV_SKUS_SHEET_ID__/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY/edit#gid=0"
         },
         "options": {}
       },

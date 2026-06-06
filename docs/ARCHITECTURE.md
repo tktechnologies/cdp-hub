@@ -1,10 +1,12 @@
 # CDP Architecture
 
-**Updated:** 2026-06-01. Canonical platform design doc (consolidates [PLATFORM_OVERVIEW.md](PLATFORM_OVERVIEW.md), [architecture/DUAL_PIPELINE.md](architecture/DUAL_PIPELINE.md), and agent routing).
+**Updated:** 2026-06-06. Canonical platform design doc (consolidates [PLATFORM_OVERVIEW.md](PLATFORM_OVERVIEW.md), [architecture/DUAL_PIPELINE.md](architecture/DUAL_PIPELINE.md), and agent routing).
 
 ## Purpose
 
-CDP automates automotive parts intelligence: public-site price scraping and internal Muvstok stock lookup, orchestrated by n8n, delivered to Google Sheets and Telegram.
+CDP automates automotive parts intelligence: public-site price scraping and API
+Diversos/StokAPI stock lookup, orchestrated by n8n, delivered to Google Sheets
+and Telegram/email.
 
 ## Monorepo layout
 

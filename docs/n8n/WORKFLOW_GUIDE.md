@@ -27,6 +27,10 @@ Publishing uses `scripts/n8n_publish.py` (n8n REST API for the full graph, then 
 |----------|---------|-------|
 | `cdp_scraper` | `scraper-result` | Scraper results → Sheets + Telegram |
 | `cdp_stokapi` | `muvstok-result` | StokAPI results → Sheets + Telegram |
+| `cdp_notifier` | `cdp-notifier` | Aggregate final Telegram/email delivery after receiver handoff |
+
+DEV workflow copies live under `n8n/workflows/dev/` and use DEV webhook paths
+such as `dev-scraper-result`, `dev-muvstok-result`, and `dev-cdp-notifier`.
 
 ## Deprecated
 

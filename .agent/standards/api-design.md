@@ -21,7 +21,7 @@ Cross-service HTTP conventions. Service-specific routes live in each repo.
 
 Schema: [contracts/scraper-job.schema.json](../../contracts/scraper-job.schema.json), [contracts/scraper-callback.schema.json](../../contracts/scraper-callback.schema.json).
 
-## StokAPI / API Diversos (`muvstok-api/`)
+## API Diversos / StokAPI (`muvstok-api/`)
 
 | Method | Path | Notes |
 |--------|------|-------|

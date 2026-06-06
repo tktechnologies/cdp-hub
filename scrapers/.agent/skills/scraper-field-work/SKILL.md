@@ -1,3 +1,8 @@
+---
+name: scraper-field-work
+description: Run, debug, document, or improve a live supplier scraper using field playbooks, local discovery, production validation, and anti-bot safeguards.
+---
+
 # Scraper Field Work Skill
 
 Use when running, debugging, documenting, or improving a live supplier scraper.

@@ -1,6 +1,12 @@
+---
+name: n8n-router-sync
+description: Edit, inject, validate, and publish CDP platform n8n workflows, including cdp_router, cdp_scraper, cdp_stokapi, cdp_progress, cdp_notifier, and DEV workflow copies.
+---
+
 # Skill: Sync CDP n8n workflows (platform)
 
-Use when editing **router** logic, syncing all three production workflows, or validating dual-pipeline dispatch.
+Use when editing **router** logic, syncing platform workflows, or validating
+dual-pipeline dispatch.
 
 ## Prerequisites
 
@@ -18,6 +24,9 @@ Read:
 | Router JSON | `n8n/workflows/cdp_router.json` |
 | Scraper receiver | `n8n/workflows/cdp_scraper.json` |
 | StokAPI receiver | `n8n/workflows/cdp_stokapi.json` |
+| Progress workflow | `n8n/workflows/cdp_progress.json` |
+| Notifier workflow | `n8n/workflows/cdp_notifier.json` |
+| DEV copies | `n8n/workflows/dev/*.json` |
 
 ## Workflow
 
@@ -43,6 +52,8 @@ for (const f of [
   'n8n/workflows/cdp_router.json',
   'n8n/workflows/cdp_scraper.json',
   'n8n/workflows/cdp_stokapi.json',
+  'n8n/workflows/cdp_progress.json',
+  'n8n/workflows/cdp_notifier.json',
 ]) JSON.parse(fs.readFileSync(f,'utf8'));
 console.log('JSON ok');
 "
@@ -64,8 +75,13 @@ make sync-n8n
 ```
 
 This injects JSON, validates SDKs, pushes the full graph via n8n REST API (`scripts/n8n_publish.py`), and MCP-publishes. Set `CDP_PROGRESS_WORKFLOW_ID` to include `cdp_progress`.
+Set `CDP_NOTIFIER_WORKFLOW_ID` to include `cdp_notifier`.
 
 For surgical graph edits without full JSON replace, use MCP `update_workflow` `operations` + `publish_workflow` (see `docs/n8n/LIVE_WORKFLOWS.md`).
+
+**DEV copies:** use `make n8n-dev-workflows` to regenerate
+`n8n/workflows/dev/`, then `make sync-n8n-dev` with `CDP_DEV_*_WORKFLOW_ID`
+exported.
 
 ## After sync
 
@@ -79,4 +95,5 @@ For surgical graph edits without full JSON replace, use MCP `update_workflow` `o
 |--------|-------------|
 | Scraper callback flatten / sheets columns | `scrapers/.agent/skills/n8n-audit/SKILL.md` |
 | StokAPI callback / sheets | `muvstok-api/n8n/docs/MUVSTOK_N8N_WORKFLOW_GUIDE.md` |
+| Google Sheets dashboard semantics | `.agent/skills/google-sheets-dashboard/SKILL.md` |
 | API request/response schema | Respective service `src/` or `app/` |

@@ -14,7 +14,6 @@ from src.models.schemas import (
     DispatchRunUpsertRequest,
     FinalNotificationPatch,
     PipelineResultRequest,
-    PipelineResultResponse,
     PipelineResultSummary,
 )
 

@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     muvstok_password: str = ""
     muvstok_timeout_seconds: float = 30.0
     muvstok_token_ttl_hours: int = 24
+    muvstok_dealership_directory_enabled: bool = True
+    muvstok_dealership_directory_url: str = (
+        "https://docs.google.com/spreadsheets/d/"
+        "1p76idxvF0z8nl20L1jvNw8CABjbgsf-R/export?format=csv&gid=1843593319"
+    )
+    muvstok_dealership_directory_ttl_seconds: int = 86_400
 
     azure_key_vault_url: str = ""
     key_vault_token_secret_name: str = "muvstok-api-token"

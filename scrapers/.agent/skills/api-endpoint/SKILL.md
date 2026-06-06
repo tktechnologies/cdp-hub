@@ -1,3 +1,8 @@
+---
+name: scraper-api-endpoint
+description: Change the Scraper FastAPI API, request and response schemas, callback behavior, routes, orchestrator contract, or API tests.
+---
+
 # Skill: Change The FastAPI Scraper API
 
 Use when adding/changing endpoints, request/response schemas, callback behavior, or API logic.

@@ -492,13 +492,47 @@ function siteHasValidPrice(sr) {
   if (sr.has_valid_price === true) return true;
   return (Array.isArray(sr.results) ? sr.results : []).some(partHasValidPrice);
 }
+function siteHasNoPriceEvidence(sr) {
+  const parts = Array.isArray(sr.results) ? sr.results : [];
+  return String(sr.sku_result || '').toUpperCase() === 'NO_PRICE'
+    || String(sr.status || '').toLowerCase() === 'no_price'
+    || parts.some((part) => !!part.exact_match);
+}
+function skuHasValidPrice(skuResult) {
+  if (skuResult.has_valid_price === true || String(skuResult.sku_result || '').toUpperCase() === 'FOUND_PRICE') return true;
+  const best = skuResult.best_price || null;
+  if (best && best.exact_match !== false) {
+    const n = Number(best.price);
+    if (Number.isFinite(n) && n > 0) return true;
+  }
+  return (Array.isArray(skuResult.site_results) ? skuResult.site_results : []).some(siteHasValidPrice);
+}
+function skuHasNoPriceEvidence(skuResult) {
+  if (skuResult.has_any_exact_evidence === true || String(skuResult.sku_result || '').toUpperCase() === 'NO_PRICE') return true;
+  return (Array.isArray(skuResult.site_results) ? skuResult.site_results : []).some(siteHasNoPriceEvidence);
+}
+function numberOrNull(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
 
-const pricedSkus = Number(meta.priced_sku_count || 0);
-const evidenceSkus = Number(meta.any_evidence_sku_count || meta.sku_success_count || 0);
-const noPriceSkus = Number(meta.no_price_sku_count || Math.max(0, evidenceSkus - pricedSkus));
-const blockedSkus = Number(meta.blocked_sku_count || 0);
-const errorSkus = Number(meta.error_sku_count || 0);
-const notFoundSkus = Number(meta.all_sites_not_found_count || Math.max(0, skus_validos - evidenceSkus - blockedSkus - errorSkus));
+const pricedSkusFromPayload = numberOrNull(meta.priced_sku_count);
+const evidenceSkusFromPayload = numberOrNull(meta.any_evidence_sku_count ?? meta.sku_success_count);
+const noPriceSkusFromPayload = numberOrNull(meta.no_price_sku_count);
+const blockedSkusFromPayload = numberOrNull(meta.blocked_sku_count);
+const errorSkusFromPayload = numberOrNull(meta.error_sku_count);
+const notFoundSkusFromPayload = numberOrNull(meta.all_sites_not_found_count);
+const pricedSkus = pricedSkusFromPayload ?? items.filter(skuHasValidPrice).length;
+const evidenceSkus = evidenceSkusFromPayload ?? items.filter((item) => skuHasValidPrice(item) || skuHasNoPriceEvidence(item)).length;
+const noPriceSkus = noPriceSkusFromPayload ?? Math.max(0, items.filter(skuHasNoPriceEvidence).length - pricedSkus);
+const blockedSkus = blockedSkusFromPayload ?? items.filter((item) =>
+  (item.site_results || []).some((sr) => String(sr.sku_result || sr.status || '').toUpperCase() === 'BLOCKED' || String(sr.status || '').toLowerCase() === 'blocked')
+).length;
+const errorSkus = errorSkusFromPayload ?? items.filter((item) =>
+  (item.site_results || []).some((sr) => ['TIMEOUT', 'ERROR'].includes(String(sr.sku_result || '').toUpperCase()) || ['timeout', 'error'].includes(String(sr.status || '').toLowerCase()))
+).length;
+const notFoundSkus = notFoundSkusFromPayload ?? Math.max(0, skus_validos - evidenceSkus - blockedSkus - errorSkus);
 const skuHit = skus_validos > 0 ? ((pricedSkus / skus_validos) * 100).toFixed(1) + '%' : '0.0%';
 const status =
   errs.length > 0 || errorSkus > 0

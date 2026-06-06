@@ -51,7 +51,3 @@ Tier 1 rules. Service-specific rules live in `scrapers/.agent/rules.md` and `muv
   blocked/captcha/403 is `BLOCKED`, not `NOT_FOUND`.
 - For dashboard/report work, start with [rules/google-sheets.md](rules/google-sheets.md)
   and [knowledge/google-sheets-reporting.md](knowledge/google-sheets-reporting.md).
-
-## AIOX
-
-`.aiox-core/` and top-level `.agent/workflows/*.md` (analyst, dev, pm, …) are IDE tooling — not CDP runtime.

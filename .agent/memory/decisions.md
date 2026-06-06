@@ -12,6 +12,7 @@ Durable choices for CDP agent architecture. Update when conventions change. ADRs
 | 2026-05-26 | No Execute Workflow for StokAPI | Inline HTTP in router only |
 | 2026-05-27 | Canonical n8n at repo root `n8n/` | Phase 1 retires `scrapers/n8n/` duplicates when complete |
 | 2026-05-27 | Root repo is the canonical CDP monorepo | `scrapers/` and `muvstok-api/` are first-class folders; old nested Git histories backed up under `.git-boundary-backups/` |
-| 2026-05-26 | AIOX workflows excluded from CDP runtime | `.agent/workflows/*.md` top level = IDE personas |
 | 2026-06-01 | Task-scoped agent rules live in `.agent/rules/` | Keep project-owned agent guidance under `.agent/` instead of a separate IDE rule tree |
 | 2026-06-01 | Root `.agent/knowledge/` is the service catalog layer | Keep n8n/API/Scraper ownership synchronized without copying service internals |
+| 2026-06-06 | Root `.agent` owns Google Sheets reporting semantics | Sheets dashboards combine Scraper + API Diversos outputs, so KPI rules belong in the platform layer and link to service details |
+| 2026-06-06 | Remove point-in-time audit memory from root `.agent` | Durable conclusions live in indexes, decisions, and implementation state; one-off audit reports create stale search noise |

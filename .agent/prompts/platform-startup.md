@@ -19,7 +19,7 @@
 
 | Signal | Tier |
 |--------|------|
-| `n8n/src`, `.analisar`, sync all workflows | Platform → `n8n-router-sync` skill |
+| `n8n/src`, `.analisar`, platform workflow sync | Platform → `n8n-router-sync` skill |
 | Playwright, scrape cache, Celery | Scraper → `scrapers/AGENTS.md` |
 | API Diversos/StokAPI jobs, Redis Streams worker | StokAPI → `muvstok-api/AGENTS.md` |
 | Only `cdp_scraper.json` flatten logic | Scraper service |
@@ -30,6 +30,7 @@
 - Dispatch: **only** `cdp_router` (`6id6dkinK9xTLfsb`)
 - Webhooks: `scraper-result`, `muvstok-result` (stable)
 - Sync: `make sync-n8n` — **never** without user approval
+- DEV sync: `make n8n-dev-workflows` then `make sync-n8n-dev` with approval
 - **Code-only** (`n8n/src/`): inject script + sync. **Graph/node changes**: MCP `update_workflow` `operations` + publish — sync alone may not update live graph ([LIVE_WORKFLOWS.md](../../docs/n8n/LIVE_WORKFLOWS.md))
 
 ## Agent docs

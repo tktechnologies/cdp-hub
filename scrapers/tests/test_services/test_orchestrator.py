@@ -20,6 +20,8 @@ from src.models.schemas import (
     SiteId,
     SiteResult,
     SKUItem,
+    SKUResultStatus,
+    SourceHealth,
 )
 from src.scrapers import _active_scrapers
 
@@ -213,3 +215,17 @@ class TestOrchestrator:
             if site_result.site == SiteId.MELIBOX
         )
         assert blocked.error_message == "blocked"
+
+    @pytest.mark.asyncio
+    async def test_archived_scraper_site_returns_blocked_audit_row(self):
+        from src.services.orchestrator import Orchestrator
+
+        result = await Orchestrator()._scrape_one_site(
+            SiteId.GOPARTS,
+            SKUItem(sku="ABC123", brand=""),
+        )
+
+        assert result.status == "blocked"
+        assert result.sku_result == SKUResultStatus.BLOCKED
+        assert result.source_health == SourceHealth.BLOCKED
+        assert "Archived scraper" in result.error_message

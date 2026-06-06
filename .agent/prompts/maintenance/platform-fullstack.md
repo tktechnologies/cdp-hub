@@ -27,6 +27,7 @@ Delegate before coding:
 Dual pipeline facts:
 - Dispatch only in cdp_router; StokAPI via inline HTTP (router_stokapi.js), not Execute Workflow
 - dispatch-runs API on scraper (POST/PATCH /api/v1/dispatch-runs) for progress + cdp_progress workflow
+- Receiver callbacks hand off final delivery to cdp_notifier for one aggregate Telegram/email
 - Shared contracts: contracts/*.schema.json
 
 Quality gates (run what you touched):

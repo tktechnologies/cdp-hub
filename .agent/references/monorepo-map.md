@@ -1,6 +1,6 @@
 # CDP Monorepo Map
 
-**Updated:** 2026-06-01
+**Updated:** 2026-06-06
 
 ```text
 cdp-app/
@@ -15,9 +15,10 @@ cdp-app/
 │   └── sub-agents/         # Delegation briefs
 ├── docs/                   # Cross-cutting documentation
 ├── n8n/
-│   ├── src/                # Router Code source (12 JS files)
+│   ├── src/                # Router/progress Code node source
 │   ├── lib/                # Receiver helpers
-│   ├── workflows/          # cdp_router, cdp_scraper, cdp_stokapi, cdp_progress JSON
+│   ├── workflows/          # PROD workflow JSON + DEV copies under workflows/dev/
+│   ├── sdk/                # Generated workflow SDK files for sync/publish
 │   └── settings/
 ├── contracts/              # JSON Schema shared contracts
 ├── scripts/
@@ -44,6 +45,7 @@ cdp-app/
 | Edit router Code | `n8n/src/*.js` |
 | Workflow JSON | `n8n/workflows/` |
 | Sync to n8n | `make sync-n8n` |
+| Sync DEV workflow copies | `make n8n-dev-workflows`; `make sync-n8n-dev` |
 | Scraper API | `scrapers/src/` |
 | StokAPI API | `muvstok-api/app/` |
 | Live workflow IDs | `docs/n8n/LIVE_WORKFLOWS.md` |

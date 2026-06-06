@@ -48,7 +48,7 @@ Router always sends `force_refresh: false` on `POST /api/v1/jobs`.
 | Tests | `make -C scrapers test lint` |
 | Azure deploy | `scrapers/scripts/deploy-azure.sh`, `scrapers/infra/` |
 
-## StokAPI / API Diversos
+## API Diversos / StokAPI
 
 | Task | Path |
 |------|------|

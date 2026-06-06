@@ -4,7 +4,7 @@ Use this file to decide what to read before acting.
 
 ## Tier
 
-**Tier 2b (StokAPI).** Router / dual pipeline / sync all workflows → [../../.agent/index.md](../../.agent/index.md) (platform).
+**Tier 2b (StokAPI).** Router / dual pipeline / platform workflow sync → [../../.agent/index.md](../../.agent/index.md) (platform).
 
 Root service catalog: [../../.agent/knowledge/service-catalog.md](../../.agent/knowledge/service-catalog.md).
 
@@ -34,7 +34,7 @@ If the task is **only** router or cross-service: stop and use platform tier firs
 - Security, secrets, callback URLs, API keys, or log redaction: read `standards/security-and-secrets.md`, `specs/008-security-and-secrets.md`, and `app/core/security.py`.
 - Observability, logs, metrics, or traces: read `standards/observability.md`, `specs/007-observability.md`, `app/core/logging.py`, and `app/observability/`.
 - n8n receiver (`cdp_stokapi` only): `n8n/workflows/cdp_stokapi.json`, `n8n/settings/cdp_stokapi.json`, `muvstok-api/n8n/docs/MUVSTOK_N8N_WORKFLOW_GUIDE.md`, `boundaries/n8n.md`
-- n8n router / dispatch / sync all 3: **platform** `../../.agent/skills/n8n-router-sync/SKILL.md` + `n8n/src/router_stokapi.js`
+- n8n router / dispatch / platform workflow sync: **platform** `../../.agent/skills/n8n-router-sync/SKILL.md` + `n8n/src/router_stokapi.js`
 - Code review: read `workflows/review-checklist.md` and the relevant standards.
 
 ## Completion Routing

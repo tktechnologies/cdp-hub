@@ -1,3 +1,8 @@
+---
+name: scraper-debugging
+description: Debug scraper failures such as no results, wrong results, auth failures, timeouts, price parsing problems, anti-bot blocks, or inconsistent source behavior.
+---
+
 # Skill: Debug A Scraper Failure
 
 Use when a site returns no results, wrong results, auth failures, timeouts, or inconsistent prices.
