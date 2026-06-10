@@ -68,16 +68,12 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("job_item_id", name="uq_muvstok_api_data_job_item_id"),
     )
-    op.create_index(
-        "ix_muvstok_api_data_correlation_id", "muvstok_api_data", ["correlation_id"]
-    )
+    op.create_index("ix_muvstok_api_data_correlation_id", "muvstok_api_data", ["correlation_id"])
     op.create_index("ix_muvstok_api_data_job_id", "muvstok_api_data", ["job_id"])
     op.create_index("ix_muvstok_api_data_job_item_id", "muvstok_api_data", ["job_item_id"])
     op.create_index("ix_muvstok_api_data_job_sku", "muvstok_api_data", ["job_id", "sku"])
     op.create_index("ix_muvstok_api_data_sku", "muvstok_api_data", ["sku"])
-    op.create_index(
-        "ix_muvstok_api_data_sku_created_at", "muvstok_api_data", ["sku", "created_at"]
-    )
+    op.create_index("ix_muvstok_api_data_sku_created_at", "muvstok_api_data", ["sku", "created_at"])
 
 
 def downgrade() -> None:

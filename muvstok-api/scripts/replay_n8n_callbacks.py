@@ -6,6 +6,7 @@ Usage:
   uv run python scripts/replay_n8n_callbacks.py --since 2026-05-21 --limit 40
   uv run python scripts/replay_n8n_callbacks.py --job-id <uuid>
 """
+
 from __future__ import annotations
 
 import argparse
@@ -86,7 +87,9 @@ def _latest_receiver_execution() -> dict[str, Any] | None:
             return None
         eid = data["data"][0]["id"]
         url2 = f"{base}/api/v1/executions/{eid}?includeData=true"
-        with urllib.request.urlopen(urllib.request.Request(url2, headers=_n8n_headers()), timeout=60) as resp:
+        with urllib.request.urlopen(
+            urllib.request.Request(url2, headers=_n8n_headers()), timeout=60
+        ) as resp:
             return json.load(resp)
     except urllib.error.URLError:
         return None
@@ -158,14 +161,19 @@ def _build_payload_from_api(job_json: dict[str, Any]) -> dict[str, Any]:
 
 def _fetch_job_api(job_id: str) -> dict[str, Any]:
     base = os.environ.get("CDP_MUVSTOK_API_BASE", "").rstrip("/")
-    key = os.environ.get("CDP_MUVSTOK_API_KEY") or os.environ.get("API_KEYS", "").split(",")[0].strip()
+    key = (
+        os.environ.get("CDP_MUVSTOK_API_KEY")
+        or os.environ.get("API_KEYS", "").split(",")[0].strip()
+    )
     url = f"{base}/api/v1/muvstok/jobs/{job_id}"
     req = urllib.request.Request(url, headers={"X-API-Key": key, "Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=60) as resp:
         return json.load(resp)
 
 
-def _build_payload(job: MuvstokJob, items: list[MuvstokJobItem], api_rows: list[MuvstokApiData]) -> dict[str, Any]:
+def _build_payload(
+    job: MuvstokJob, items: list[MuvstokJobItem], api_rows: list[MuvstokApiData]
+) -> dict[str, Any]:
     api_by_item = {row.job_item_id: row for row in api_rows}
     sku_results: list[dict[str, Any]] = []
     callback_items: list[dict[str, Any]] = []

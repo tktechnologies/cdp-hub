@@ -12,6 +12,7 @@ Usage:
   uv run --with google-api-python-client --with google-auth --with google-auth-oauthlib \
     python scripts/apply_google_sheets_audit.py
 """
+
 from __future__ import annotations
 
 import argparse
@@ -142,10 +143,7 @@ def resolve_sheet(sheet_api: Any, spreadsheet_id: str, gid: int) -> tuple[str, i
 
 
 def fetch_public_csv(spreadsheet_id: str, gid: int) -> list[dict[str, str]]:
-    url = (
-        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export"
-        f"?format=csv&gid={gid}"
-    )
+    url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&gid={gid}"
     with urllib.request.urlopen(url, timeout=120) as resp:
         text = resp.read().decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(text))
@@ -162,9 +160,7 @@ def migrate_detalhado(
     print(f"Migrating Detalhado tab {tab_name!r} → v2 ({len(CANONICAL_DETALHADO_HEADERS)} columns)")
 
     result = (
-        sheet_api.values()
-        .get(spreadsheetId=spreadsheet_id, range=f"'{tab_name}'!A:ZZ")
-        .execute()
+        sheet_api.values().get(spreadsheetId=spreadsheet_id, range=f"'{tab_name}'!A:ZZ").execute()
     )
     values = result.get("values") or []
     if not values:
@@ -175,10 +171,7 @@ def migrate_detalhado(
         renamed = [HEADER_RENAMES.get(h, h) for h in headers]
         data_rows = []
         for raw in values[1:]:
-            row_dict = {
-                renamed[i]: raw[i] if i < len(raw) else ""
-                for i in range(len(renamed))
-            }
+            row_dict = {renamed[i]: raw[i] if i < len(raw) else "" for i in range(len(renamed))}
             data_rows.append(remap_row_to_headers(row_dict, CANONICAL_DETALHADO_HEADERS))
 
     out_values = [CANONICAL_DETALHADO_HEADERS, *data_rows]

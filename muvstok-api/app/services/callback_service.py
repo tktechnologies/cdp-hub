@@ -155,7 +155,9 @@ class CallbackService:
         failed = sum(1 for row in sku_results if row.status != "succeeded")
         found = sum(1 for row in sku_results if row.sku_result == SkuResultStatus.FOUND_PRICE.value)
         no_price = sum(1 for row in sku_results if row.sku_result == SkuResultStatus.NO_PRICE.value)
-        not_found = sum(1 for row in sku_results if row.sku_result == SkuResultStatus.NOT_FOUND.value)
+        not_found = sum(
+            1 for row in sku_results if row.sku_result == SkuResultStatus.NOT_FOUND.value
+        )
         blocked = sum(1 for row in sku_results if row.sku_result == SkuResultStatus.BLOCKED.value)
         error = sum(
             1

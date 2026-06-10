@@ -3,6 +3,7 @@
 
 Delegates to apply_google_sheets_audit.py (v2 schema).
 """
+
 from __future__ import annotations
 
 import sys

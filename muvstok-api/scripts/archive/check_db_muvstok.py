@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Quick Azure DB health check for Muvstok tables (run inside cdp-muv-api or with DATABASE_URL)."""
+
 from __future__ import annotations
 
 import asyncio

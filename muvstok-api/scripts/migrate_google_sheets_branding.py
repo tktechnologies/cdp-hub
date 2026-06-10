@@ -8,6 +8,7 @@ Usage:
   python3 scripts/migrate_google_sheets_branding.py --dry-run
   python3 scripts/migrate_google_sheets_branding.py
 """
+
 from __future__ import annotations
 
 import argparse

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Apply Google Sheets audit via one-shot n8n workflow (uses live Sheets OAuth in n8n)."""
+
 from __future__ import annotations
 
 import csv
@@ -35,7 +36,9 @@ from n8n_publish import (  # noqa: E402
 SHEET_ID = SPREADSHEET_ID
 DETALHADO_GID = 1185876304
 WEBHOOK_PATH = "cdp-sheets-audit-apply"
-SHEETS_CRED = {"googleSheetsOAuth2Api": {"id": "ep05fPlF3xggWhWc", "name": "gcp sheets lucas@tktech"}}
+SHEETS_CRED = {
+    "googleSheetsOAuth2Api": {"id": "ep05fPlF3xggWhWc", "name": "gcp sheets lucas@tktech"}
+}
 
 
 def load_dotenv() -> None:
@@ -69,7 +72,9 @@ def fetch_header_row(gid: int) -> list[str]:
     return next(csv.reader(io.StringIO(first)))
 
 
-def extend_headers(tab: str, gid: int, extra: list[str], after: str | None = None) -> list[str] | None:
+def extend_headers(
+    tab: str, gid: int, extra: list[str], after: str | None = None
+) -> list[str] | None:
     headers = [str(h).strip() for h in fetch_header_row(gid)]
     missing = [c for c in extra if c not in headers]
     if not missing:
@@ -202,10 +207,14 @@ return [{{ json: {{ values, painelBatch, ...extra }} }}];"""
     ]
     connections: dict = {
         "Webhook": {"main": [[{"node": "Load migration payload", "type": "main", "index": 0}]]},
-        "Load migration payload": {"main": [[{"node": "Clear Detalhado", "type": "main", "index": 0}]]},
+        "Load migration payload": {
+            "main": [[{"node": "Clear Detalhado", "type": "main", "index": 0}]]
+        },
         "Clear Detalhado": {"main": [[{"node": "Write Detalhado v2", "type": "main", "index": 0}]]},
         "Write Detalhado v2": {"main": [[{"node": "Refresh Painel", "type": "main", "index": 0}]]},
-        "Refresh Painel": {"main": [[{"node": "Clear stale Painel rows", "type": "main", "index": 0}]]},
+        "Refresh Painel": {
+            "main": [[{"node": "Clear stale Painel rows", "type": "main", "index": 0}]]
+        },
     }
     last = "Clear stale Painel rows"
     x = 1320
@@ -266,7 +275,9 @@ return [{{ json: {{ values, painelBatch, ...extra }} }}];"""
 def trigger_webhook() -> None:
     base = n8n_api_base().replace("/api/v1", "")
     url = f"{base}/webhook/{WEBHOOK_PATH}"
-    req = urllib.request.Request(url, data=b"{}", method="POST", headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(
+        url, data=b"{}", method="POST", headers={"Content-Type": "application/json"}
+    )
     with urllib.request.urlopen(req, timeout=300) as resp:
         print("webhook", resp.status, resp.read()[:200])
 

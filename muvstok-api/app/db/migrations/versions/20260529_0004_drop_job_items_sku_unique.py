@@ -22,9 +22,7 @@ TABLE_NAME = "muvstok_job_items"
 
 
 def upgrade() -> None:
-    op.execute(
-        f"ALTER TABLE {TABLE_NAME} DROP CONSTRAINT IF EXISTS {CONSTRAINT_NAME}"
-    )
+    op.execute(f"ALTER TABLE {TABLE_NAME} DROP CONSTRAINT IF EXISTS {CONSTRAINT_NAME}")
 
 
 def downgrade() -> None:

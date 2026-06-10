@@ -27,7 +27,9 @@ async def _read_text(*, csv_path: Path | None, csv_url: str, timeout_seconds: fl
     if csv_path is not None:
         return _read_local_text(csv_path)
     if not csv_url:
-        raise ValueError("Provide --csv-path or --csv-url, or configure MUVSTOK_DEALERSHIP_DIRECTORY_URL.")
+        raise ValueError(
+            "Provide --csv-path or --csv-url, or configure MUVSTOK_DEALERSHIP_DIRECTORY_URL."
+        )
     async with httpx.AsyncClient(timeout=timeout_seconds, follow_redirects=True) as client:
         response = await client.get(csv_url)
         response.raise_for_status()
@@ -82,7 +84,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--csv-path", type=Path, help="Local CSV export to import.")
     parser.add_argument("--csv-url", default="", help="CSV URL to download and import.")
-    parser.add_argument("--dry-run", action="store_true", help="Parse input without writing DB rows.")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Parse input without writing DB rows."
+    )
     args = parser.parse_args()
     try:
         return asyncio.run(main_async(args))

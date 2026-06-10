@@ -8,6 +8,7 @@ Usage:
 
 Does not read Google Sheets; use n8n sender for sheet-driven audits.
 """
+
 from __future__ import annotations
 
 import argparse

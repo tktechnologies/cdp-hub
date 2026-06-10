@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Drain Muvstok Redis job stream and show queue stats."""
+
 from __future__ import annotations
 
 import asyncio

@@ -163,9 +163,7 @@ class JobRepository:
 
     async def set_callback_status(self, job_id: UUID, status: CallbackStatus) -> None:
         await self._session.execute(
-            update(MuvstokJob)
-            .where(MuvstokJob.id == job_id)
-            .values(callback_status=status)
+            update(MuvstokJob).where(MuvstokJob.id == job_id).values(callback_status=status)
         )
         await self._session.commit()
 
@@ -201,9 +199,7 @@ class JobRepository:
                 elapsed = (datetime.now(UTC) - job.updated_at).total_seconds()
                 remaining_items = total - processed
                 if remaining_items > 0:
-                    estimated_seconds_remaining = int(
-                        elapsed / processed * remaining_items
-                    )
+                    estimated_seconds_remaining = int(elapsed / processed * remaining_items)
                 else:
                     estimated_seconds_remaining = 0
 

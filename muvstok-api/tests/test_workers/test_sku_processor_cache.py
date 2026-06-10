@@ -71,7 +71,9 @@ async def test_duplicate_sku_reused_even_with_separator_variants(deps):
     processor = _build(deps, sku_cache=None)
     job_id = uuid4()
 
-    await processor.process_item(job_id=job_id, correlation_id="c", item=_make_item("AB-12"), token="t")
+    await processor.process_item(
+        job_id=job_id, correlation_id="c", item=_make_item("AB-12"), token="t"
+    )
     r2, _ = await processor.process_item(
         job_id=job_id, correlation_id="c", item=_make_item("ab12"), token="t"
     )
@@ -112,7 +114,9 @@ async def test_redis_cache_hit_skips_upstream(deps):
     )
 
     client.fetch_sku.assert_not_called()
-    assert result.status == "succeeded" and result.rows == [{"price": 1}] and result.from_cache is True
+    assert (
+        result.status == "succeeded" and result.rows == [{"price": 1}] and result.from_cache is True
+    )
     assert result.sku_result == "FOUND_PRICE"
 
 

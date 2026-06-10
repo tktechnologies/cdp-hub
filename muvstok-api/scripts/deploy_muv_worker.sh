@@ -29,7 +29,7 @@ fi
 
 echo "==> ACR build worker image ${WORKER_IMAGE} (Dockerfile.worker)"
 cd "${ROOT}"
-az acr build --registry "${ACR}" --image "cdp-muv-worker:${TAG}" -f docker/Dockerfile.worker .
+az acr build --registry "${ACR}" --image "cdp-muv-worker:${TAG}" -f docker/Dockerfile.worker . --no-logs
 
 echo "==> Resolve Container Apps environment"
 ENV_ID="$(az containerapp show -n "${API_APP}" -g "${RG}" --query properties.managedEnvironmentId -o tsv)"

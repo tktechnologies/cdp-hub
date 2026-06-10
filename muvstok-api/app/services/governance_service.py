@@ -26,7 +26,11 @@ class GovernanceService:
                     )
                 )
                 continue
-            price = row.get("valorPrecoVenda") if row.get("valorPrecoVenda") is not None else row.get("price")
+            price = (
+                row.get("valorPrecoVenda")
+                if row.get("valorPrecoVenda") is not None
+                else row.get("price")
+            )
             if price is not None:
                 try:
                     if float(price) < 0:
@@ -62,9 +66,7 @@ class GovernanceService:
             issues.append(
                 GovernanceIssue(
                     code="sku_count_mismatch",
-                    message=(
-                        f"submitted={submitted} but succeeded+failed={succeeded + failed}"
-                    ),
+                    message=(f"submitted={submitted} but succeeded+failed={succeeded + failed}"),
                     severity="error",
                 )
             )

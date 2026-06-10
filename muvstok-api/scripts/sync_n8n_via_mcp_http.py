@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Push StokAPI receiver workflow — delegates to monorepo scripts/n8n_publish.py."""
+
 from __future__ import annotations
 
 import subprocess

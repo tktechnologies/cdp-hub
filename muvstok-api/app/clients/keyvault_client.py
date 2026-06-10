@@ -8,7 +8,9 @@ class KeyVaultClient:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._credential = DefaultAzureCredential()
-        self._client = SecretClient(vault_url=settings.azure_key_vault_url, credential=self._credential)
+        self._client = SecretClient(
+            vault_url=settings.azure_key_vault_url, credential=self._credential
+        )
 
     async def get_secret(self, name: str) -> str:
         secret = await self._client.get_secret(name)

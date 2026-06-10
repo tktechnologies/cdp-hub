@@ -42,13 +42,13 @@ class RedisQueueClient:
 
     async def publish_job(self, payload: dict[str, Any]) -> str:
         await self.ensure_group()
-        fields: dict[RedisField, RedisField] = {
-            key: str(value) for key, value in payload.items()
-        }
+        fields: dict[RedisField, RedisField] = {key: str(value) for key, value in payload.items()}
         message_id = await self._redis.xadd(self._settings.redis_job_stream, fields)
         return str(message_id)
 
-    async def reclaim_pending(self, *, min_idle_ms: int = 60_000, count: int = 10) -> list[dict[str, Any]]:
+    async def reclaim_pending(
+        self, *, min_idle_ms: int = 60_000, count: int = 10
+    ) -> list[dict[str, Any]]:
         await self.ensure_group()
         try:
             result = await self._redis.xautoclaim(
@@ -63,10 +63,7 @@ class RedisQueueClient:
             return []
         # redis-py returns (next_start, messages, deleted_ids) on supported versions
         entries = result[1] if isinstance(result, tuple) and len(result) > 1 else []
-        return [
-            {"message_id": message_id, "fields": fields}
-            for message_id, fields in entries
-        ]
+        return [{"message_id": message_id, "fields": fields} for message_id, fields in entries]
 
     async def read_jobs(self, count: int = 1, block_ms: int = 1_000) -> list[dict[str, Any]]:
         await self.ensure_group()

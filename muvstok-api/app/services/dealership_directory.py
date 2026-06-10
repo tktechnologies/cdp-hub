@@ -169,7 +169,10 @@ class DealershipDirectory:
                     "dealership_directory_db_loaded",
                     extra={"row_count": len(self._cache)},
                 )
-                if self._cache or not self._settings.muvstok_dealership_directory_url_fallback_enabled:
+                if (
+                    self._cache
+                    or not self._settings.muvstok_dealership_directory_url_fallback_enabled
+                ):
                     return self._cache
             except Exception as exc:
                 logger.warning("dealership_directory_db_load_failed", extra={"error": str(exc)})

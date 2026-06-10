@@ -13,7 +13,7 @@ KV="${KV:-cdp-scrapers-kv-prod}"
 
 echo "==> ACR build API image ${API_IMAGE} (Dockerfile.api)"
 cd "${ROOT}"
-az acr build --registry "${ACR}" --image "cdp-muv-api:${TAG}" -f docker/Dockerfile.api .
+az acr build --registry "${ACR}" --image "cdp-muv-api:${TAG}" -f docker/Dockerfile.api . --no-logs
 
 echo "==> Patch secrets on ${API_APP}"
 DB_URL="$(az keyvault secret show --vault-name "${KV}" --name database-url --query value -o tsv)"

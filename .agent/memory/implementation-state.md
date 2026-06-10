@@ -15,9 +15,9 @@ decommissioned later with explicit approval.
 
 | Workflow | ID | Webhook / trigger | Last known active version |
 |----------|-----|-------------------|---------------------------|
-| `cdp_router` | `6id6dkinK9xTLfsb` | Telegram, Gmail, schedule | `08832e1d-30c0-4e7f-b52b-0fcc671e1481` (StokAPI dispatch email errors, 2026-06-10) |
-| `cdp_scraper` | `VfBSV3WU6on8BXm8` | `scraper-result` | `62231bd4-fec4-41aa-b276-6debeefe6983` (Melibox blocked → ops warning, 2026-06-10) |
-| `cdp_stokapi` | `t160mzGPYYlJcrjZ` | `muvstok-result` | `a67c819f-8498-4d59-88c9-f4e2da3b6571` (2026-06-10) |
+| `cdp_router` | `6id6dkinK9xTLfsb` | Telegram, Gmail, schedule | `d40f065c-7b2e-476e-97e7-f62b3252fea9` (v1 handoff sync, 2026-06-10) |
+| `cdp_scraper` | `VfBSV3WU6on8BXm8` | `scraper-result` | `3581b022-e53a-4fe2-a893-7d4d93a33b8c` (v1 handoff sync, 2026-06-10) |
+| `cdp_stokapi` | `t160mzGPYYlJcrjZ` | `muvstok-result` | `2c2806f1-3580-4978-af53-5f6e4da8a1f1` (v1 handoff sync, 2026-06-10) |
 | `cdp_progress` | `V9I6o32XDoPIRarz` | Schedule | REST activation/update (2026-06-10; MCP not enabled on workflow card) |
 | `cdp_notifier` | `ennI9nKin9ruPaLO` | `cdp-notifier` | REST activation/update (Gmail cred `rQesNRyarukVs0N4` + CSV attachment, 2026-06-10; MCP not enabled) |
 
@@ -53,8 +53,8 @@ is configured by `scripts/configure-shared-n8n-dev-env.sh`.
 - [x] `make import-n8n-dev` — workflow IDs recorded above (2026-06-05)
 - [x] DEV Google Sheet `1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY` (SKUs + resultados in one workbook; report link gid `2069105059`) — 2026-06-05
 - [ ] Confirm DEV Key Vault has `api-key`, `callback-webhook-secret`, Muvstok creds for `cdp-muv-api-dev` / worker
-- [ ] Set GitHub `development` secrets/vars per [docs/ENVIRONMENTS.md](../../docs/ENVIRONMENTS.md)
-- [ ] Push to `dev` → **CD - Development** (images + `configure-shared-n8n-dev-env.sh` + `sync-n8n-dev`)
+- [ ] Set GitHub `development` secrets/vars per [docs/ENVIRONMENTS.md](../../docs/ENVIRONMENTS.md) (CD still fails at Azure login)
+- [x] Push to `dev` @ `96422e1` — **CD - Development** still blocked until GitHub secrets configured
 - [ ] Smoke: **dev-cdp-bot** `.sku` → DEV sheets + `dev-scraper-result` / `dev-muvstok-result` / `dev-cdp-notifier`
 
 **n8n Container App:** Production n8n is revision `cdp-n8n-prod--0000025`
@@ -66,7 +66,7 @@ by Key Vault secret ref `callback-webhook-secret` (confirmed 2026-06-09).
 
 **Email command trigger:** Gmail Trigger filters `subject:"cdp-enviar-skus"`. Put `.analisar` or `.sku ...` at the start of the subject or first body line.
 
-**GitHub:** `tktech/main` and `tktech/dev` @ `3daf582`; `origin/main` was 6 commits behind before the 2026-06-06 sync pass.
+**GitHub:** `tktech/main` and `tktech/dev` @ `96422e1` (v1 handoff, 2026-06-10); CI green on Scraper + Contracts; StokAPI lint fixed in follow-up commit.
 
 ### Scraper (`scrapers/`)
 
@@ -74,7 +74,7 @@ by Key Vault secret ref `callback-webhook-secret` (confirmed 2026-06-09).
 |------|--------|
 | Stack | FastAPI, Celery, Playwright, PostgreSQL, Redis DB 0/1 |
 | Azure prod | `cdp-scrapers-api-prod`, `cdp-scrapers-worker-prod` |
-| Last deploy | 2026-06-10 — `cdpscraperprodacr.azurecr.io/cdp-scraper:20260610-1309` (`GET /dispatch-runs/by-batch`, extended claim fields) |
+| Last deploy | 2026-06-10 — `cdpscraperprodacr.azurecr.io/cdp-scraper:20260610-1443` (v1 handoff GitHub sync) |
 | Azure dev | `cdp-scrapers-api-dev`, `cdp-scrapers-worker-dev` — image `dev-20260602-2106`; API `https://cdp-scrapers-api-dev.happyforest-06c871e6.eastus2.azurecontainerapps.io`; secrets in `cdp-scrapers-kv-dev` |
 | Cache | 24h TTL; router `force_refresh: false` |
 | Sites | gm, ml, vw, eu, melibox (`CDP_SCRAPER_SITES`); pecadireta/goparts/procurapecas/ebay disabled pending smoke |
@@ -86,7 +86,7 @@ by Key Vault secret ref `callback-webhook-secret` (confirmed 2026-06-09).
 |------|--------|
 | Stack | FastAPI, Redis Streams worker, PostgreSQL |
 | Azure prod | `cdp-muv-api`, `cdp-muv-worker` |
-| Last deploy | 2026-06-08 — `cdpscraperprodacr.azurecr.io/cdp-muv-api:20260608-1545`, `cdpscraperprodacr.azurecr.io/cdp-muv-worker:20260608-1545` (`cdp-muv-api--0000012`, `cdp-muv-worker--0000013`) |
+| Last deploy | 2026-06-10 — `cdpscraperprodacr.azurecr.io/cdp-muv-api:20260610-1448`, `cdpscraperprodacr.azurecr.io/cdp-muv-worker:20260610-1448` (v1 handoff GitHub sync) |
 | Azure dev | `cdp-muv-api-dev`, `cdp-muv-worker-dev` not present as of 2026-06-06 audit; scripts ready, but deployment requires DEV Key Vault access/secrets |
 
 ### Email aggregate delivery (live 2026-06-10)

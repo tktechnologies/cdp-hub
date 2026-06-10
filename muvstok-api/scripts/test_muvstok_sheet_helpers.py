@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Smoke-test sheet helper logic via Node (same JS as n8n)."""
+
 from __future__ import annotations
 
 import json

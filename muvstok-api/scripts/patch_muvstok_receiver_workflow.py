@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Inject shared Muvstok sheet helpers and fix receiver Code nodes + cdp_skus match."""
+
 from __future__ import annotations
 
 import json
@@ -250,8 +251,7 @@ MAPEAR_NOTES = (
     "reads sku_updates from staticData (set by Extrair linhas)."
 )
 SHEET_STATUS_PRIORITY_JS = (
-    PICK_SHEET_FIELD_JS
-    + "function normalizeSheetStatus(value) {\n"
+    PICK_SHEET_FIELD_JS + "function normalizeSheetStatus(value) {\n"
     "  let s = String(value || '').trim().toLowerCase();\n"
     "  try { s = s.normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''); } catch (e) {}\n"
     "  s = s.replace(/[^a-z0-9]+/g, ' ').trim();\n"
@@ -285,9 +285,7 @@ MAPEAR_JS = (
     "for (const u of updates) {\n"
     "  const key = String(u.sku == null ? '' : u.sku).trim().toUpperCase();\n"
     "  if (key) byCodigo[key] = u;\n"
-    "}\n"
-    + SHEET_STATUS_PRIORITY_JS
-    + "const items = $input.all();\n"
+    "}\n" + SHEET_STATUS_PRIORITY_JS + "const items = $input.all();\n"
     "const out = [];\n"
     "for (let i = 0; i < items.length; i++) {\n"
     "  const item = items[i];\n"
@@ -420,8 +418,7 @@ def patch_same_channel_notification(wf: dict) -> None:
                     {
                         "id": "send-email",
                         "leftValue": (
-                            "={{ $json.notify === 'email' && !$json.skip && "
-                            "!!$json.email_to }}"
+                            "={{ $json.notify === 'email' && !$json.skip && !!$json.email_to }}"
                         ),
                         "rightValue": True,
                         "operator": {"type": "boolean", "operation": "true"},
@@ -638,7 +635,9 @@ def patch_detalhado(code: str, helpers: str) -> str:
         "seller: 'N/A',\n      product_url: productUrlForSheet",
         "seller: 'N/A',\n      uf: '',\n      empresa: 'N/A',\n      cnpj: '',\n      product_url: productUrlForSheet",
     )
-    code = code.replace("        estado: '',\n        empresa:", "        uf: '',\n        empresa:")
+    code = code.replace(
+        "        estado: '',\n        empresa:", "        uf: '',\n        empresa:"
+    )
     code = code.replace("      estado: '',\n      empresa:", "      uf: '',\n      empresa:")
     code = re.sub(r"\n\s+melibox_[a-z_]+: [^,\n]+,", "", code)
     code = code.replace("'✗ Não encontrado'", "'❌ Não encontrado'")
@@ -720,10 +719,7 @@ def patch_detalhado_sheet_columns(wf: dict) -> None:
         canonical = DETALHADO_COLUMN_ALIASES.get(key, key)
         normalized.setdefault(canonical, expr)
 
-    ordered = {
-        key: normalized.get(key, expr)
-        for key, expr in DETALHADO_COLUMN_EXPRESSIONS.items()
-    }
+    ordered = {key: normalized.get(key, expr) for key, expr in DETALHADO_COLUMN_EXPRESSIONS.items()}
     drop_legacy = {
         "disponibilidade",
         "duracao_job_s",

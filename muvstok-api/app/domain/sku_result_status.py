@@ -21,7 +21,9 @@ class SourceHealth(StrEnum):
 
 
 def _row_price(row: dict[str, Any]) -> float | None:
-    price = row.get("valorPrecoVenda") if row.get("valorPrecoVenda") is not None else row.get("price")
+    price = (
+        row.get("valorPrecoVenda") if row.get("valorPrecoVenda") is not None else row.get("price")
+    )
     if price is None or price == "":
         return None
     try:

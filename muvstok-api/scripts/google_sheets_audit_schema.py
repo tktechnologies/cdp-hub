@@ -98,24 +98,19 @@ COL_SOURCE_HEALTH = "I"
 COL_PRECO = "J"
 COL_PIPELINE = "X"
 
+
 def _rng(col: str) -> str:
     """Bounded Detalhado data range (avoids MAP/#ERROR on open-ended columns)."""
     return f"Detalhado!{col}2:INDEX(Detalhado!{col}:{col},COUNTA(Detalhado!A:A))"
 
 
 _HAS_PRICE = f'REGEXMATCH(TO_TEXT({_rng(COL_HAS_PRICE)}),"(?i)^(true|1|sim)$")'
-_SKU_OK = (
-    f'{_rng(COL_SKU)}<>""'
-    f',{_rng(COL_SKU)}<>"SEM_DADOS"'
-)
-_FOUND_VALID = (
-    f'{_rng(COL_STATUS)}="FOUND_PRICE"'
-    f",{_HAS_PRICE}"
-)
+_SKU_OK = f'{_rng(COL_SKU)}<>"",{_rng(COL_SKU)}<>"SEM_DADOS"'
+_FOUND_VALID = f'{_rng(COL_STATUS)}="FOUND_PRICE",{_HAS_PRICE}'
 
 # Brazilian decimal strings (e.g. 30,81) and plain numbers.
 _PARSED_PRICE = (
-    f"MAP({_rng(COL_PRECO)},LAMBDA(p,IFERROR(IF(REGEXMATCH(TO_TEXT(p),\",\"),"
+    f'MAP({_rng(COL_PRECO)},LAMBDA(p,IFERROR(IF(REGEXMATCH(TO_TEXT(p),","),'
     'VALUE(SUBSTITUTE(SUBSTITUTE(TO_TEXT(p),".",""),",",".")),'
     'IF(TO_TEXT(p)="","",VALUE(p))),0)))'
 )
@@ -127,24 +122,24 @@ PAINEL_SITE_TABLE_FORMULA = (
     f"statusR,{_rng(COL_STATUS)},"
     f"hasPriceR,{_HAS_PRICE},"
     f"parsedPrice,{_PARSED_PRICE},"
-    f"sites,SORT(UNIQUE(FILTER(siteR,siteR<>\"\"))),"
+    f'sites,SORT(UNIQUE(FILTER(siteR,siteR<>""))),'
     "BYROW(sites,LAMBDA(s,HSTACK(s,"
-    "COUNTUNIQUE(FILTER(skuR,(siteR=s)*(statusR=\"FOUND_PRICE\")*hasPriceR*(skuR<>\"\"))),"
-    "COUNTUNIQUE(FILTER(skuR,(siteR=s)*(skuR<>\"\")*(skuR<>\"SEM_DADOS\"))),"
-    "IFERROR(COUNTUNIQUE(FILTER(skuR,(siteR=s)*(statusR=\"FOUND_PRICE\")*hasPriceR*(skuR<>\"\")))/COUNTUNIQUE(FILTER(skuR,(siteR=s)*(skuR<>\"\")*(skuR<>\"SEM_DADOS\"))),0),"
+    'COUNTUNIQUE(FILTER(skuR,(siteR=s)*(statusR="FOUND_PRICE")*hasPriceR*(skuR<>""))),'
+    'COUNTUNIQUE(FILTER(skuR,(siteR=s)*(skuR<>"")*(skuR<>"SEM_DADOS"))),'
+    'IFERROR(COUNTUNIQUE(FILTER(skuR,(siteR=s)*(statusR="FOUND_PRICE")*hasPriceR*(skuR<>"")))/COUNTUNIQUE(FILTER(skuR,(siteR=s)*(skuR<>"")*(skuR<>"SEM_DADOS"))),0),'
     "COUNTIF(siteR,s),"
-    "IFERROR(MIN(FILTER(parsedPrice,(siteR=s)*(statusR=\"FOUND_PRICE\")*hasPriceR*(parsedPrice>0))),0),"
-    "IFERROR(AVERAGE(FILTER(parsedPrice,(siteR=s)*(statusR=\"FOUND_PRICE\")*hasPriceR*(parsedPrice>0))),0),"
-    "IFERROR(MAX(FILTER(parsedPrice,(siteR=s)*(statusR=\"FOUND_PRICE\")*hasPriceR*(parsedPrice>0))),0)"
+    'IFERROR(MIN(FILTER(parsedPrice,(siteR=s)*(statusR="FOUND_PRICE")*hasPriceR*(parsedPrice>0))),0),'
+    'IFERROR(AVERAGE(FILTER(parsedPrice,(siteR=s)*(statusR="FOUND_PRICE")*hasPriceR*(parsedPrice>0))),0),'
+    'IFERROR(MAX(FILTER(parsedPrice,(siteR=s)*(statusR="FOUND_PRICE")*hasPriceR*(parsedPrice>0))),0)'
     ")))"
     ")"
 )
 
 PAINEL_SITE_TOTAL_ROW: list[str] = [
     "TOTAL",
-    f'=IFERROR(COUNTUNIQUE(FILTER({_rng(COL_SKU)},{_SKU_OK},{_FOUND_VALID})),0)',
-    f'=IFERROR(COUNTUNIQUE(FILTER({_rng(COL_SKU)},{_SKU_OK})),0)',
-    f'=IFERROR(COUNTUNIQUE(FILTER({_rng(COL_SKU)},{_SKU_OK},{_FOUND_VALID}))/COUNTUNIQUE(FILTER({_rng(COL_SKU)},{_SKU_OK})),0)',
+    f"=IFERROR(COUNTUNIQUE(FILTER({_rng(COL_SKU)},{_SKU_OK},{_FOUND_VALID})),0)",
+    f"=IFERROR(COUNTUNIQUE(FILTER({_rng(COL_SKU)},{_SKU_OK})),0)",
+    f"=IFERROR(COUNTUNIQUE(FILTER({_rng(COL_SKU)},{_SKU_OK},{_FOUND_VALID}))/COUNTUNIQUE(FILTER({_rng(COL_SKU)},{_SKU_OK})),0)",
     f'=IFERROR(COUNTA(FILTER({_rng(COL_SITE)},{_rng(COL_SITE)}<>"")),0)',
     f'=IFERROR(MIN(FILTER({_PARSED_PRICE},{_FOUND_VALID},{_PARSED_PRICE}>0)),"")',
     f'=IFERROR(AVERAGE(FILTER({_PARSED_PRICE},{_FOUND_VALID},{_PARSED_PRICE}>0)),"")',
@@ -153,7 +148,7 @@ PAINEL_SITE_TOTAL_ROW: list[str] = [
 
 PAINEL_AVG_SITE_COVERAGE = (
     "=IFERROR(AVERAGE(MAP(SORT(UNIQUE(FILTER("
-    f"{_rng(COL_SITE)},{_rng(COL_SITE)}<>\"\"))),LAMBDA(s,IFERROR(COUNTUNIQUE(FILTER("
+    f'{_rng(COL_SITE)},{_rng(COL_SITE)}<>""))),LAMBDA(s,IFERROR(COUNTUNIQUE(FILTER('
     f"{_rng(COL_SKU)},{_rng(COL_SITE)}=s,{_FOUND_VALID}))/COUNTUNIQUE(FILTER("
     f"{_rng(COL_SKU)},{_rng(COL_SITE)}=s,{_SKU_OK})),0)))),0)"
 )
@@ -161,8 +156,8 @@ PAINEL_AVG_SITE_COVERAGE = (
 PAINEL_STATUS_ROWS: list[list[str]] = [
     [
         "✅  FOUND (preço válido)",
-        f'=IFERROR(COUNTUNIQUE(FILTER({_rng(COL_SKU)},{_SKU_OK},{_FOUND_VALID})),0)',
-        f'=IFERROR(ROWS(FILTER({_rng(COL_STATUS)},{_FOUND_VALID})),0)',
+        f"=IFERROR(COUNTUNIQUE(FILTER({_rng(COL_SKU)},{_SKU_OK},{_FOUND_VALID})),0)",
+        f"=IFERROR(ROWS(FILTER({_rng(COL_STATUS)},{_FOUND_VALID})),0)",
         '=IFERROR(TEXT(B36/$A$5,"0.0%"),"—")',
     ],
     [
@@ -218,9 +213,7 @@ PAINEL_PIPELINE_ROWS: list[list[str]] = [
     ],
 ]
 
-PAINEL_JOBS_FORMULA = (
-    '=IFERROR(QUERY(Historico!A2:J,"select B,G,H,J,F where A is not null order by E desc limit 5",0),"—")'
-)
+PAINEL_JOBS_FORMULA = '=IFERROR(QUERY(Historico!A2:J,"select B,G,H,J,F where A is not null order by E desc limit 5",0),"—")'
 
 PAINEL_UPDATES: list[tuple[str, list[list[str]]]] = [
     (
@@ -282,7 +275,16 @@ PAINEL_UPDATES: list[tuple[str, list[list[str]]]] = [
                 '=IFERROR(TEXT(SUM(FILTER(Historico!F2:F,Historico!F2:F<>""))/3600,"0.0")&"h total","—")',
                 "",
             ],
-            ["📊  TAXA SUCESSO SKU", "", "🎯  % COBERTURA POR SITE", "", "🌐  SITES", "", "📋  JOBS TOTAL", ""],
+            [
+                "📊  TAXA SUCESSO SKU",
+                "",
+                "🎯  % COBERTURA POR SITE",
+                "",
+                "🌐  SITES",
+                "",
+                "📋  JOBS TOTAL",
+                "",
+            ],
             [
                 '=IFERROR(TEXT(C5/A5,"0.0%"),"—")',
                 "",
@@ -293,7 +295,16 @@ PAINEL_UPDATES: list[tuple[str, list[list[str]]]] = [
                 "=IFERROR(COUNTA(Historico!A:A)-1,0)",
                 "",
             ],
-            ["via Detalhado canônico", "", "média de cobertura por site", "", "sites no Detalhado", "", "jobs no histórico", ""],
+            [
+                "via Detalhado canônico",
+                "",
+                "média de cobertura por site",
+                "",
+                "sites no Detalhado",
+                "",
+                "jobs no histórico",
+                "",
+            ],
             [
                 '=IFERROR("🔗  Job: "&INDEX(Historico!A:A,COUNTA(Historico!A:A))&"   |   Status: "&INDEX(Historico!G:G,COUNTA(Historico!G:G))&"   |   SKUs Lidos: "&INDEX(Historico!H:H,COUNTA(Historico!H:H))&"   |   Origem: "&INDEX(Historico!B:B,COUNTA(Historico!B:B)),"—")',
                 "",
@@ -313,7 +324,16 @@ PAINEL_UPDATES: list[tuple[str, list[list[str]]]] = [
     (
         "A14:H16",
         [
-            ["📡  COBERTURA POR SITE — FOUND_PRICE + has_valid_price (via Detalhado)", "", "", "", "", "", "", ""],
+            [
+                "📡  COBERTURA POR SITE — FOUND_PRICE + has_valid_price (via Detalhado)",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+            ],
             [
                 "Site",
                 "SKUs c/ Preço",

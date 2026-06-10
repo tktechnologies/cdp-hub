@@ -74,8 +74,12 @@ def jsonb_default() -> sa.TextClause:
 
 def timestamp_columns() -> list[sa.Column[Any]]:
     return [
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     ]
 
 
@@ -130,7 +134,9 @@ def upgrade() -> None:
         sa.Column("metadata", postgresql.JSONB(), server_default=jsonb_default(), nullable=False),
         *timestamp_columns(),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("api_client_id", "idempotency_key", name="uq_jobs_client_idempotency_key"),
+        sa.UniqueConstraint(
+            "api_client_id", "idempotency_key", name="uq_jobs_client_idempotency_key"
+        ),
     )
     op.create_index("ix_muvstok_jobs_correlation_id", "muvstok_jobs", ["correlation_id"])
     op.create_index("ix_muvstok_jobs_status_created_at", "muvstok_jobs", ["status", "created_at"])
@@ -161,18 +167,31 @@ def upgrade() -> None:
         sa.Column("job_item_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("correlation_id", sa.String(length=100), nullable=False),
         sa.Column("sku", sa.String(length=128), nullable=False),
-        sa.Column("request_metadata", postgresql.JSONB(), server_default=jsonb_default(), nullable=False),
-        sa.Column("response_metadata", postgresql.JSONB(), server_default=jsonb_default(), nullable=False),
+        sa.Column(
+            "request_metadata", postgresql.JSONB(), server_default=jsonb_default(), nullable=False
+        ),
+        sa.Column(
+            "response_metadata", postgresql.JSONB(), server_default=jsonb_default(), nullable=False
+        ),
         sa.Column("raw_response", postgresql.JSONB(), nullable=False),
-        sa.Column("governance_metadata", postgresql.JSONB(), server_default=jsonb_default(), nullable=False),
+        sa.Column(
+            "governance_metadata",
+            postgresql.JSONB(),
+            server_default=jsonb_default(),
+            nullable=False,
+        ),
         *timestamp_columns(),
         sa.ForeignKeyConstraint(["job_id"], ["muvstok_jobs.id"]),
         sa.ForeignKeyConstraint(["job_item_id"], ["muvstok_job_items.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_muvstok_raw_snapshots_correlation_id", "muvstok_raw_snapshots", ["correlation_id"])
+    op.create_index(
+        "ix_muvstok_raw_snapshots_correlation_id", "muvstok_raw_snapshots", ["correlation_id"]
+    )
     op.create_index("ix_muvstok_raw_snapshots_job_id", "muvstok_raw_snapshots", ["job_id"])
-    op.create_index("ix_muvstok_raw_snapshots_job_item_id", "muvstok_raw_snapshots", ["job_item_id"])
+    op.create_index(
+        "ix_muvstok_raw_snapshots_job_item_id", "muvstok_raw_snapshots", ["job_item_id"]
+    )
     op.create_index("ix_muvstok_raw_snapshots_sku", "muvstok_raw_snapshots", ["sku"])
 
     op.create_table(
@@ -248,7 +267,9 @@ def upgrade() -> None:
     op.create_index("ix_queue_messages_correlation_id", "queue_messages", ["correlation_id"])
     op.create_index("ix_queue_messages_job_id", "queue_messages", ["job_id"])
     op.create_index("ix_queue_messages_redis_message_id", "queue_messages", ["redis_message_id"])
-    op.create_index("ix_queue_messages_status_created_at", "queue_messages", ["status", "created_at"])
+    op.create_index(
+        "ix_queue_messages_status_created_at", "queue_messages", ["status", "created_at"]
+    )
 
 
 def downgrade() -> None:
