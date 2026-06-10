@@ -93,15 +93,14 @@ class MeliboxScraper(BaseScraper):
     async def scrape_sku(self, sku: str, brand: str = "") -> SiteResult:
         """Run one SKU while reusing the logged-in browser context by default."""
         if (
-            settings.proxy_rotation_enabled
-            and settings.melibox_rotate_context_per_sku
+            settings.melibox_rotate_context_per_sku
+            and not settings.proxy_rotate_context_per_search
             and self._context is not None
         ):
             logger.info("Melibox: rotating browser context before SKU", sku=sku)
-            await self.shutdown()
-            self._playwright = None
-            self._browser = None
-            self._context = None
+            await self._shutdown_browser()
+            self._proxy_endpoint = None
+            self._proxy_identity = None
 
         result = await super().scrape_sku(sku, brand)
         if (

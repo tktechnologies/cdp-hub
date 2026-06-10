@@ -23,9 +23,10 @@ from src.models.schemas import (
     SKUResultStatus,
     SourceHealth,
 )
-from src.scrapers import archived_scraper_label, get_scraper, is_archived_scraper_site
+from src.scrapers import get_scraper
 from src.services.result_formatter import _find_best_price
 from src.utils.job_estimate import estimate_job_duration_seconds
+from src.utils.proxy_manager import get_proxy_manager
 
 logger = structlog.get_logger()
 
@@ -39,7 +40,6 @@ class Orchestrator:
     - Aggregate results into unified JSON
     - Track job status and send callbacks to external consumers
     """
-
 
     def __init__(self) -> None:
         self._jobs_cache: dict[str, ScrapeJobResult] = {}  # Fast-path cache
@@ -58,16 +58,11 @@ class Orchestrator:
 
         priced = sum(1 for result in job.results if has_priced_result(result))
         evidence = sum(1 for result in job.results if has_result_evidence(result))
-        no_price = sum(
-            1
-            for result in job.results
-            if result.sku_result == SKUResultStatus.NO_PRICE
-        )
+        no_price = sum(1 for result in job.results if result.sku_result == SKUResultStatus.NO_PRICE)
         blocked = sum(
             1
             for result in job.results
-            if result.blocked_site_count > 0
-            and result.sku_result != SKUResultStatus.FOUND_PRICE
+            if result.blocked_site_count > 0 and result.sku_result != SKUResultStatus.FOUND_PRICE
         )
         errored = sum(
             1
@@ -81,8 +76,7 @@ class Orchestrator:
         for result in job.results:
             site_results = result.site_results
             if site_results and all(
-                site_result.status.lower() == "not_found"
-                for site_result in site_results
+                site_result.status.lower() == "not_found" for site_result in site_results
             ):
                 all_sites_not_found += 1
 
@@ -94,9 +88,7 @@ class Orchestrator:
                     SourceHealth.ERROR,
                 }:
                     message = site_result.error_message or status
-                    warning_messages.append(
-                        f"{result.sku} / {site_result.site_name}: {message}"
-                    )
+                    warning_messages.append(f"{result.sku} / {site_result.site_name}: {message}")
 
         # Legacy fields stay populated for existing progress consumers. New reporting
         # fields below are the source of truth for "found price" dashboards.
@@ -178,9 +170,7 @@ class Orchestrator:
         except Exception as e:
             logger.error("Failed to queue job in Celery", job_id=job_id, error=str(e))
             async with async_session() as session:
-                result = await session.execute(
-                    select(ScrapeJob).where(ScrapeJob.id == job_id)
-                )
+                result = await session.execute(select(ScrapeJob).where(ScrapeJob.id == job_id))
                 db_job = result.scalar_one()
                 db_job.status = JobStatus.FAILED.value
                 db_job.errors = [f"Failed to enqueue Celery task: {e}"]
@@ -208,13 +198,11 @@ class Orchestrator:
         # Fetch from database with eager loading
         async with async_session() as session:
             from src.models.database import ScrapeItem
-            
+
             stmt = (
                 select(ScrapeJob)
                 .where(ScrapeJob.id == job_id)
-                .options(
-                    selectinload(ScrapeJob.items).selectinload(ScrapeItem.results)
-                )
+                .options(selectinload(ScrapeJob.items).selectinload(ScrapeItem.results))
             )
             result = await session.execute(stmt)
             db_job = result.scalar_one_or_none()
@@ -231,11 +219,11 @@ class Orchestrator:
 
     async def wait_for_job(self, job_id: str, timeout: float = 120.0) -> ScrapeJobResult | None:
         """Wait for a job to complete, using async event instead of polling.
-        
+
         Args:
             job_id: The job ID to wait for
             timeout: Maximum seconds to wait (default 120)
-            
+
         Returns:
             Job result when complete, or None if timeout
         """
@@ -250,13 +238,12 @@ class Orchestrator:
                     return result
                 await asyncio.sleep(0.5)
             return None
-        
+
         try:
             await asyncio.wait_for(event.wait(), timeout=timeout)
             return await self.get_job_status(job_id)
         except TimeoutError:
             return None
-
 
     async def execute_queued_job(self, job_id: str, request: ScrapeJobRequest) -> None:
         """Execute an already-created job from an external worker process."""
@@ -286,9 +273,7 @@ class Orchestrator:
 
         # Update DB status to running
         async with async_session() as session:
-            result = await session.execute(
-                select(ScrapeJob).where(ScrapeJob.id == job_id)
-            )
+            result = await session.execute(select(ScrapeJob).where(ScrapeJob.id == job_id))
             db_job = result.scalar_one()
             db_job.status = JobStatus.RUNNING.value
             db_job.started_at = datetime.now(UTC)
@@ -303,11 +288,16 @@ class Orchestrator:
                     logger.debug("Throttle delay", delay_s=round(delay, 2), job_id=job_id)
                     await asyncio.sleep(delay)
 
-                sku_result = await self._search_sku_all_sites(
-                    item,
-                    request.sites,
-                    force_refresh=request.force_refresh,
-                )
+                proxy_manager = get_proxy_manager()
+                proxy_manager.begin_sku(item.sku, item.brand)
+                try:
+                    sku_result = await self._search_sku_all_sites(
+                        item,
+                        request.sites,
+                        force_refresh=request.force_refresh,
+                    )
+                finally:
+                    proxy_manager.clear_sku()
 
                 # Persist SKU item and results to DB
                 async with async_session() as session:
@@ -326,10 +316,10 @@ class Orchestrator:
                                 "search_time_ms": site_res.search_time_ms,
                                 "from_cache": site_res.from_cache,
                                 "cached_at": (
-                                    site_res.cached_at.isoformat()
-                                    if site_res.cached_at
-                                    else None
+                                    site_res.cached_at.isoformat() if site_res.cached_at else None
                                 ),
+                                "proxy_host": site_res.proxy_host,
+                                "proxy_identity": site_res.proxy_identity,
                             }
                             for site_res in sku_result.site_results
                         ],
@@ -376,9 +366,7 @@ class Orchestrator:
                 # Persist incremental progress counters to the DB so that
                 # GET /jobs/{id} returns live numbers while the job runs.
                 async with async_session() as session:
-                    result = await session.execute(
-                        select(ScrapeJob).where(ScrapeJob.id == job_id)
-                    )
+                    result = await session.execute(select(ScrapeJob).where(ScrapeJob.id == job_id))
                     db_job = result.scalar_one()
                     db_job.items_processed = i + 1
                     db_job.items_succeeded = job.items_succeeded
@@ -387,9 +375,7 @@ class Orchestrator:
 
             # Determine final status and persist to DB
             async with async_session() as session:
-                result = await session.execute(
-                    select(ScrapeJob).where(ScrapeJob.id == job_id)
-                )
+                result = await session.execute(select(ScrapeJob).where(ScrapeJob.id == job_id))
                 db_job = result.scalar_one()
 
                 items_succeeded = job.items_succeeded
@@ -424,9 +410,7 @@ class Orchestrator:
             logger.error("Job execution failed", job_id=job_id, error=str(e))
 
             async with async_session() as session:
-                result = await session.execute(
-                    select(ScrapeJob).where(ScrapeJob.id == job_id)
-                )
+                result = await session.execute(select(ScrapeJob).where(ScrapeJob.id == job_id))
                 db_job = result.scalar_one()
                 db_job.status = JobStatus.FAILED.value
                 db_job.errors = [str(e)]
@@ -458,17 +442,8 @@ class Orchestrator:
                 duration=f"{job.duration_seconds:.1f}s",
             )
 
-
     async def _scrape_one_site(self, site_id: SiteId, item: SKUItem) -> SiteResult:
         """Run a live scraper for one site."""
-        if is_archived_scraper_site(site_id):
-            return SiteResult(
-                site=site_id,
-                site_name=archived_scraper_label(site_id),
-                status="blocked",
-                error_message="Archived scraper: blocked until proxy smoke validates reactivation.",
-                blocked_reason="Archived scraper requires proxy smoke before live execution.",
-            )
         try:
             scraper = await get_scraper(site_id)
             return await scraper.scrape_sku(item.sku, item.brand)
@@ -496,11 +471,16 @@ class Orchestrator:
         force_refresh: bool = False,
     ) -> SKUResult:
         """Synchronous single-SKU lookup for POST /lookup (cache-aware, no Celery)."""
-        return await self._search_sku_all_sites(
-            SKUItem(sku=sku, brand=brand),
-            sites,
-            force_refresh=force_refresh,
-        )
+        proxy_manager = get_proxy_manager()
+        proxy_manager.begin_sku(sku, brand)
+        try:
+            return await self._search_sku_all_sites(
+                SKUItem(sku=sku, brand=brand),
+                sites,
+                force_refresh=force_refresh,
+            )
+        finally:
+            proxy_manager.clear_sku()
 
     async def _search_sku_all_sites(
         self,
@@ -549,7 +529,9 @@ class Orchestrator:
                     live_scrapes += 1
                     await scrape_cache.set_site_result(item.sku, item.brand, site_result)
 
-        site_results = [site_results_by_id[site_id] for site_id in sites if site_id in site_results_by_id]
+        site_results = [
+            site_results_by_id[site_id] for site_id in sites if site_id in site_results_by_id
+        ]
         all_parts = []
         for site_result in site_results:
             all_parts.extend(site_result.results)
@@ -628,10 +610,10 @@ class Orchestrator:
                             search_time_ms=snapshot.get("search_time_ms", 0),
                             from_cache=from_cache,
                             cached_at=(
-                                datetime.fromisoformat(cached_at_raw)
-                                if cached_at_raw
-                                else None
+                                datetime.fromisoformat(cached_at_raw) if cached_at_raw else None
                             ),
+                            proxy_host=snapshot.get("proxy_host", ""),
+                            proxy_identity=snapshot.get("proxy_identity", ""),
                         )
                     )
             else:
@@ -647,9 +629,7 @@ class Orchestrator:
 
             best_price = _find_best_price(part_results)
 
-            live_scrapes = sum(
-                1 for site_result in site_results if not site_result.from_cache
-            )
+            live_scrapes = sum(1 for site_result in site_results if not site_result.from_cache)
             sku_results.append(
                 SKUResult(
                     sku=db_item.sku,
@@ -693,7 +673,6 @@ class Orchestrator:
 
         self._apply_summary_metrics(job_result)
         return job_result
-
 
     async def _send_callback(self, url: str, job: ScrapeJobResult) -> None:
         """Send job results to an external callback URL."""

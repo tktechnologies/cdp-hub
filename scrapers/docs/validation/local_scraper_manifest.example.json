@@ -1,0 +1,17 @@
+{
+  "require_real_scrapers": true,
+  "cases": [
+    {
+      "id": "gm-example",
+      "site": "gm",
+      "sku": "REPLACE_WITH_VERIFIED_SKU",
+      "brand": "GM",
+      "expect_result": true,
+      "expected_currency": "BRL",
+      "expected_condition": "new",
+      "expected_price_min": 1.0,
+      "expected_price_max": 999999.0,
+      "evidence_url": "https://example.com/product-page"
+    }
+  ]
+}

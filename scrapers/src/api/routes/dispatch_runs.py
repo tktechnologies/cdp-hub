@@ -74,6 +74,23 @@ async def patch_dispatch_run(
     return result
 
 
+@router.get(
+    "/dispatch-runs/by-batch/{batch_group_id}",
+    response_model=DispatchRunResponse,
+    dependencies=[Depends(verify_api_key), Depends(get_request_id)],
+)
+async def get_dispatch_run_by_batch(batch_group_id: str) -> DispatchRunResponse:
+    """Lookup dispatch run state for a dual-pipeline batch (ops audit)."""
+    result = await dispatch_runs.get_dispatch_run_by_batch(batch_group_id)
+    if not result:
+        raise APIHTTPException(
+            status.HTTP_404_NOT_FOUND,
+            "not_found",
+            f"No dispatch run for batch {batch_group_id}",
+        )
+    return result
+
+
 @router.post(
     "/dispatch-runs/by-batch/{batch_group_id}/pipeline-result",
     response_model=PipelineResultResponse,

@@ -1,3 +1,47 @@
+// cdp_router — format API Diversos dispatch failures for Telegram or email requester.
+
+function env(name) {
+  try {
+    if (typeof $env !== 'undefined' && $env && $env[name]) {
+      return String($env[name]).trim();
+    }
+  } catch (e) {}
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env[name]) {
+      return String(process.env[name]).trim();
+    }
+  } catch (e) {}
+  return '';
+}
+
+function workflowName() {
+  try {
+    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {
+      return String($workflow.name);
+    }
+  } catch (e) {}
+  return '';
+}
+
+function isDevWorkflow() {
+  return workflowName().trim().toLowerCase().startsWith('dev -');
+}
+
+function envFor(name) {
+  if (isDevWorkflow() && name === 'NOTIFICATION_EMAIL_TO') {
+    return env('CDP_DEV_NOTIFICATION_EMAIL_TO');
+  }
+  return env(name);
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 const resp = $input.first().json;
 let prep = {};
 try {
@@ -5,25 +49,73 @@ try {
 } catch (e) {}
 
 let chatId = String(prep.chat_id || '').trim();
+let replyEmail = String(prep.reply_email || prep.email_from || '').trim();
+let replyChannel = String(prep.reply_channel || prep.command_origin || '').trim().toLowerCase();
 let statusCode = resp.statusCode ?? resp.status_code ?? 'N/A';
 let errorText = resp.error || resp.message || resp.detail || '';
 
 if (resp.parallel_dispatch) {
   const stokapi = resp.stokapi_response || {};
   if (stokapi.accepted || stokapi.skipped) return [];
-  chatId = String(resp.chat_id || '').trim();
+  chatId = String(resp.chat_id || prep.chat_id || '').trim();
+  replyEmail = String(resp.reply_email || prep.reply_email || prep.email_from || '').trim();
+  replyChannel = String(resp.reply_channel || prep.reply_channel || prep.command_origin || replyChannel)
+    .trim()
+    .toLowerCase();
   statusCode = stokapi.statusCode ?? 'N/A';
   errorText = stokapi.error || stokapi.body?.detail || stokapi.body?.message || 'dispatch_not_accepted';
 }
 
-if (!chatId || prep.skip_stokapi || prep.skip_muvstok) return [];
+if (prep.skip_stokapi || prep.skip_muvstok) return [];
+
+if (replyChannel === 'email') {
+  chatId = '';
+} else if (replyChannel === 'telegram') {
+  replyEmail = '';
+} else if (replyEmail) {
+  replyChannel = 'email';
+} else if (chatId) {
+  replyChannel = 'telegram';
+}
+
+if (!chatId && !replyEmail) return [];
+
+const detail =
+  statusCode !== 'N/A' || errorText
+    ? 'Erro: HTTP ' + statusCode + ' — ' + String(errorText).slice(0, 160)
+    : '';
+
 const msg = [
   '🤖 *Assistente CDP*',
   '',
   '⚠️ A consulta de estoque não iniciou nesta rodada.',
   'A busca em sites continua — você receberá o aviso de sites normalmente.',
-  statusCode !== 'N/A' || errorText ? 'Erro: HTTP ' + statusCode + ' — ' + String(errorText).slice(0, 160) : '',
+  detail,
   '',
   'Se o problema persistir, tente novamente em alguns minutos.',
-].filter((line) => line !== '').join('\n');
-return [{ json: { chat_id: chatId, msg } }];
+]
+  .filter((line) => line !== '')
+  .join('\n');
+
+const html =
+  '<div style="font-family:Arial,sans-serif;color:#1f2937;max-width:640px">' +
+  '<h2 style="margin:0 0 12px">Consulta de estoque não iniciou</h2>' +
+  '<p style="margin:0 0 12px;line-height:1.6">A busca em sites continua. Você receberá o resultado consolidado quando a consulta de sites terminar.</p>' +
+  (detail
+    ? '<p style="margin:0 0 12px;color:#b45309"><strong>' + escapeHtml(detail) + '</strong></p>'
+    : '') +
+  '<p style="margin:0;color:#64748b;font-size:13px">Se o problema persistir, tente novamente em alguns minutos.</p>' +
+  '</div>';
+
+return [
+  {
+    json: {
+      chat_id: chatId,
+      email_to: replyEmail,
+      reply_channel: replyChannel || (replyEmail ? 'email' : 'telegram'),
+      msg,
+      msg_email_subject: 'CDP — consulta de estoque não iniciou',
+      msg_email_html: html,
+    },
+  },
+];

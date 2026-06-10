@@ -141,6 +141,21 @@ def activate_via_rest(workflow_id: str) -> None:
         raise
 
 
+def deactivate_via_rest(workflow_id: str) -> None:
+    try:
+        n8n_api_request("POST", f"/workflows/{workflow_id}/deactivate")
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode(errors="replace")
+        if exc.code == 400 and ("not active" in body.lower() or "already inactive" in body.lower()):
+            return
+        raise
+
+
+def reactivate_via_rest(workflow_id: str) -> None:
+    deactivate_via_rest(workflow_id)
+    activate_via_rest(workflow_id)
+
+
 def validate_sdk(sdk_path: pathlib.Path) -> dict:
     code = sdk_path.read_text(encoding="utf-8")
     return parse_structured(mcp_call("validate_workflow", {"code": code}))
@@ -190,8 +205,8 @@ def push_workflow_json(
         else:
             error = str(p.get("error", p))
             if "not available in MCP" in error:
-                activate_via_rest(workflow_id)
-                print(f"publish fallback: activated via REST ({error})")
+                reactivate_via_rest(workflow_id)
+                print(f"publish fallback: reactivated via REST ({error})")
             else:
                 print(f"publish note: {error}", file=sys.stderr)
                 return 3

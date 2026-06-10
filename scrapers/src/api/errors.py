@@ -79,7 +79,9 @@ def register_exception_handlers(app: FastAPI) -> None:
     ) -> JSONResponse:
         return JSONResponse(
             status_code=exc.status_code,
-            content=error_payload(exc.error_code, _message_from_detail(exc.detail), details=exc.error_details),
+            content=error_payload(
+                exc.error_code, _message_from_detail(exc.detail), details=exc.error_details
+            ),
         )
 
     @app.exception_handler(HTTPException)

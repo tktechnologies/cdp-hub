@@ -12,6 +12,7 @@ def _configure_worker_logging(**_kwargs: object) -> None:
     """Configure structlog once per forked worker child process."""
     setup_logging()
 
+
 celery_app = Celery(
     "cdp_scraper",
     broker=settings.resolved_celery_broker_url,

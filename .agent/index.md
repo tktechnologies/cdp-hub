@@ -49,6 +49,16 @@ Does the task touch n8n/src, cdp_router dispatch, or all 3 workflows?
 | Scraper API, Celery, cache, Playwright, `cdp_scraper` receiver logic | [scrapers/.agent/index.md](../scrapers/.agent/index.md) |
 | StokAPI API, Redis worker, `cdp_stokapi` receiver | [muvstok-api/.agent/index.md](../muvstok-api/.agent/index.md) |
 
+## Optional sub-agent briefs
+
+Use when the user explicitly asks for delegation. See [sub-agents/README.md](sub-agents/README.md).
+
+| Brief | Scope |
+|-------|--------|
+| [sub-agents/backend-api.md](sub-agents/backend-api.md) | API design and route changes |
+| [sub-agents/database.md](sub-agents/database.md) | Schema, migrations, query patterns |
+| [sub-agents/qa-testing.md](sub-agents/qa-testing.md) | Test strategy and contract checks |
+
 ## Completion (platform)
 
 - Router: `python3 scripts/sync_workflow_code_from_shared.py` before any router JSON commit

@@ -20,8 +20,6 @@ from src.models.schemas import (
     SiteId,
     SiteResult,
     SKUItem,
-    SKUResultStatus,
-    SourceHealth,
 )
 from src.scrapers import _active_scrapers
 
@@ -85,7 +83,9 @@ class TestOrchestrator:
         assert response.estimated_duration_seconds == 62
 
     @pytest.mark.asyncio
-    async def test_submit_job_enqueues_celery_when_configured(self, sample_job_request, monkeypatch):
+    async def test_submit_job_enqueues_celery_when_configured(
+        self, sample_job_request, monkeypatch
+    ):
         from src.services.orchestrator import Orchestrator
 
         queued: dict[str, object] = {}
@@ -114,6 +114,7 @@ class TestOrchestrator:
     @pytest.mark.asyncio
     async def test_get_nonexistent_job_returns_none(self):
         from src.services.orchestrator import Orchestrator
+
         orch = Orchestrator()
         result = await orch.get_job_status("nonexistent-id")
         assert result is None
@@ -201,8 +202,7 @@ class TestOrchestrator:
         assert result.all_sites_not_found_count == 0
         assert result.warning_messages == ["93338835 / Melibox: blocked"]
         statuses = {
-            site_result.site: site_result.status
-            for site_result in result.results[0].site_results
+            site_result.site: site_result.status for site_result in result.results[0].site_results
         }
         assert statuses == {
             SiteId.GM: "success",
@@ -217,15 +217,33 @@ class TestOrchestrator:
         assert blocked.error_message == "blocked"
 
     @pytest.mark.asyncio
-    async def test_archived_scraper_site_returns_blocked_audit_row(self):
+    async def test_goparts_scraper_is_registered_and_invoked(self, monkeypatch):
         from src.services.orchestrator import Orchestrator
+
+        class FakeGoParts:
+            async def scrape_sku(self, sku: str, brand: str = ""):
+                from src.models.schemas import SiteId, SiteResult
+
+                return SiteResult(
+                    site=SiteId.GOPARTS,
+                    site_name="GoParts Brazil",
+                    status="not_found",
+                    proxy_host="20.1.2.3",
+                )
+
+        async def fake_get_scraper(site_id):
+            assert site_id == SiteId.GOPARTS
+            return FakeGoParts()
+
+        monkeypatch.setattr(
+            "src.services.orchestrator.get_scraper",
+            fake_get_scraper,
+        )
 
         result = await Orchestrator()._scrape_one_site(
             SiteId.GOPARTS,
             SKUItem(sku="ABC123", brand=""),
         )
 
-        assert result.status == "blocked"
-        assert result.sku_result == SKUResultStatus.BLOCKED
-        assert result.source_health == SourceHealth.BLOCKED
-        assert "Archived scraper" in result.error_message
+        assert result.status == "not_found"
+        assert result.proxy_host == "20.1.2.3"

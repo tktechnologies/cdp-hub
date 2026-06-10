@@ -1,6 +1,6 @@
 # CDP n8n — Live workflows
 
-Last verified: 2026-06-06.
+Last verified: 2026-06-10.
 
 Production truth lives in this document. DEV workflow copies run in the same
 n8n instance under names prefixed `DEV - ...`; their IDs are tracked in
@@ -14,7 +14,7 @@ changes the operating model.
 | **cdp_scraper** | `VfBSV3WU6on8BXm8` | `POST /webhook/scraper-result` | Scraper job callbacks → sheets + notify |
 | **cdp_stokapi** | `t160mzGPYYlJcrjZ` | `POST /webhook/muvstok-result` | Muvstok job callbacks → sheets + notify |
 | **cdp_progress** | `V9I6o32XDoPIRarz` | Schedule (`CDP_PROGRESS_INTERVAL_MIN`, default 10) | Proactive Telegram progress while runs are active |
-| **cdp_notifier** | `ennI9nKin9ruPaLO` | `POST /webhook/cdp-notifier` | Single final Telegram/email after both pipelines finish (`delivery_mode: aggregate`) |
+| **cdp_notifier** | `ennI9nKin9ruPaLO` | `POST /webhook/cdp-notifier` | Single final Telegram/email after both pipelines finish; email includes job-scoped CSV (`delivery_mode: aggregate`) |
 
 Deprecated: `cdp_muvstok-api_starter` (`PXLHDzRbBVgs8Xl2`) — use `cdp_router` for production dispatch.
 
@@ -35,17 +35,38 @@ DEV Telegram credential, and DEV Google Sheets IDs.
 For one-off structural patches that are awkward as full JSON replace, use MCP `update_workflow` `operations` + `publish_workflow`.
 
 MCP access is enabled for `cdp_router`, `cdp_scraper`, and `cdp_stokapi`.
-As of 2026-06-06, MCP access is not enabled for `cdp_progress`,
+As of 2026-06-09, MCP access is not enabled for `cdp_progress`,
 `cdp_notifier`, or the DEV workflow copies; MCP calls return "Workflow is not
 available in MCP" until access is enabled on each workflow card/settings.
 
-Latest full sync (2026-06-05): `cdp_router` `bb52096d-aff9-4895-941b-0391643a75d7` (53 nodes); `cdp_scraper` `67be3cf3-fb6b-425a-a55a-340cb713b5f9` (47 nodes); `cdp_stokapi` `c6eca24d-eefa-4932-90e2-9292614d8667` (19 nodes); `cdp_progress` REST activation (10 nodes; MCP publish unavailable until MCP enabled on workflow card). **Last known active version** per workflow (including targeted publishes that supersede a full sync) is in [.agent/memory/implementation-state.md](../../.agent/memory/implementation-state.md).
+Latest targeted sync (2026-06-09): exact SKUs robot-header writeback +
+blocked-site deactivation — `cdp_router`
+`e0303e69-3b0f-4ea1-a970-707ca32eeaf7` (53 nodes; dispatch sites now
+`gm,ml,vw,eu,melibox`); `cdp_scraper`
+`39f2706f-333c-4f7b-b8fb-4095463db2db` (49 nodes); `cdp_stokapi`
+`e24e2a30-f67f-42b2-8c18-bac97772cdba` (21 nodes); `cdp_progress` REST
+update/reactivate; `cdp_notifier` REST update/reactivate (15 nodes; exact
+`NOTIFICADO 🤖` header). Prior targeted sync: router `199b21e3`, scraper
+`b66066f4`, stokapi `da621eb6`. **Last known active version** per workflow is in
+[.agent/memory/implementation-state.md](../../.agent/memory/implementation-state.md).
 
-Latest MCP publish check (2026-06-06): `cdp_router`
-`65dea47b-8cba-4db5-9969-da9493eec252`; `cdp_scraper`
-`0086a065-8369-48d3-b33a-4de4312f76f6`; `cdp_stokapi`
-`e139b97d-0688-4cf1-ba5a-2899d24dcaac`. MCP validation was valid for all
-three workflows.
+Latest callback smoke (2026-06-09): batch
+`bg-codex-positive-20260609134721` produced successful n8n executions
+`2356` (`cdp_scraper`), `2355` (`cdp_stokapi`), and `2358`
+(`cdp_notifier`). The notifier `pipeline-result` response had
+`both_terminal=true` and `ready_for_final=true`; the controlled smoke had no
+Telegram/email target, so final delivery was patched without sending a user
+message.
+
+Latest Telegram delivery evidence (2026-06-08): `cdp_notifier` execution
+`2067` for batch `bg-mq5kmekg-2iiivj` ran `📱 Telegram: resultado final` and
+patched `final_channel=telegram` with no final error.
+
+Latest DEV sync (2026-06-09): `DEV - cdp_router`, `DEV - cdp_scraper`,
+`DEV - cdp_stokapi`, `DEV - cdp_progress`, and `DEV - cdp_notifier` were
+updated by REST PUT and reactivated through REST fallback. Smoke POSTs to
+`dev-scraper-result`, `dev-muvstok-result`, and `dev-cdp-notifier` returned
+HTTP 200.
 
 ## Local files
 
@@ -59,7 +80,7 @@ three workflows.
 
 Shared router Code node sources: `n8n/src/*.js`
 
-**Phase 1 (complete):** Workflow JSON only at repo root `n8n/`. Legacy docs under `scrapers/n8n/docs/` are deprecated.
+**Phase 1–2 (complete):** Workflow JSON only at repo root `n8n/`. Legacy `scrapers/n8n/` redirect stubs removed.
 
 ## Progress visibility (2026-05-27)
 

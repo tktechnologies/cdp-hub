@@ -55,7 +55,7 @@ Validation scripts:
 Summary:
 - Scrape cache: validated on `/lookup` and `/jobs`.
 - Active scrapers: GM, VW, EU, Peça Direta OK; ML uses SKU `51766536` for smoke; Melibox blocked without BR ISP proxy.
-- Archived: GoParts, Procura Peças, eBay — see `SCRAPER_STATUS_BRIEFING.md` (historical).
+- Archived: GoParts, Procura Peças, eBay — see `docs/archive/SCRAPER_STATUS_BRIEFING.md` (historical).
 
 ## Quick Start
 

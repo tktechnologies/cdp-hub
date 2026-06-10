@@ -31,6 +31,12 @@ Telegram/email summaries that read sheet data, and n8n receiver mappings into
   historical compatibility: `StokAPI`, `muvstok-result`,
   `/api/v1/muvstok/*`.
 
+## SKUs robot columns (PROCESSADO / ENCONTRADO / NOTIFICADO)
+
+- Updates must use `row_number` from a Google Sheets read in the same branch.
+- Remap Code nodes spread the read row and keep `pairedItem`; never emit only
+  `{ row_number, STATUS }` into an Update Row node.
+
 ## Validation
 
 - Inspect formulas for `FOUND_PRICE` and `has_valid_price`; formulas that only

@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     redis_dead_letter_stream: str = "muvstok:jobs:dead-letter"
     redis_consumer_name: str = "worker-1"
     redis_pending_idle_ms: int = 300_000
+    redis_read_block_ms: int = 1_000
+    redis_socket_timeout_seconds: float = 15.0
+    redis_socket_connect_timeout_seconds: float = 10.0
     worker_jobs_per_read: int = 1
     muvstok_sku_delay_seconds: float = 0.75
 
@@ -55,6 +58,7 @@ class Settings(BaseSettings):
         "https://docs.google.com/spreadsheets/d/"
         "1p76idxvF0z8nl20L1jvNw8CABjbgsf-R/export?format=csv&gid=1843593319"
     )
+    muvstok_dealership_directory_url_fallback_enabled: bool = False
     muvstok_dealership_directory_ttl_seconds: int = 86_400
 
     azure_key_vault_url: str = ""

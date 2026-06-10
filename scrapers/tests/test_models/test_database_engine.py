@@ -28,9 +28,7 @@ def test_celery_postgres_engine_disables_pooling() -> None:
 
 
 def test_asyncpg_ssl_query_moves_to_connect_args() -> None:
-    url, connect_args = normalize_asyncpg_url(
-        "postgresql+asyncpg://user:pass@host/db?ssl=require"
-    )
+    url, connect_args = normalize_asyncpg_url("postgresql+asyncpg://user:pass@host/db?ssl=require")
 
     assert url == "postgresql+asyncpg://user:pass@host/db"
     assert connect_args == {"ssl": True}

@@ -1,6 +1,8 @@
 # Scraper implementation state
 
-Last reviewed: 2026-06-03. **Handoff source of truth:** `docs/MAINTENANCE_CHECKPOINT.md`.
+**Last reviewed:** 2026-06-09 · **Handoff:** `docs/MAINTENANCE_CHECKPOINT.md`
+
+> **Live n8n workflow IDs, deploy tags, and cross-service facts:** root [`.agent/memory/implementation-state.md`](../../../.agent/memory/implementation-state.md) and [`docs/n8n/LIVE_WORKFLOWS.md`](../../../docs/n8n/LIVE_WORKFLOWS.md). Do not duplicate IDs in this file.
 
 ## Stack
 
@@ -8,15 +10,11 @@ Last reviewed: 2026-06-03. **Handoff source of truth:** `docs/MAINTENANCE_CHECKP
 - Redis DB 0: Celery broker; DB 1: scrape cache (24h TTL)
 - Production: `cdp-scrapers-api-prod`, `cdp-scrapers-worker-prod`
 
-## n8n (monorepo `n8n/workflows/`)
+## n8n (this service)
 
-| Workflow | ID | File |
-|----------|-----|------|
-| `cdp_router` | `6id6dkinK9xTLfsb` | `n8n/workflows/cdp_router.json` |
-| `cdp_scraper` | `VfBSV3WU6on8BXm8` | `n8n/workflows/cdp_scraper.json` |
-| `cdp_progress` | `CDP_PROGRESS_WORKFLOW_ID` | `n8n/workflows/cdp_progress.json` |
-
-Router Code source: monorepo `n8n/src/` (not `n8n/shared/dual_dispatch/`).
+- **Owns:** `n8n/workflows/cdp_scraper.json`, webhook `scraper-result`
+- **Shares:** router JSON at `n8n/workflows/cdp_router.json`; router Code in `n8n/src/` (platform-owned)
+- **Boundaries:** [boundaries/n8n.md](../boundaries/n8n.md) → root [`.agent/boundaries/n8n.md`](../../../.agent/boundaries/n8n.md)
 
 ## Progress visibility (2026-05-27)
 
@@ -27,35 +25,36 @@ Router Code source: monorepo `n8n/src/` (not `n8n/shared/dual_dispatch/`).
 
 ## Active scrapers
 
-`gm`, `ml`, `vw`, `eu`, `pecadireta`; `melibox` optional in router via `CDP_SCRAPER_SITES`.
+`gm`, `ml`, `vw`, `eu`, `melibox` via live `CDP_SCRAPER_SITES`.
 
-**Archived** (code only, not in `SCRAPER_REGISTRY`): `goparts`, `procurapecas`, `ebay`. Re-enable only after proxy site smoke — see `.agent/workflows/proxy-rollout.md`.
+**Disabled pending smoke:** `pecadireta` (cached HTTP 403 anti-bot blocks on
+2026-06-09). **Archived** (code only, not in `SCRAPER_REGISTRY`): `goparts`,
+`procurapecas`, `ebay`. Re-enable only after fresh proxy site smoke — see
+`.agent/workflows/proxy-rollout.md`.
 
-## Proxy (2026-06-02)
+## Proxy (2026-06-09)
 
 | Item | Status |
 |------|--------|
+| Provider | **IPRoyal ISP BR** — 2 dedicated IPs (HTTP port 12323) |
 | Code (`proxy_manager`, `BaseScraper`, circuit breaker) | Ready |
 | Spec | `docs/SPECS/PROXY_ROTATION_SPEC.md` |
 | Readiness script | `scripts/proxy_readiness_check.py` |
 | Site smoke script | `scripts/proxy_site_smoke.py` |
-| Production `PROXY_URLS` | **Not confirmed** — set in Key Vault before fail-closed deploy |
+| Local validation | **Passed 2026-06-09** — both IPs; Playwright egress OK |
+| Local site smoke | **Melibox PASS** (18 priced); gm/vw/ml `not_found`; pecadireta/eu previously passed locally but prod cache showed HTTP 403 anti-bot blocks on 2026-06-09; keep disabled until fresh smoke |
+| Production `PROXY_URLS` | **Applied on Container Apps** 2026-06-09 (`configure-iproyal-proxy-prod.sh`); Key Vault write blocked for current `az` user — persist manually |
+| Azure egress whitelist | **Done** — `172.193.112.98` whitelisted in IPRoyal (2026-06-09) |
+| Production Melibox smoke | **PASS** — job `d4c9bec0-426d-4c1a-9ae2-8ba124f90b56`, 18 priced rows |
 
 ## Dual pipeline
 
-Router dispatches Scraper + StokAPI in parallel. Scraper arm uses `force_refresh: false`. Platform doc: `docs/architecture/DUAL_PIPELINE.md`.
+Router dispatches Scraper + StokAPI in parallel. Scraper arm uses `force_refresh: false`. Platform: [`docs/architecture/DUAL_PIPELINE.md`](../../../docs/architecture/DUAL_PIPELINE.md).
 
-## Result semantics (2026-06-03)
+## Reporting (callback fields)
 
-- Callback/reporting fields: `sku_result`, `source_health`, `has_valid_price`.
-- Seller fields: `seller_uf`, `seller_company_name`, `seller_cnpj`; receiver
-  output columns are `uf`, `empresa`, `cnpj` after `vendedor`.
-- `FOUND_PRICE` requires exact SKU match plus positive usable price.
-- `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`, and `NOT_QUERIED`
-  are not found-price successes.
-- Mercado Livre captcha/anti-bot/403/access-denied pages should be emitted as
-  `BLOCKED`, not `NOT_FOUND`.
+Canonical semantics: [`.agent/rules/google-sheets.md`](../../../.agent/rules/google-sheets.md). Scraper payload: `sku_result`, `source_health`, `has_valid_price`; seller fields `seller_uf`, `seller_company_name`, `seller_cnpj` → receiver columns `uf`, `empresa`, `cnpj`.
 
 ## Before deploy
 
-Verify image tags in Azure. If enabling proxy: run readiness + site smoke; document provider name (no secrets) here and in platform memory.
+Verify image tags in Azure (see platform memory). If enabling proxy: run readiness + site smoke; document provider name (no secrets) here and in platform memory.

@@ -59,7 +59,7 @@ echo "==> Patch secrets on ${APP} (${RG})"
 az containerapp secret set -g "${RG}" -n "${APP}" --secrets "${SECRET_ARGS[@]}" --output none
 
 ENV_ARGS=(
-  "CDP_ENV=development"
+  "CDP_ENV=shared"
   "TELEGRAM_DEV_ALLOWED_CHAT_IDS=${TELEGRAM_DEV_ALLOWED_CHAT_IDS}"
   "TELEGRAM_DEV_BOT_TOKEN=secretref:telegram-dev-bot-token"
   "CDP_DEV_SCRAPER_API_BASE=${CDP_DEV_SCRAPER_API_BASE}"

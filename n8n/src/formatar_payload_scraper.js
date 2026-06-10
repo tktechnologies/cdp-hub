@@ -7,11 +7,6 @@ const DEFAULT_SITES = [
   'ml',
   'vw',
   'eu',
-  'pecadireta',
-  'melibox',
-  'goparts',
-  'procurapecas',
-  'ebay',
 ];
 const DEFAULT_SCRAPER_API_BASE =
   'https://cdp-scrapers-api-prod.bravecoast-b14d791e.eastus2.azurecontainerapps.io';
@@ -42,7 +37,7 @@ function workflowName() {
   return '';
 }
 function isDevWorkflow() {
-  return /^DEV\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));
+  return /^DEV\s*-/i.test(workflowName());
 }
 function devEnvName(name) {
   const map = {

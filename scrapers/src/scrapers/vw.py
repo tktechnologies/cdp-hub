@@ -98,9 +98,15 @@ class VWScraper(BaseScraper):
                 logger.info("VW: CEP filled", cep=CEP)
 
                 # Submit
-                confirm_btn = page.locator("button").filter(
-                    has_text=re.compile(r"OK|Confirmar|Atualizar|Buscar|Aplicar|Localizar", re.I)
-                ).first
+                confirm_btn = (
+                    page.locator("button")
+                    .filter(
+                        has_text=re.compile(
+                            r"OK|Confirmar|Atualizar|Buscar|Aplicar|Localizar", re.I
+                        )
+                    )
+                    .first
+                )
                 if await confirm_btn.is_visible():
                     await confirm_btn.click()
                 else:
@@ -111,9 +117,11 @@ class VWScraper(BaseScraper):
                 return True
 
         # Try clicking a CEP trigger element
-        cep_trigger = page.locator('button, a, div, span').filter(
-            has_text=re.compile(r"CEP|Informe|Localização|01001-000", re.I)
-        ).first
+        cep_trigger = (
+            page.locator("button, a, div, span")
+            .filter(has_text=re.compile(r"CEP|Informe|Localização|01001-000", re.I))
+            .first
+        )
         if await cep_trigger.is_visible():
             await cep_trigger.click()
             await self._wait_for_page_settle()
@@ -148,7 +156,7 @@ class VWScraper(BaseScraper):
         """Apply VW-specific SKU normalization rules.
         Removes all spaces, dashes, dots, and slashes.
         """
-        return re.sub(r'[\s\.\-/]', '', sku).upper()
+        return re.sub(r"[\s\.\-/]", "", sku).upper()
 
     async def search_sku(self, page: Page, sku: str, brand: str = "") -> list[PartResult]:
         """Search for a part on VW official site.

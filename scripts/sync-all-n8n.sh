@@ -27,6 +27,12 @@ python3 scripts/sync_workflow_code_from_shared.py
 echo "==> Build cdp_notifier workflow JSON"
 python3 scripts/build_cdp_notifier_workflow.py
 
+echo "==> Patch cdp_notifier (CSV attachment + send guards)"
+python3 scripts/patch_cdp_notifier_workflow.py
+
+echo "==> Patch cdp_skus sheet tab refs (+ notifier NOTIFICADO writeback)"
+python3 scripts/patch_cdp_skus_sheet_nodes.py
+
 echo "==> Patch receivers for aggregate notifier handoff"
 python3 scripts/patch_receiver_notifier_handoff.py
 

@@ -10,7 +10,6 @@ from src.main import app
 
 @pytest.mark.integration
 class TestE2EMockPipeline:
-
     @pytest.mark.asyncio
     async def test_submit_and_get_results(self, api_headers):
         transport = ASGITransport(app=app)

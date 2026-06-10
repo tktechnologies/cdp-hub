@@ -24,7 +24,7 @@ function workflowName() {
 }
 
 function isDevWorkflow() {
-  return workflowName().trim().toLowerCase().startsWith('dev -') || env('CDP_ENV').toLowerCase() === 'dev';
+  return workflowName().trim().toLowerCase().startsWith('dev -');
 }
 
 function envFor(name) {

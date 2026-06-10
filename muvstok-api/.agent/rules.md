@@ -67,16 +67,11 @@ Do not mark work complete based on chat memory alone.
 - Document business rules that affect data behavior.
 - Preserve existing data contracts unless the spec requires a change.
 - When behavior changes, update the relevant spec.
-- Keep worker lifecycle status separate from SKU result semantics:
-  `status=succeeded` means lookup processing completed, while `sku_result` /
-  `has_valid_price` decides whether a price was found.
-- Callback/reporting result values are `FOUND_PRICE`, `NO_PRICE`, `NOT_FOUND`,
-  `BLOCKED`, `TIMEOUT`, `ERROR`, and `NOT_QUERIED`.
-- `has_valid_price=true` is required for found-price metrics; `NO_PRICE`,
-  `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`, and `NOT_QUERIED` are not success.
-- Sheets seller/location output is canonical as `vendedor`, `uf`, `empresa`,
-  `cnpj`. Accept raw `estado` aliases from upstream rows, but normalize them to
-  `uf` and never write an `estado` column.
+- Worker `status=succeeded` means lookup completed — not a found-price signal.
+  Canonical callback/Sheets semantics:
+  [`../../.agent/rules/google-sheets.md`](../../.agent/rules/google-sheets.md).
+- Detalhado seller output: `vendedor`, `uf`, `empresa`, `cnpj`; accept raw
+  `estado` aliases but normalize to `uf` only.
 
 ## Testing and Validation Rules
 

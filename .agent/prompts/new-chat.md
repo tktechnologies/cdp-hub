@@ -2,7 +2,7 @@
 
 Use this at the **start of every new Cursor chat** on the CDP monorepo. Paste the block below, then add your task on the next line.
 
-**Maintainers:** keep this file aligned with [platform-startup.md](platform-startup.md) and [../index.md](../index.md). Last reviewed: 2026-06-06.
+**Maintainers:** keep this file aligned with [platform-startup.md](platform-startup.md) and [../index.md](../index.md). Last reviewed: 2026-06-09. Do not embed workflow IDs here — use `docs/n8n/LIVE_WORKFLOWS.md` and `.agent/memory/implementation-state.md`.
 
 ---
 
@@ -23,8 +23,7 @@ You are a senior engineer on the CDP platform monorepo (cdp-app): Scraper + Stok
 6. Router sends force_refresh: false; scraper 24h cache applies before Playwright.
 7. .analisar / .sku: all valid SKUs by default; optional sample only via CDP_DISPATCH_SAMPLE_SIZE.
 8. Never run `make sync-n8n` or publish live n8n without my explicit approval.
-9. Reporting success means `FOUND_PRICE` + `has_valid_price=TRUE`; row existence in `Detalhado` is not success, and blocked/captcha/403 is `BLOCKED`, not `NOT_FOUND`.
-10. Detalhado seller metadata is `vendedor`, `uf`, `empresa`, `cnpj`; never write `estado` as a column.
+9. Google Sheets reporting: follow [../rules/google-sheets.md](../rules/google-sheets.md) (`FOUND_PRICE` + `has_valid_price`, Detalhado columns, `BLOCKED` vs `NOT_FOUND`).
 
 ## Tier routing (pick one, then open that AGENTS.md)
 | If the work touches… | Start here |
@@ -43,7 +42,7 @@ You are a senior engineer on the CDP platform monorepo (cdp-app): Scraper + Stok
 4. docs/architecture/DUAL_PIPELINE.md
 5. .agent/index.md + .agent/rules.md
 6. .agent/memory/implementation-state.md (current snapshot only — do not treat old version UUIDs as current)
-7. For Sheets/callback/reporting: `.agent/rules/google-sheets.md` + `.agent/knowledge/google-sheets-reporting.md` — `FOUND_PRICE` + `has_valid_price=true` is the only found-price success; row existence in `Detalhado` is not success; blocked/captcha/403 is `BLOCKED`, not `NOT_FOUND`; Detalhado seller metadata is `vendedor`, `uf`, `empresa`, `cnpj` (`estado` is input-alias only)
+7. For Sheets/callback/reporting: `.agent/rules/google-sheets.md` + `.agent/knowledge/google-sheets-reporting.md`
 8. docs/PLATFORM_OVERVIEW.md only for API/Azure tables
 
 Task-scoped rules: .agent/rules/<domain>.md · Ownership: .agent/knowledge/service-catalog.md
@@ -51,9 +50,7 @@ Task-scoped rules: .agent/rules/<domain>.md · Ownership: .agent/knowledge/servi
 ## n8n publish (critical)
 - Code in n8n/src/*.js → python3 scripts/sync_workflow_code_from_shared.py → commit JSON → make sync-n8n (with approval).
 - Structural workflow changes (nodes, connections): MCP update_workflow operations + publish_workflow — make sync-n8n alone may NOT update the live graph (see LIVE_WORKFLOWS.md).
-- cdp_progress / cdp_notifier: live IDs exist; export CDP_PROGRESS_WORKFLOW_ID and CDP_NOTIFIER_WORKFLOW_ID before make sync-n8n to include them.
-
-Live IDs: cdp_router 6id6dkinK9xTLfsb · cdp_scraper VfBSV3WU6on8BXm8 · cdp_stokapi t160mzGPYYlJcrjZ · cdp_progress V9I6o32XDoPIRarz · cdp_notifier ennI9nKin9ruPaLO
+- cdp_progress / cdp_notifier: export CDP_PROGRESS_WORKFLOW_ID and CDP_NOTIFIER_WORKFLOW_ID before make sync-n8n (resolve IDs from docs/n8n/LIVE_WORKFLOWS.md — do not cite IDs from this prompt).
 
 ## Quality gates (run what you touched)
 - Scraper: make -C scrapers test lint

@@ -115,9 +115,19 @@ class BaseScraper(ABC):
     async def initialize(self) -> None:
         """Start browser and create context with stored session if available."""
         self._credentials = settings.get_site_credentials(self.site_id.value)
-        proxy = get_proxy_manager().proxy_for_site(self.site_id.value)
+        if self._proxy_endpoint is None:
+            self._assign_proxy_from_manager()
+        await self._launch_browser()
+
+    def _assign_proxy_from_manager(self) -> None:
+        """Bind the proxy for the current SKU scope (shared across sites)."""
+        proxy = get_proxy_manager().proxy_for_current_scope(self.site_id.value)
         self._proxy_endpoint = proxy
         self._proxy_identity = proxy.identity if proxy else None
+
+    async def _launch_browser(self) -> None:
+        """Launch Chromium and create a context using the current proxy binding."""
+        proxy = self._proxy_endpoint
 
         self._playwright = await async_playwright().start()
         playwright = self._playwright
@@ -130,9 +140,10 @@ class BaseScraper(ABC):
 
         self._browser = await playwright.chromium.launch(**launch_opts)
 
-        # Restore session state if it exists
         raw_browser_version = getattr(self._browser, "version", "")
-        browser_version = raw_browser_version() if callable(raw_browser_version) else raw_browser_version
+        browser_version = (
+            raw_browser_version() if callable(raw_browser_version) else raw_browser_version
+        )
         browser_version = str(browser_version or "")
         context_opts = self._build_context_options(browser_version)
         if self.state_file.exists():
@@ -145,11 +156,82 @@ class BaseScraper(ABC):
                 "Using outbound proxy",
                 site=self.site_id.value,
                 proxy=proxy.server,
+                proxy_host=proxy.host,
                 proxy_identity=proxy.identity,
+                last_proxy_host=get_proxy_manager().last_proxy_host,
             )
 
         self._context = await self._browser.new_context(**context_opts)
         await self._install_anti_bot_context()
+        await self._on_context_created()
+
+    async def _on_context_created(self) -> None:
+        """Subclass hook after a new browser context is created (e.g. route blocking)."""
+        return
+
+    async def _shutdown_browser(self) -> None:
+        """Close browser resources without removing the scraper instance."""
+        if self._context:
+            try:
+                await self._context.storage_state(path=str(self.state_file))
+                logger.info("Session state saved", site=self.site_id.value)
+            except Exception as e:
+                logger.warning(
+                    "Failed to save session state", site=self.site_id.value, error=str(e)
+                )
+            await self._context.close()
+            self._context = None
+        if self._browser:
+            await self._browser.close()
+            self._browser = None
+        if self._playwright:
+            await self._playwright.stop()
+            self._playwright = None
+        self._invalidate_session_cache()
+
+    async def _apply_proxy_for_search(self) -> None:
+        """Pick the next proxy and recreate the browser context when the IP changes."""
+        if not settings.proxy_rotation_enabled:
+            if not self._context:
+                await self.initialize()
+            return
+
+        if not settings.proxy_rotate_context_per_search:
+            if not self._context:
+                await self.initialize()
+            return
+
+        if self._context is None:
+            await self.initialize()
+            return
+
+        manager = get_proxy_manager()
+        desired = manager.proxy_for_current_scope(self.site_id.value)
+        desired_identity = desired.identity if desired else None
+        if desired_identity == self._proxy_identity:
+            return
+
+        previous_host = self._proxy_endpoint.host if self._proxy_endpoint else None
+        logger.info(
+            "Rotating proxy for SKU scope",
+            site=self.site_id.value,
+            sku_scope=manager.active_sku_key,
+            previous_proxy_host=previous_host,
+            previous_proxy_identity=self._proxy_identity,
+            next_proxy_host=desired.host if desired else None,
+            next_proxy_identity=desired_identity,
+        )
+        await self._shutdown_browser()
+        self._proxy_endpoint = desired
+        self._proxy_identity = desired_identity
+        await self._launch_browser()
+
+    def _attach_proxy_metadata(self, result: SiteResult) -> SiteResult:
+        """Record which proxy/IP served this live search."""
+        if self._proxy_endpoint:
+            result.proxy_host = self._proxy_endpoint.host
+            result.proxy_identity = self._proxy_identity or ""
+        return result
 
     def _httpx_proxy_url(self) -> str | None:
         """Return the current proxy URL for source-specific HTTP preflights."""
@@ -160,9 +242,7 @@ class BaseScraper(ABC):
     def _select_user_agent(self, browser_version: str = "") -> str:
         """Choose a Chromium-compatible user agent for this browser context."""
         configured_agents = [
-            user_agent.strip()
-            for user_agent in settings.browser_user_agents
-            if user_agent.strip()
+            user_agent.strip() for user_agent in settings.browser_user_agents if user_agent.strip()
         ]
         if configured_agents:
             return random.choice(configured_agents)
@@ -260,17 +340,7 @@ class BaseScraper(ABC):
 
     async def shutdown(self) -> None:
         """Save session state and close browser."""
-        if self._context:
-            try:
-                await self._context.storage_state(path=str(self.state_file))
-                logger.info("Session state saved", site=self.site_id.value)
-            except Exception as e:
-                logger.warning("Failed to save session state", site=self.site_id.value, error=str(e))
-            await self._context.close()
-        if self._browser:
-            await self._browser.close()
-        if self._playwright:
-            await self._playwright.stop()
+        await self._shutdown_browser()
 
     # ─── Session Management ───────────────────────────────────────
 
@@ -330,7 +400,7 @@ class BaseScraper(ABC):
         stop=stop_after_attempt(3),
         wait=wait_exponential(min=2, max=30),
         retry=retry_if_exception_type((asyncio.TimeoutError, ConnectionError)),
-        reraise=True
+        reraise=True,
     )
     async def _search_with_retry(self, page: Page, sku: str, brand: str) -> list[PartResult]:
         """Execute search with retry logic for transient failures."""
@@ -342,7 +412,7 @@ class BaseScraper(ABC):
                 site=self.site_id.value,
                 sku=sku,
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
             raise
 
@@ -355,8 +425,7 @@ class BaseScraper(ABC):
         page: Page | None = None
 
         try:
-            if not self._context:
-                await self.initialize()
+            await self._apply_proxy_for_search()
 
             assert self._context is not None
             circuit_open, retry_after, reason = anti_bot_circuit_breaker.is_open(
@@ -378,7 +447,7 @@ class BaseScraper(ABC):
                     result.search_time_ms / 1000,
                     self._proxy_identity,
                 )
-                return result
+                return self._attach_proxy_metadata(result)
 
             self._last_http_block = None
             page = await self._new_page()
@@ -402,7 +471,7 @@ class BaseScraper(ABC):
                         result.search_time_ms / 1000,
                         self._proxy_identity,
                     )
-                    return result
+                    return self._attach_proxy_metadata(result)
                 result = SiteResult(
                     site=self.site_id,
                     site_name=self.site_name,
@@ -416,7 +485,7 @@ class BaseScraper(ABC):
                     result.search_time_ms / 1000,
                     self._proxy_identity,
                 )
-                return result
+                return self._attach_proxy_metadata(result)
 
             # Normalize SKU based on business rules
             normalized_sku = self._normalize_sku(sku, brand)
@@ -454,7 +523,7 @@ class BaseScraper(ABC):
                         result.search_time_ms / 1000,
                         self._proxy_identity,
                     )
-                    return result
+                    return self._attach_proxy_metadata(result)
 
                 await self._anti_bot_backoff(attempt)
                 with contextlib.suppress(Exception):
@@ -472,6 +541,8 @@ class BaseScraper(ABC):
                 results_count=len(results),
                 exact_count=len(exact_results),
                 elapsed_ms=elapsed_ms,
+                proxy_host=self._proxy_endpoint.host if self._proxy_endpoint else "",
+                proxy_identity=self._proxy_identity,
             )
 
             result = self._site_result_from_search(results, elapsed_ms)
@@ -483,18 +554,23 @@ class BaseScraper(ABC):
                 result.search_time_ms / 1000,
                 self._proxy_identity,
             )
-            return result
+            return self._attach_proxy_metadata(result)
 
         except Exception as e:
             elapsed_ms = int((time.monotonic() - start_time) * 1000)
             logger.error(
                 "Scrape failed",
-                site=self.site_id.value, sku=sku, error=str(e), exc_info=True,
+                site=self.site_id.value,
+                sku=sku,
+                error=str(e),
+                exc_info=True,
             )
             # Capture screenshot on error
             if page and settings.screenshot_on_error:
                 try:
-                    screenshot_path = settings.browser_state_dir / f"error_{self.site_id.value}_{sku}.png"
+                    screenshot_path = (
+                        settings.browser_state_dir / f"error_{self.site_id.value}_{sku}.png"
+                    )
                     await page.screenshot(path=str(screenshot_path))
                 except Exception:
                     pass
@@ -512,7 +588,7 @@ class BaseScraper(ABC):
                 result.search_time_ms / 1000,
                 self._proxy_identity,
             )
-            return result
+            return self._attach_proxy_metadata(result)
         finally:
             if page:
                 await page.close()
@@ -544,7 +620,7 @@ class BaseScraper(ABC):
         minimum = max(0.0, settings.anti_bot_backoff_min_seconds)
         maximum = max(minimum, settings.anti_bot_backoff_max_seconds)
         base_wait = random.uniform(minimum, maximum)
-        wait_seconds = base_wait * (2 ** attempt)
+        wait_seconds = base_wait * (2**attempt)
         logger.info(
             "Anti-bot backoff before retry",
             site=self.site_id.value,
@@ -597,8 +673,7 @@ class BaseScraper(ABC):
         normalized = unicodedata.normalize("NFD", str(text).upper())
         normalized = "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
         uf_codes = (
-            "AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|"
-            "RJ|RN|RS|RO|RR|SC|SP|SE|TO"
+            "AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO"
         )
         uf_match = re.search(rf"(?<![A-Z0-9])({uf_codes})(?![A-Z0-9])", normalized)
         if uf_match:
@@ -691,9 +766,7 @@ class BaseScraper(ABC):
             and not cls._is_out_of_stock(result.availability)
         )
 
-    def _site_result_from_search(
-        self, results: list[PartResult], elapsed_ms: int
-    ) -> SiteResult:
+    def _site_result_from_search(self, results: list[PartResult], elapsed_ms: int) -> SiteResult:
         """Classify scraper results while preserving exact out-of-stock evidence."""
         priced_results = [result for result in results if self._is_priced_in_stock(result)]
         if priced_results:
@@ -723,15 +796,11 @@ class BaseScraper(ABC):
             search_time_ms=elapsed_ms,
         )
 
-    async def _wait_for_page_settle(
-        self, minimum_ms: int = 900, maximum_ms: int = 2200
-    ) -> None:
+    async def _wait_for_page_settle(self, minimum_ms: int = 900, maximum_ms: int = 2200) -> None:
         """Tunable settle wait after navigation or SPA updates."""
         await self._action_delay(minimum_ms, maximum_ms)
 
-    async def _wait_for_post_submit(
-        self, minimum_ms: int = 1200, maximum_ms: int = 3000
-    ) -> None:
+    async def _wait_for_post_submit(self, minimum_ms: int = 1200, maximum_ms: int = 3000) -> None:
         """Tunable wait after submitting forms such as CEP or SKU search."""
         await self._action_delay(minimum_ms, maximum_ms)
 
@@ -741,9 +810,7 @@ class BaseScraper(ABC):
         """Tunable wait between click/fill/key interactions."""
         await self._action_delay(minimum_ms, maximum_ms)
 
-    async def _wait_for_results(
-        self, page: Page, selector: str, timeout_ms: int = 8000
-    ) -> None:
+    async def _wait_for_results(self, page: Page, selector: str, timeout_ms: int = 8000) -> None:
         """Wait for result selectors, then settle briefly; ignore absent optional results."""
         try:
             await page.wait_for_selector(selector, timeout=timeout_ms)
@@ -751,7 +818,9 @@ class BaseScraper(ABC):
             logger.debug("Result selector wait timed out", site=self.site_id.value)
         await self._wait_for_page_settle()
 
-    async def _action_delay(self, minimum_ms: int | None = None, maximum_ms: int | None = None) -> None:
+    async def _action_delay(
+        self, minimum_ms: int | None = None, maximum_ms: int | None = None
+    ) -> None:
         """Small jittered in-page delay to avoid tight bot-like action loops."""
         min_ms = settings.scraper_action_delay_min_ms if minimum_ms is None else minimum_ms
         max_ms = settings.scraper_action_delay_max_ms if maximum_ms is None else maximum_ms

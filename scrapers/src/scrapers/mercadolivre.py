@@ -153,9 +153,11 @@ class MercadoLivreScraper(BaseScraper):
             await self._wait_for_micro_interaction()
             logger.info("ML: CEP filled", cep=ML_CEP)
 
-            confirm_btn = page.locator("button").filter(
-                has_text=re.compile(r"Usar|Confirmar|OK|Continuar|Salvar", re.I)
-            ).first
+            confirm_btn = (
+                page.locator("button")
+                .filter(has_text=re.compile(r"Usar|Confirmar|OK|Continuar|Salvar", re.I))
+                .first
+            )
             if await confirm_btn.is_visible():
                 await confirm_btn.click()
             else:
@@ -163,9 +165,13 @@ class MercadoLivreScraper(BaseScraper):
             await self._wait_for_post_submit()
             return
 
-        cep_trigger = page.locator("button, a, span").filter(
-            has_text=re.compile(r"CEP|Informe|Código postal|Onde comprar|Enviar para", re.I)
-        ).first
+        cep_trigger = (
+            page.locator("button, a, span")
+            .filter(
+                has_text=re.compile(r"CEP|Informe|Código postal|Onde comprar|Enviar para", re.I)
+            )
+            .first
+        )
         if await cep_trigger.is_visible():
             await cep_trigger.click()
             await self._wait_for_page_settle(1000, 2000)
@@ -210,9 +216,7 @@ class MercadoLivreScraper(BaseScraper):
 
             # Check for "no results"
             no_results = await page.query_selector(
-                "div.ui-search-rescue, "
-                "p.ui-search-rescue__text, "
-                "[class*='empty-state']"
+                "div.ui-search-rescue, p.ui-search-rescue__text, [class*='empty-state']"
             )
             if no_results:
                 # Also check page text
@@ -496,14 +500,12 @@ class MercadoLivreScraper(BaseScraper):
             cents = ""
             aria_label = ""
             price_int_el = await card.query_selector(
-                "span.andes-money-amount__fraction, "
-                "span.price-tag-fraction"
+                "span.andes-money-amount__fraction, span.price-tag-fraction"
             )
             if price_int_el:
                 fraction = (await price_int_el.inner_text()).strip()
             price_cents_el = await card.query_selector(
-                "span.andes-money-amount__cents, "
-                "span.price-tag-cents"
+                "span.andes-money-amount__cents, span.price-tag-cents"
             )
             if price_cents_el:
                 cents = (await price_cents_el.inner_text()).strip()
@@ -593,10 +595,7 @@ class MercadoLivreScraper(BaseScraper):
                     condition = ItemCondition.USED
 
             # Seller
-            seller_el = await page.query_selector(
-                "span.ui-pdp-action__info, "
-                "a.ui-pdp-action__link"
-            )
+            seller_el = await page.query_selector("span.ui-pdp-action__info, a.ui-pdp-action__link")
             seller_name = ""
             if seller_el:
                 seller_name = (await seller_el.inner_text()).strip()

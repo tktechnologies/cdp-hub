@@ -1,5 +1,5 @@
 // CDP platform infrastructure entry (resource group scope).
-// Delegates scraper stack to scrapers/infra/main.bicep; StokAPI apps are a placeholder module.
+// Orchestrates scraper stack (infra/scraper-stack.bicep) and optional StokAPI apps.
 
 targetScope = 'resourceGroup'
 
@@ -49,7 +49,7 @@ param proxyAdminPassword string = ''
 param deployContainerApps bool = true
 param deployProxyPool bool = false
 
-module scraper '../scrapers/infra/main.bicep' = if (deployScraper) {
+module scraper 'scraper-stack.bicep' = if (deployScraper) {
   name: 'scraper-stack'
   params: {
     environmentName: environmentName

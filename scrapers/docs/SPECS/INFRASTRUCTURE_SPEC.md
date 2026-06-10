@@ -3,11 +3,11 @@
 ## Current State
 This repository uses Bicep plus Azure CLI deployment automation.
 
-Current deployment assets:
-- `infra/main.bicep`
+Current deployment assets (monorepo root):
+- `infra/scraper-stack.bicep` (orchestrated by `infra/main.bicep`)
 - `infra/modules/*.bicep`
-- `scripts/deploy-azure.sh`
-- `.github/workflows/cd.yml`
+- `scripts/deploy-scraper-azure.sh`
+- `.github/workflows/cd-prod.yml`
 - `Dockerfile`
 - `docker-compose.yml` for local development
 - Celery worker command: `celery -A src.celery_app.celery_app worker --loglevel=INFO --concurrency=1`
@@ -99,7 +99,7 @@ Why not Terraform right now:
 
 Decision:
 - Use Bicep as the source of truth for Azure resources.
-- Use `scripts/deploy-azure.sh` for the manual production rebuild flow until a
+- Use `scripts/deploy-scraper-azure.sh` for the manual production rebuild flow until a
   dedicated infrastructure GitHub workflow is added.
 - Keep app CD focused on building/pushing the scraper image, running migrations,
   and updating the API + worker Container App revisions.
@@ -108,8 +108,9 @@ Decision:
 Recommended structure:
 
 ```text
-infra/
-  main.bicep
+infra/                          # monorepo root (not under scrapers/)
+  main.bicep                    # platform entry
+  scraper-stack.bicep           # scraper + n8n stack
   modules/
     acr.bicep
     container-app-env.bicep
@@ -119,14 +120,17 @@ infra/
     key-vault.bicep
     n8n-container-app.bicep
     proxy-pool.bicep
+    stokapi-apps.bicep            # placeholder
 ```
 
 Current repository structure follows this module layout. Validate before deployment with:
 
 ```bash
-az bicep build --file infra/main.bicep
-cp infra/main.parameters.example.json infra/main.parameters.local.json
-az deployment group what-if --resource-group automation --template-file infra/main.bicep --parameters @infra/main.parameters.local.json
+make bicep-validate
+# or direct scraper stack:
+az bicep build --file infra/scraper-stack.bicep
+cp infra/scraper-stack.parameters.example.json infra/scraper-stack.parameters.local.json
+az deployment group what-if --resource-group automation --template-file infra/scraper-stack.bicep --parameters @infra/scraper-stack.parameters.local.json
 ```
 
 The production deployment script performs a two-phase rollout:

@@ -31,6 +31,8 @@ node -e "const fs=require('fs'); for (const f of ['n8n/workflows/cdp_scraper.jso
 - `Detalhado` uses `vendedor`, `uf`, `empresa`, `cnpj`; no output
   `estado` column.
 - SKU KPIs use unique SKUs; offer/listing KPIs use row counts.
+- SKUs tab robot columns: Update Row nodes must receive items with `pairedItem`
+  from a prior read; grep remap nodes for `pairedItem` and `...row` spread.
 
 ## Safety
 

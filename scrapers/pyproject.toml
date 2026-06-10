@@ -59,8 +59,8 @@ known-first-party = ["src"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/interview_scraper_demo.py" = ["N806"]
-"scripts/batch_meeting_skus.py" = ["E402", "RUF001"]
-"scripts/summarize_meeting_batch.py" = ["RUF001"]
+"scripts/archive/batch_meeting_skus.py" = ["E402", "RUF001"]
+"scripts/archive/summarize_meeting_batch.py" = ["RUF001"]
 
 [[tool.mypy.overrides]]
 module = [

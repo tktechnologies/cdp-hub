@@ -35,10 +35,7 @@ def format_sku_result(
 
 def _find_best_price(results: list[PartResult]) -> PartResult | None:
     """Find the lowest-priced exact match when candidates share one currency."""
-    priced = [
-        r for r in results
-        if r.price is not None and r.price > 0 and r.exact_match
-    ]
+    priced = [r for r in results if r.price is not None and r.price > 0 and r.exact_match]
     if not priced:
         return None
 

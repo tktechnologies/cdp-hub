@@ -2,6 +2,8 @@ import asyncio
 import logging
 from uuid import UUID
 
+from redis.exceptions import RedisError
+
 from app.clients.redis_queue_client import RedisQueueClient
 from app.core.config import get_settings
 from app.workers.job_processor import JobProcessor
@@ -16,7 +18,21 @@ async def run_worker() -> None:
 
     try:
         while True:
-            messages = await queue_client.read_jobs(count=settings.worker_jobs_per_read)
+            try:
+                messages = await queue_client.read_jobs(
+                    count=settings.worker_jobs_per_read,
+                    block_ms=settings.redis_read_block_ms,
+                )
+            except (RedisError, TimeoutError, OSError) as exc:
+                logger.warning(
+                    "redis_read_failed",
+                    extra={
+                        "event_name": "redis_read_failed",
+                        "error_type": type(exc).__name__,
+                    },
+                )
+                await asyncio.sleep(5)
+                continue
             if not messages:
                 continue
             for message in messages:

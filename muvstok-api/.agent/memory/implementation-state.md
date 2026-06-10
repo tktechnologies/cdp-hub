@@ -1,25 +1,16 @@
 # Implementation State
 
-Last reviewed: 2026-06-03.
+**Last reviewed:** 2026-06-09
 
-## n8n (renamed)
+> **Live n8n workflow IDs and cross-service deploy facts:** root [`.agent/memory/implementation-state.md`](../../../.agent/memory/implementation-state.md) and [`docs/n8n/LIVE_WORKFLOWS.md`](../../../docs/n8n/LIVE_WORKFLOWS.md). Do not duplicate IDs in this file.
 
-| Workflow | ID | Role |
-|----------|-----|------|
-| `cdp_router` | `6id6dkinK9xTLfsb` | `.analisar` / `.sku` → Scraper + StokAPI inline |
-| `cdp_scraper` | `VfBSV3WU6on8BXm8` | Webhook `scraper-result` |
-| `cdp_stokapi` | `t160mzGPYYlJcrjZ` | Webhook `muvstok-result` |
+## n8n (this service)
 
-Legacy `cdp_muvstok-api_starter` (`PXLHDzRbBVgs8Xl2`) — deprecated; dispatch only via router.
-
-Sync: monorepo `make sync-n8n` with user approval; includes `cdp_progress` when `CDP_PROGRESS_WORKFLOW_ID` is set.
-
-## Router behaviour
-
-- Shared Code sources: `cdp-app/n8n/src/`
-- Scraper anti-bot: **Redis scrape cache 24h** (`SCRAPE_CACHE_TTL_SECONDS=86400`) + PG fallback; router sends `force_refresh: false`
-- `.sku` and `.analisar` both run dual pipeline
-- Job metadata: `batch_group_id`, `command_route`, `pipeline`
+- **Owns:** `n8n/workflows/cdp_stokapi.json`, webhook `muvstok-result`
+- **Shares:** production dispatch inline in `cdp_router` via `n8n/src/router_stokapi.js` (platform-owned)
+- **Boundaries:** [boundaries/n8n.md](../boundaries/n8n.md) → root [`.agent/boundaries/n8n.md`](../../../.agent/boundaries/n8n.md)
+- Legacy `cdp_muvstok-api_starter` (`PXLHDzRbBVgs8Xl2`) — deprecated; dispatch only via router
+- Sync: monorepo `make sync-n8n` with user approval
 
 ## Duplicate SKUs + per-SKU cache (2026-05-29)
 
@@ -30,19 +21,9 @@ Sync: monorepo `make sync-n8n` with user approval; includes `cdp_progress` when 
 - Tests: `tests/test_workers/test_sku_processor_cache.py`, `tests/test_services/test_sku_cache.py`, `tests/test_services/test_request_skus.py`.
 - **Deployed 2026-05-29:** migration `20260529_0004` on prod PG; images `20260529-1040` on `cdp-muv-api` / `cdp-muv-worker` with `MUVSTOK_CACHE_*` env.
 
-## Result semantics (2026-06-03)
+## Result semantics
 
-- Worker lifecycle `status=succeeded` means the lookup completed; it is not a
-  found-price signal.
-- Callback/results now carry `sku_result`, `source_health`, and
-  `has_valid_price`.
-- Found-price metrics require `sku_result=FOUND_PRICE` and
-  `has_valid_price=true`.
-- `NO_PRICE`, `NOT_FOUND`, `BLOCKED`, `TIMEOUT`, `ERROR`, and `NOT_QUERIED`
-  remain distinct in callbacks, `Detalhado`, Historico, Telegram, and dashboard
-  formulas.
-- Local receiver JSON is regenerated; live `cdp_stokapi` publish still requires
-  explicit user approval.
+Worker `status=succeeded` means lookup completed — not a found-price signal. Canonical callback/Sheets semantics: [`.agent/rules/google-sheets.md`](../../../.agent/rules/google-sheets.md). Detalhado seller columns: `vendedor`, `uf`, `empresa`, `cnpj`; raw `estado` aliases normalize to `uf`.
 
 ## API / worker
 
@@ -51,10 +32,8 @@ Sync: monorepo `make sync-n8n` with user approval; includes `cdp_progress` when 
 - Callbacks to `muvstok-result` with `x-webhook-secret`
 - **Progress:** `GET /api/v1/muvstok/jobs/{id}` returns live `items_processed` / `progress_pct` while status is `processing` (read-time recount from DB).
 - **User-facing branding** (Telegram, Sheets, n8n node labels, `app_name`): **API Diversos** / `api-diversos`. Internal routes, env vars, DB tables, and webhook path unchanged for compatibility.
-- **Detalhado seller columns**: `vendedor`, `uf`, `empresa`, `cnpj`; raw
-  `estado` aliases normalize to `uf`.
 
 ## Docs
 
-- Platform: `cdp-app/docs/architecture/DUAL_PIPELINE.md`
-- Live IDs: `cdp-app/docs/n8n/LIVE_WORKFLOWS.md`
+- Platform dual pipeline: `cdp-app/docs/architecture/DUAL_PIPELINE.md`
+- Receiver guide: `muvstok-api/n8n/docs/MUVSTOK_N8N_WORKFLOW_GUIDE.md`

@@ -41,6 +41,7 @@ run in the shared n8n instance under `DEV - ...` names.
 
 | Path | Purpose |
 |------|---------|
+| [infra/](infra/) | Platform Azure Bicep (scraper stack, shared modules) |
 | [scrapers/](scrapers/) | Scraper API, Celery worker, Playwright scrapers, cache |
 | [muvstok-api/](muvstok-api/) | API Diversos/StokAPI API, Redis worker, persistence |
 | [n8n/](n8n/) | Router/progress source, workflow JSON, receiver helpers, SDK |

@@ -43,6 +43,7 @@ Boundaries:
 - Do not change production application code unless the audit found a doc/code mismatch requiring a code fix
 - Do not run make sync-n8n or publish n8n
 - Link instead of duplicating architecture across three repos
+- Follow single-source-of-truth table in .agent/knowledge/workspace-sync.md (IDs, reporting, boundaries)
 
 Maintenance prompt library: .agent/prompts/maintenance/README.md
 

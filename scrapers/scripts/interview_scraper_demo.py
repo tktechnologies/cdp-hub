@@ -31,16 +31,14 @@ from src.scrapers import shutdown_all_scrapers
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 from demo_scraper_runs import _get_demo_scraper, _summarize_site_result
 
-# Active production sites + eBay (archived). No GoParts/ProcuraPeças in headed demo.
+# Production sites only (CDP_SCRAPER_SITES=gm,ml,vw,eu,melibox).
 # Melibox uses Royal IP / residential proxy when PROXY_ROTATION_ENABLED=true.
 DEMO_CASES: list[dict[str, Any]] = [
     {"id": "gm", "site": "gm", "sku": "93240598", "brand": "GM"},
     {"id": "ml", "site": "ml", "sku": "51766536", "brand": ""},
     {"id": "vw", "site": "vw", "sku": "5X9827550A", "brand": "VW"},
     {"id": "eu", "site": "eu", "sku": "03L115562", "brand": "VW"},
-    {"id": "pecadireta", "site": "pecadireta", "sku": "7091011", "brand": ""},
     {"id": "melibox", "site": "melibox", "sku": "51766536", "brand": ""},
-    {"id": "ebay", "site": "ebay", "sku": "5473368", "brand": ""},
 ]
 
 _SITE_LABELS: dict[str, str] = {

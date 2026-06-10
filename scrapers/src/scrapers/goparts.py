@@ -80,23 +80,16 @@ class GoPartsScraper(BaseScraper):
     def base_url(self) -> str:
         return BASE_URL
 
-    async def initialize(self) -> None:
-        """Start browser with analytics blocking for GoParts.
-
-        Calls super().initialize() then adds route interception to block
-        tracking/analytics scripts that make the page too heavy for Playwright.
-        """
-        await super().initialize()
+    async def _on_context_created(self) -> None:
+        """Block analytics and heavy assets that hang Playwright on GoParts."""
         assert self._context is not None
 
-        # Block tracking/analytics domains that cause Playwright to hang
         for domain in BLOCKED_DOMAINS:
             await self._context.route(
                 f"**/*{domain}*",
                 lambda route: route.abort(),
             )
 
-        # Block images and fonts for faster page loads
         await self._context.route(
             "**/*.{png,jpg,jpeg,gif,svg,webp,ico,woff,woff2,ttf,eot}",
             lambda route: route.abort(),
@@ -139,7 +132,9 @@ class GoPartsScraper(BaseScraper):
         # Extract all data via a single JS evaluate call
         # This avoids multiple Playwright round-trips that can timeout
         try:
-            data = await asyncio.wait_for(page.evaluate("""(searchedSku) => {
+            data = await asyncio.wait_for(
+                page.evaluate(
+                    """(searchedSku) => {
                 const results = [];
                 const clean = (value) => String(value || '').replace(/[\\s\\-.\\/]/g, '').toUpperCase();
                 const searchedClean = clean(searchedSku);
@@ -289,7 +284,11 @@ class GoPartsScraper(BaseScraper):
                     noResults: noResults,
                     title: document.title,
                 };
-            }""", sku), timeout=15000)
+            }""",
+                    sku,
+                ),
+                timeout=15000,
+            )
         except Exception as e:
             logger.warning("GoParts: JS evaluate failed", sku=sku, error=str(e))
             return []
@@ -315,9 +314,7 @@ class GoPartsScraper(BaseScraper):
                 else:
                     product_url = f"{BASE_URL}/{href}"
 
-            exact = (
-                self.validate_exact_match(sku, found_sku) if found_sku else False
-            )
+            exact = self.validate_exact_match(sku, found_sku) if found_sku else False
 
             results.append(
                 PartResult(
@@ -365,12 +362,9 @@ class GoPartsScraper(BaseScraper):
             logger.debug("GoParts: preflight skipped after HTTP error", error=str(e))
             return False
 
-        if (
-            response.headers.get("cf-mitigated", "").lower() == "challenge"
-            or (
-                response.status_code in settings.anti_bot_block_status_codes
-                and response.headers.get("server", "").lower() == "cloudflare"
-            )
+        if response.headers.get("cf-mitigated", "").lower() == "challenge" or (
+            response.status_code in settings.anti_bot_block_status_codes
+            and response.headers.get("server", "").lower() == "cloudflare"
         ):
             self._last_http_block = {"status": response.status_code, "url": str(response.url)}
             logger.warning(

@@ -22,10 +22,8 @@ def test_interview_demo_cases_match_registry() -> None:
 
     mod = _load_script_module("interview_scraper_demo.py")
     demo_sites = {c["site"] for c in mod.DEMO_CASES}
-    expected = {s.value for s in SCRAPER_REGISTRY} | {"ebay"}
-    assert demo_sites == expected
-    assert "goparts" not in demo_sites
-    assert "procurapecas" not in demo_sites
+    registered = {s.value for s in SCRAPER_REGISTRY}
+    assert demo_sites.issubset(registered)
     assert "melibox" in demo_sites
 
 
@@ -37,9 +35,7 @@ def test_interview_demo_uses_validated_sku_map() -> None:
         "ml": "51766536",
         "vw": "5X9827550A",
         "eu": "03L115562",
-        "pecadireta": "7091011",
         "melibox": "51766536",
-        "ebay": "5473368",
     }
 
 

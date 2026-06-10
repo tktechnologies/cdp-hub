@@ -18,12 +18,12 @@ Bootstrap (read before editing):
 4. .agent/skills/n8n-router-sync/SKILL.md
 5. git status --short — never revert user changes without asking
 
-Live workflows (verify IDs in LIVE_WORKFLOWS.md):
-- cdp_router 6id6dkinK9xTLfsb — Telegram/Gmail/schedule; .analisar / .sku; inline HTTP to both APIs
-- cdp_scraper VfBSV3WU6on8BXm8 — webhook scraper-result
-- cdp_stokapi t160mzGPYYlJcrjZ — webhook muvstok-result
-- cdp_progress V9I6o32XDoPIRarz — schedule; set CDP_PROGRESS_WORKFLOW_ID for make sync-n8n
-- cdp_notifier ennI9nKin9ruPaLO — webhook cdp-notifier; set CDP_NOTIFIER_WORKFLOW_ID for make sync-n8n
+Live workflows (resolve IDs from docs/n8n/LIVE_WORKFLOWS.md + .agent/memory/implementation-state.md — do not hardcode):
+- cdp_router — Telegram/Gmail/schedule; .analisar / .sku; inline HTTP to both APIs
+- cdp_scraper — webhook scraper-result
+- cdp_stokapi — webhook muvstok-result
+- cdp_progress — schedule; set CDP_PROGRESS_WORKFLOW_ID for make sync-n8n
+- cdp_notifier — webhook cdp-notifier; set CDP_NOTIFIER_WORKFLOW_ID for make sync-n8n
 
 Classify my task:
 - Router / dual dispatch / .status / dispatch-runs → edit n8n/src/ → python3 scripts/sync_workflow_code_from_shared.py
@@ -37,7 +37,7 @@ Hard rules:
 - NEVER publish or MCP-push workflows without my explicit approval
 - NEVER rename scraper-result or muvstok-result without coordinated API deploy
 - Scraper jobs: force_refresh: false; all valid SKUs pass through unless CDP_DISPATCH_SAMPLE_SIZE intentionally samples
-- Do not use scrapers/n8n/docs/ for truth — use docs/n8n/ and n8n/
+- Use docs/n8n/ and n8n/ for platform workflow truth
 
 Before done (local):
 - python3 scripts/sync_workflow_code_from_shared.py

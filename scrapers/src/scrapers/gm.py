@@ -66,9 +66,11 @@ class GMScraper(BaseScraper):
             # If modal didn't show, find the header CEP control and click it
             header_cep = page.locator(".header-items-right-cep").first
             if not await header_cep.is_visible():
-                header_cep = page.locator('button, div, a').filter(
-                    has_text=re.compile(r"(01001-000|Informe seu CEP|CEP)", re.I)
-                ).first
+                header_cep = (
+                    page.locator("button, div, a")
+                    .filter(has_text=re.compile(r"(01001-000|Informe seu CEP|CEP)", re.I))
+                    .first
+                )
 
             if await header_cep.is_visible():
                 await header_cep.click()
@@ -102,9 +104,11 @@ class GMScraper(BaseScraper):
             logger.info("GM: CEP field filled", cep=CEP)
 
             # Submit via button or Enter
-            localizar = page.locator("button").filter(
-                has_text=re.compile(r"Localizar|Buscar|Confirmar|OK", re.I)
-            ).first
+            localizar = (
+                page.locator("button")
+                .filter(has_text=re.compile(r"Localizar|Buscar|Confirmar|OK", re.I))
+                .first
+            )
             if await localizar.is_visible():
                 await localizar.click()
                 logger.info("GM: CEP submit button clicked")
@@ -163,10 +167,7 @@ class GMScraper(BaseScraper):
         results: list[PartResult] = []
 
         try:
-            search_url = (
-                f"{BASE_URL}/pesquisa/"
-                f"?nomepeca=&grupo=&nomeveiculo=&ano=&numeropeca={sku}"
-            )
+            search_url = f"{BASE_URL}/pesquisa/?nomepeca=&grupo=&nomeveiculo=&ano=&numeropeca={sku}"
             logger.info("GM search: navigating", sku=sku, url=search_url)
 
             await page.goto(search_url, wait_until="domcontentloaded", timeout=30000)
@@ -205,14 +206,14 @@ class GMScraper(BaseScraper):
             # Navigate into each product details page (limit to 5)
             for link_info in product_links[:5]:
                 try:
-                    detail_results = await self._navigate_and_extract_details(
-                        page, link_info, sku
-                    )
+                    detail_results = await self._navigate_and_extract_details(page, link_info, sku)
                     results.extend(detail_results)
                 except Exception as e:
                     logger.warning(
                         "GM: failed to extract product details",
-                        sku=sku, url=link_info.get("url", ""), error=str(e),
+                        sku=sku,
+                        url=link_info.get("url", ""),
+                        error=str(e),
                     )
 
             logger.info("GM search completed", sku=sku, results_count=len(results))
@@ -289,8 +290,10 @@ class GMScraper(BaseScraper):
         # Extract product title
         title = ""
         title_selectors = [
-            "h1.product-name", "h1[class*='productName']",
-            "h1.product-title", "h1",
+            "h1.product-name",
+            "h1[class*='productName']",
+            "h1.product-title",
+            "h1",
             "span.vtex-product-identifier-0-x-product-identifier__value",
         ]
         for sel in title_selectors:
@@ -309,8 +312,7 @@ class GMScraper(BaseScraper):
         sku_found = searched_sku
         page_text = await page.inner_text("body")
         sku_match = re.search(
-            r'(?:Código|Ref|SKU|Cód|Part\s*Number)[:\s]*([A-Za-z0-9\-\.]{4,25})',
-            page_text, re.I
+            r"(?:Código|Ref|SKU|Cód|Part\s*Number)[:\s]*([A-Za-z0-9\-\.]{4,25})", page_text, re.I
         )
         if sku_match:
             sku_found = sku_match.group(1).strip()
@@ -323,49 +325,55 @@ class GMScraper(BaseScraper):
 
         if dealers:
             for dealer in dealers:
-                results.append(PartResult(
+                results.append(
+                    PartResult(
+                        sku_searched=searched_sku,
+                        sku_found=sku_found,
+                        exact_match=self.validate_exact_match(searched_sku, sku_found),
+                        site=self.site_id,
+                        site_name=self.site_name,
+                        price=dealer.get("price", 0.0),
+                        currency=Currency.BRL,
+                        condition=ItemCondition.NEW,
+                        availability=dealer.get("availability", availability),
+                        seller_name=dealer.get("name", "Chevrolet (official)"),
+                        seller_uf=dealer.get("uf", ""),
+                        seller_company_name=dealer.get("company_name", ""),
+                        seller_cnpj=dealer.get("cnpj", ""),
+                        product_url=product_url,
+                        origin="Brasil",
+                        raw_title=title,
+                    )
+                )
+        else:
+            price = await self._extract_price(page)
+            if price is None:
+                return []
+            results.append(
+                PartResult(
                     sku_searched=searched_sku,
                     sku_found=sku_found,
                     exact_match=self.validate_exact_match(searched_sku, sku_found),
                     site=self.site_id,
                     site_name=self.site_name,
-                    price=dealer.get("price", 0.0),
+                    price=price,
                     currency=Currency.BRL,
                     condition=ItemCondition.NEW,
-                    availability=dealer.get("availability", availability),
-                    seller_name=dealer.get("name", "Chevrolet (official)"),
-                    seller_uf=dealer.get("uf", ""),
-                    seller_company_name=dealer.get("company_name", ""),
-                    seller_cnpj=dealer.get("cnpj", ""),
+                    availability=availability,
+                    seller_name="Chevrolet (official)",
+                    seller_company_name="Chevrolet (official)",
                     product_url=product_url,
                     origin="Brasil",
                     raw_title=title,
-                ))
-        else:
-            price = await self._extract_price(page)
-            if price is None:
-                return []
-            results.append(PartResult(
-                sku_searched=searched_sku,
-                sku_found=sku_found,
-                exact_match=self.validate_exact_match(searched_sku, sku_found),
-                site=self.site_id,
-                site_name=self.site_name,
-                price=price,
-                currency=Currency.BRL,
-                condition=ItemCondition.NEW,
-                availability=availability,
-                seller_name="Chevrolet (official)",
-                seller_company_name="Chevrolet (official)",
-                product_url=product_url,
-                origin="Brasil",
-                raw_title=title,
-            ))
+                )
+            )
 
         logger.info(
             "GM: details page extracted",
-            sku=searched_sku, title=title[:60],
-            dealers=len(dealers), total_results=len(results),
+            sku=searched_sku,
+            title=title[:60],
+            dealers=len(dealers),
+            total_results=len(results),
         )
         return results
 
@@ -480,7 +488,7 @@ class GMScraper(BaseScraper):
         }""")
 
         parsed = []
-        for d in (data or []):
+        for d in data or []:
             price = self._parse_price(d.get("price", ""))
             if price is not None:
                 name_parts = [
@@ -489,14 +497,16 @@ class GMScraper(BaseScraper):
                     d.get("distance", ""),
                 ]
                 location_text = " ".join(part for part in name_parts if part)
-                parsed.append({
-                    "name": " - ".join(part for part in name_parts if part),
-                    "company_name": d.get("name", ""),
-                    "uf": self.extract_brazil_uf(location_text),
-                    "cnpj": self.extract_cnpj_digits(d.get("cnpj", "")),
-                    "price": price,
-                    "availability": d.get("availability", "unknown"),
-                })
+                parsed.append(
+                    {
+                        "name": " - ".join(part for part in name_parts if part),
+                        "company_name": d.get("name", ""),
+                        "uf": self.extract_brazil_uf(location_text),
+                        "cnpj": self.extract_cnpj_digits(d.get("cnpj", "")),
+                        "price": price,
+                        "availability": d.get("availability", "unknown"),
+                    }
+                )
         return parsed
 
     async def _extract_price(self, page: Page) -> float | None:

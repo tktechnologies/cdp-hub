@@ -36,7 +36,7 @@ Python 3.12 FastAPI ingestion platform for API Diversos SKU data. Accepts jobs w
 | Docker | `docker/` | Dockerfiles (API + worker) and local compose |
 | Docs | `docs/` | Production audit results |
 | Tests | `tests/` | Unit, service, and contract tests |
-| Infra | `infra/` | Azure infrastructure (placeholder) |
+| Infra | `../infra/` | Platform Azure Bicep; StokAPI deploy via `scripts/deploy_muv_*.sh` |
 
 ## Quality Gates
 

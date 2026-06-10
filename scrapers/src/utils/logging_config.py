@@ -70,9 +70,7 @@ def setup_logging() -> None:
     _CONFIGURED = True
 
 
-def _filter_sensitive_fields(
-    logger: object, method_name: str, event_dict: dict
-) -> dict:
+def _filter_sensitive_fields(logger: object, method_name: str, event_dict: dict) -> dict:
     """Remove sensitive data from log output."""
     sensitive_keys = {"password", "token", "secret", "api_key", "credential"}
     for key in list(event_dict.keys()):

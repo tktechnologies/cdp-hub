@@ -27,7 +27,7 @@
 
 ## n8n facts
 
-- Dispatch: **only** `cdp_router` (`6id6dkinK9xTLfsb`)
+- Dispatch: **only** `cdp_router` (ID in `docs/n8n/LIVE_WORKFLOWS.md` + `.agent/memory/implementation-state.md`)
 - Webhooks: `scraper-result`, `muvstok-result` (stable)
 - Sync: `make sync-n8n` — **never** without user approval
 - DEV sync: `make n8n-dev-workflows` then `make sync-n8n-dev` with approval

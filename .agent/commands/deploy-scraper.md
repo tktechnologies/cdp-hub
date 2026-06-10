@@ -16,7 +16,7 @@ Push to `main` with scraper changes triggers [`.github/workflows/ci-scraper.yml`
 
 ```bash
 cd scrapers
-./scripts/deploy-azure.sh
+./scripts/deploy-scraper-azure.sh
 ```
 
 **Infrastructure (what-if only from monorepo root)**
@@ -26,7 +26,7 @@ make bicep-build
 make bicep-what-if   # does not apply changes
 ```
 
-Platform Bicep entry: [`infra/main.bicep`](../../infra/main.bicep) (delegates to `scrapers/infra/`).
+Platform Bicep entry: [`infra/main.bicep`](../../infra/main.bicep) → [`infra/scraper-stack.bicep`](../../infra/scraper-stack.bicep).
 
 **Verify**
 

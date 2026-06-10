@@ -6,7 +6,7 @@ Spreadsheet: [cdp_resultados](https://docs.google.com/spreadsheets/d/1ZBU2d3XVsn
 
 | Tab | gid (reference) |
 |-----|-----------------|
-| Detalhado | `1831011286` (also `533358674` if sheet was duplicated — use tab name **Detalhado**) |
+| Detalhado | `1185876304` (legacy gids `533358674`, `1831011286` — use tab name **Detalhado**) |
 | Resumo | `79112561` |
 | Historico | `1406942676` |
 
@@ -39,7 +39,8 @@ Filter API Diversos rows: `codigo_site = api-diversos` or `origem = API Diversos
 | `empresa` | `razaoSocial`, `nomeEmpresa`, company aliases; fallback `nomeFilial` | |
 | `cnpj` | `cnpj`, `cnpjFilial`, company/document aliases | normalized 14 digits; blank when unavailable |
 | `url_produto` | *(empty)* | API Diversos has no public product URL |
-| `origem` | `Brasil` | |
+| `regiao` | geographic region (`Brasil`, …) | renamed from legacy `origem` on Detalhado |
+| `fonte_pipeline` | `WEBSCRAPER` or `API Diversos` | pipeline source label |
 | `titulo_bruto` | `produto` + `[tipo code]` | see stock type codes below |
 | `coletado_em` | job `completed_at` | |
 | `tempo_busca_ms` | `results[].duration_ms` | |

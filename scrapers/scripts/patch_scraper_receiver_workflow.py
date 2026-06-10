@@ -3,16 +3,32 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from cdp_skus_sheet_columns import (  # noqa: E402, I001
+    PICK_SHEET_FIELD_JS,
+    sheet_column_id,
+    sheet_display_name,
+)
 WF_PATH = REPO_ROOT / "n8n/workflows/cdp_scraper.json"
 TELEGRAM_FMT_PATH = REPO_ROOT / "n8n/lib/scraper_telegram_notification.js"
 
 AD_HOC_GUARD = """
 const q = wh.query || {};
-const jmeta = typeof payload.job_metadata === 'object' && payload.job_metadata !== null ? payload.job_metadata : {};
+const jmeta =
+  typeof payload.job_metadata === 'object' && payload.job_metadata !== null
+    ? payload.job_metadata
+    : typeof payload.metadata === 'object' && payload.metadata !== null
+      ? payload.metadata
+      : {};
 if (String(jmeta.ad_hoc || q.ad_hoc || '').toLowerCase() === 'true') {
+  return [];
+}
+const deliveryMode = String(jmeta.delivery_mode || q.delivery_mode || '').trim().toLowerCase();
+if (deliveryMode === 'aggregate') {
   return [];
 }
 """
@@ -28,7 +44,7 @@ const wh = $('🔔 Webhook: Receber Resultados').first().json;
 const payload = parseBody(wh.body);
 """
 
-SHEET_STATUS_PRIORITY_JS = """function normalizeSheetStatus(value) {
+SHEET_STATUS_PRIORITY_JS = PICK_SHEET_FIELD_JS + """function normalizeSheetStatus(value) {
   let s = String(value || '').trim().toLowerCase();
   try { s = s.normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''); } catch (e) {}
   s = s.replace(/[^a-z0-9]+/g, ' ').trim();
@@ -56,31 +72,31 @@ DETALHADO_COLUMN_EXPRESSIONS: dict[str, str] = {
     "sku_encontrado": "={{ $json.sku_found }}",
     "correspondencia_exata": "={{ $json.exact_match }}",
     "site": "={{ $json.site }}",
+    "codigo_site": "={{ $json.site_code }}",
+    "status_resultado": "={{ $json.status_resultado }}",
+    "has_valid_price": "={{ $json.has_valid_price }}",
+    "source_health": "={{ $json.source_health }}",
     "preco": "={{ $json.price }}",
     "preco-medio": "={{ $json.preco_medio }}",
     "moeda": "={{ $json.currency }}",
-    "disponibilidade": "={{ $json.availability }}",
+    "condicao": "={{ $json.condition }}",
     "vendedor": "={{ $json.seller }}",
     "uf": "={{ $json.uf }}",
     "empresa": "={{ $json.empresa }}",
     "cnpj": "={{ $json.cnpj }}",
     "url_produto": "={{ $json.product_url }}",
-    "origem": "={{ $json.origin }}",
     "titulo_bruto": "={{ $json.raw_title }}",
+    "marca": "={{ $json.brand }}",
+    "regiao": "={{ $json.regiao }}",
     "coletado_em": "={{ $json.scraped_at }}",
     "tempo_busca_ms": "={{ $json.search_time_ms }}",
-    "condicao": "={{ $json.condition }}",
-    "duracao_job_s": "={{ $json.job_duration_s }}",
-    "marca": "={{ $json.brand }}",
-    "codigo_site": "={{ $json.site_code }}",
-    "status_resultado": "={{ $json.status_resultado }}",
-    "source_health": "={{ $json.source_health }}",
-    "has_valid_price": "={{ $json.has_valid_price }}",
+    "fonte_pipeline": "={{ $json.fonte_pipeline }}",
 }
 
 DETALHADO_COLUMN_ALIASES = {
     "id_job": "job_id",
     "estado": "uf",
+    "origem": "regiao",
 }
 
 SCRAPER_DETALHADO_JS = """// CDP result flattener v1.1 — canonical result semantics.
@@ -164,15 +180,18 @@ function availabilityForCanonical(status, fallback) {
   if (s === 'NOT_QUERIED') return 'sem_resultados';
   return toAvailabilityPt(fallback);
 }
-function rawTitleForStatus(status, message) {
-  const msg = String(message || status || 'sem_resultados').trim();
-  const s = String(status || '').toUpperCase();
-  if (s === 'BLOCKED') return 'BLOQUEADO: ' + msg;
-  if (s === 'TIMEOUT') return 'TIMEOUT: ' + msg;
-  if (s === 'ERROR') return 'ERRO: ' + msg;
-  if (s === 'NO_PRICE') return 'SEM_PRECO: ' + msg;
-  if (s === 'NOT_FOUND') return 'NOT_FOUND';
-  return msg.toUpperCase();
+function empresaValue(seller, company) {
+  const s = naStr(seller);
+  const c = company ? naStr(company) : '';
+  if (!c || c === 'N/A' || c === s) return '';
+  return c;
+}
+function listingTitle(canonical, part) {
+  const title = part && part.raw_title ? naStr(part.raw_title) : '';
+  const s = String(canonical || '').toUpperCase();
+  if (title && !/^(NOT_FOUND|BLOQUEADO:|TIMEOUT:|ERRO:|SEM_PRECO:)/i.test(title)) return title;
+  if (s === 'FOUND_PRICE' || s === 'NO_PRICE') return title;
+  return '';
 }
 function toConditionPt(v) {
   const key = String(v || '').toLowerCase();
@@ -185,7 +204,6 @@ function placeholderRow({ sku, brand, siteResult, status }) {
   const siteName = siteResult.site_name || siteCode;
   const canonical = normalizeSkuResult(siteResult, []);
   const health = normalizeSourceHealth(siteResult);
-  const message = siteResult.blocked_reason || siteResult.error_message || status || 'sem_resultados';
   return {
     job_id: jobId,
     sku_searched: naStr(sku),
@@ -195,23 +213,22 @@ function placeholderRow({ sku, brand, siteResult, status }) {
     price: 'N/A',
     preco_medio: 'N/A',
     currency: 'N/A',
-    availability: availabilityForCanonical(canonical, status),
     seller: 'N/A',
     uf: '',
-    empresa: 'N/A',
+    empresa: '',
     cnpj: '',
     product_url: 'N/A',
-    origin: 'N/A',
-    raw_title: rawTitleForStatus(canonical, message),
+    regiao: 'N/A',
+    raw_title: '',
     scraped_at: new Date().toISOString(),
     search_time_ms: String(siteResult.search_time_ms || 0),
-    job_duration_s: String(jobDuration),
     brand: naStr(brand),
     condition: 'N/A',
     site_code: naStr(siteCode),
     status_resultado: canonical,
     source_health: health,
     has_valid_price: false,
+    fonte_pipeline: 'WEBSCRAPER',
   };
 }
 
@@ -242,23 +259,22 @@ for (const skuResult of results) {
         preco_medio: 'N/A',
         price: naPrice(part.price),
         currency: part.currency || 'BRL',
-        availability: availabilityForCanonical(canonical, part.availability || siteStatus || 'unknown'),
         seller: naStr(part.seller_name),
         uf: naStr(part.seller_uf || part.seller_state || ''),
-        empresa: naStr(part.seller_company_name || part.seller_name),
+        empresa: empresaValue(part.seller_name, part.seller_company_name),
         cnpj: naStr(part.seller_cnpj || ''),
         product_url: naStr(part.product_url),
-        origin: naStr(part.origin),
-        raw_title: naStr(part.raw_title),
+        regiao: naStr(part.origin),
+        raw_title: listingTitle(canonical, part),
         scraped_at: part.scraped_at || new Date().toISOString(),
         search_time_ms: String(searchTimeMs),
-        job_duration_s: String(jobDuration),
-        brand: naStr(brand),
+        brand: naStr(brand || skuResult.brand || ''),
         condition: toConditionPt(part.condition),
         site_code: naStr(siteCode),
         status_resultado: canonical,
         source_health: normalizeSourceHealth(siteResult),
         has_valid_price: rowHasValidPrice,
+        fonte_pipeline: 'WEBSCRAPER',
       });
     }
   }
@@ -274,23 +290,22 @@ if (rows.length === 0) {
     price: 'N/A',
     preco_medio: 'N/A',
     currency: 'N/A',
-    availability: toAvailabilityPt('no_results'),
     seller: 'N/A',
     uf: '',
-    empresa: 'N/A',
+    empresa: '',
     cnpj: '',
     product_url: 'N/A',
-    origin: 'N/A',
-    raw_title: 'Sem resultados de scraping',
+    regiao: 'N/A',
+    raw_title: '',
     scraped_at: new Date().toISOString(),
     search_time_ms: '0',
-    job_duration_s: String(jobDuration),
     brand: 'N/A',
     condition: 'N/A',
     site_code: 'N/A',
     status_resultado: 'NOT_QUERIED',
     source_health: 'NOT_QUERIED',
     has_valid_price: false,
+    fonte_pipeline: 'WEBSCRAPER',
   });
 }
 
@@ -433,6 +448,7 @@ for (const skuResult of results) {
   rows.push({
     CODIGO: sku,
     STATUS: status,
+    STATUS_RESULTADO: canonical,
     MELHOR_PRECO: melhor,
     SITE: bestSite || 'N/A',
     LINK: bestUrl || 'N/A',
@@ -575,6 +591,9 @@ return [{
     skus_validos,
     skus_encontrados: pricedSkus,
     skus_falhos: notFoundSkus + blockedSkus + errorSkus,
+    skus_not_found: notFoundSkus,
+    skus_blocked: blockedSkus,
+    skus_error: errorSkus,
     taxa_sucesso_sku: skuHit,
     taxa_sucesso_sites: taxaSite,
     sites_pesquisados: Object.keys(siteTotals).length || 5,
@@ -611,7 +630,7 @@ function workflowName() {
   return '';
 }
 function isDevWorkflow() {
-  return workflowName().trim().toLowerCase().startsWith('dev -') || env('CDP_ENV').toLowerCase() === 'dev';
+  return workflowName().trim().toLowerCase().startsWith('dev -');
 }
 function envFor(name) {
   if (isDevWorkflow() && name === 'CDP_RESULTADOS_SHEETS_URL') return env('CDP_DEV_RESULTADOS_SHEETS_URL');
@@ -849,16 +868,20 @@ return [{ json: { ...d, email_html: html, email_subject: subject }, binary: $inp
 """
 
 
-def patch_expandir_notificado(code: str) -> str:
-    if "ad_hoc" in code and "return []" in code:
-        return code
-    if EXPANDIR_SIM_PREFIX not in code:
-        return code
-    return code.replace(
-        EXPANDIR_SIM_PREFIX,
-        EXPANDIR_SIM_PREFIX + AD_HOC_GUARD,
-        1,
+def build_expandir_notificado_js(notificado: str) -> str:
+    return (
+        EXPANDIR_SIM_PREFIX
+        + AD_HOC_GUARD
+        + f"""
+const results = payload.results || [];
+const codigos = [...new Set(results.map((r) => String(r.sku || '').trim()).filter(Boolean))];
+return codigos.map((codigo) => ({{ json: {{ CODIGO: codigo, NOTIFICADO: {json.dumps(notificado)} }} }}));
+"""
     )
+
+
+def patch_expandir_notificado(_code: str, *, notificado: str) -> str:
+    return build_expandir_notificado_js(notificado)
 
 
 def patch_telegram_nodes(wf: dict) -> None:
@@ -898,8 +921,19 @@ def patch_detalhado_columns(wf: dict) -> None:
             key: normalized.get(key, expr)
             for key, expr in DETALHADO_COLUMN_EXPRESSIONS.items()
         }
+        drop_legacy = {
+            "disponibilidade",
+            "duracao_job_s",
+            "origem",
+            "melibox_posicao",
+            "melibox_tipo",
+            "melibox_oferta_pct",
+            "melibox_envio",
+            "melibox_frete",
+            "melibox_pagina",
+        }
         for key, expr in normalized.items():
-            if key.startswith("melibox_"):
+            if key.startswith("melibox_") or key in drop_legacy:
                 continue
             if key not in ordered:
                 ordered[key] = expr
@@ -917,9 +951,10 @@ def _clone(obj):
 
 
 def _schema_entry(col_id, col_type, *, match=False, read_only=False):
+    actual_col_id = sheet_column_id(col_id)
     entry = {
-        "id": col_id,
-        "displayName": col_id,
+        "id": actual_col_id,
+        "displayName": sheet_display_name(col_id),
         "required": False,
         "defaultMatch": False,
         "display": True,
@@ -931,7 +966,7 @@ def _schema_entry(col_id, col_type, *, match=False, read_only=False):
     return entry
 
 
-def _splice_rownum_marker(wf, *, update_name, producers, names, ids, remap_value_js, update_value, schema):
+def _splice_rownum_marker(wf, *, update_name, producers, names, ids, remap_fields_js, update_value, schema):
     """Insert collapse → read → remap between `producers` and the update node."""
     nodes = wf["nodes"]
     by_name = {n["name"]: n for n in nodes}
@@ -974,15 +1009,20 @@ def _splice_rownum_marker(wf, *, update_name, producers, names, ids, remap_value
         "  if (k) byCodigo[k] = it;\n"
         "}\n"
         + SHEET_STATUS_PRIORITY_JS
-        + "const rows = $input.all().map((i) => i.json);\n"
+        + "const items = $input.all();\n"
         "const out = [];\n"
-        "for (const row of rows) {\n"
+        "for (let i = 0; i < items.length; i++) {\n"
+        "  const item = items[i];\n"
+        "  const row = item.json || {};\n"
         "  const rn = row.row_number;\n"
         "  if (rn === undefined || rn === null || rn === '') continue;\n"
         "  const k = String(row.CODIGO == null ? '' : row.CODIGO).trim().toUpperCase();\n"
         "  const it = byCodigo[k];\n"
         "  if (!it) continue;\n"
-        "  out.push({ json: " + remap_value_js + " });\n"
+        "  out.push({\n"
+        "    json: { ...row, " + remap_fields_js + " },\n"
+        "    pairedItem: item.pairedItem ?? { item: i },\n"
+        "  });\n"
         "}\n"
         "return out;\n"
     )
@@ -1030,11 +1070,11 @@ def patch_rownum_markers(wf: dict) -> None:
             "99e08055-40e6-4304-8cd9-48b48ede9872",
             "29bd78b2-edc9-428c-bcef-3088ab6b7f69",
         ),
-        remap_value_js="{ row_number: rn, PROCESSADO: '✅ Processado', ENCONTRADO: chooseSheetStatus(row.ENCONTRADO, it._encontrado) }",
+        remap_fields_js="PROCESSADO: '✅ Processado', ENCONTRADO: chooseSheetStatus(pickSheetField(row, 'ENCONTRADO'), it._encontrado)",
         update_value={
             "row_number": "={{ $json.row_number }}",
-            "PROCESSADO": "={{ $json.PROCESSADO }}",
-            "ENCONTRADO": "={{ $json.ENCONTRADO }}",
+            sheet_column_id("PROCESSADO"): "={{ $json.PROCESSADO }}",
+            sheet_column_id("ENCONTRADO"): "={{ $json.ENCONTRADO }}",
         },
         schema=[
             _schema_entry("row_number", "number", match=True, read_only=True),
@@ -1052,10 +1092,10 @@ def patch_rownum_markers(wf: dict) -> None:
             "534799f9-6f03-4d36-b787-bfda68cd9e08",
             "dd367c1d-91b8-4b7b-afe6-17501dae61d8",
         ),
-        remap_value_js="{ row_number: rn, NOTIFICADO: it.NOTIFICADO }",
+        remap_fields_js="NOTIFICADO: it.NOTIFICADO",
         update_value={
             "row_number": "={{ $json.row_number }}",
-            "NOTIFICADO": "={{ $json.NOTIFICADO }}",
+            sheet_column_id("NOTIFICADO"): "={{ $json.NOTIFICADO }}",
         },
         schema=[
             _schema_entry("row_number", "number", match=True, read_only=True),
@@ -1072,10 +1112,10 @@ def patch_rownum_markers(wf: dict) -> None:
             "14ab52e5-660f-4b8f-9649-d55b9b3a4a74",
             "6384dbec-f061-4d96-bafa-5c0c97f9e669",
         ),
-        remap_value_js="{ row_number: rn, NOTIFICADO: it.NOTIFICADO }",
+        remap_fields_js="NOTIFICADO: it.NOTIFICADO",
         update_value={
             "row_number": "={{ $json.row_number }}",
-            "NOTIFICADO": "={{ $json.NOTIFICADO }}",
+            sheet_column_id("NOTIFICADO"): "={{ $json.NOTIFICADO }}",
         },
         schema=[
             _schema_entry("row_number", "number", match=True, read_only=True),
@@ -1115,6 +1155,17 @@ def main() -> None:
             node["parameters"]["jsCode"] = BULK_CAPTION_JS
         elif name == "📧 Formatar HTML Bulk (Email)":
             node["parameters"]["jsCode"] = BULK_EMAIL_JS
+        elif name == "📧 Formatar Email de Erro":
+            code = node["parameters"].get("jsCode", "")
+            code = code.replace(
+                "const hasError = errors.length > 0 || jobErrors.length > 0;",
+                "const realErrors = (errors || []).filter((e) => String(e.status || '').toLowerCase() !== 'blocked');\n"
+                "const hasError = jobErrors.length > 0 || realErrors.length > 0;",
+            )
+            node["parameters"]["jsCode"] = code
+            node["notes"] = (
+                "Ops alert: per-site blocked (e.g. Melibox) is warning-only when no job-level errors."
+            )
         elif name == "✅ Marcar ENCONTRADO → CDP_SKUs":
             node["notes"] = (
                 "Updates PROCESSADO/ENCONTRADO by row_number using sticky status priority "
@@ -1125,10 +1176,18 @@ def main() -> None:
                 "Updates NOTIFICADO=✅ Sim for all SKUs in this job by row_number. | "
                 "v0.8.0: retry 5x/5s; no continueOnFail (retries work; fail loud if Sheets still errors)."
             )
-        if name in ("🔧 Expandir NOTIFICADO (✅ Sim)", "🔧 Expandir NOTIFICADO (❌ Não)", "🔧 Bulk: Expandir NOTIFICADO (✅ Sim)"):
-            node["parameters"]["jsCode"] = patch_expandir_notificado(node["parameters"]["jsCode"])
-            if name == "🔧 Bulk: Expandir NOTIFICADO (✅ Sim)":
-                node["parameters"]["jsCode"] = node["parameters"]["jsCode"].replace("✅ Sim (Bulk)", "✅ Sim")
+        if name == "🔧 Expandir NOTIFICADO (✅ Sim)":
+            node["parameters"]["jsCode"] = patch_expandir_notificado(
+                node["parameters"]["jsCode"], notificado="✅ Sim"
+            )
+        elif name == "🔧 Expandir NOTIFICADO (❌ Não)":
+            node["parameters"]["jsCode"] = patch_expandir_notificado(
+                node["parameters"]["jsCode"], notificado="❌ Não"
+            )
+        elif name == "🔧 Bulk: Expandir NOTIFICADO (✅ Sim)":
+            node["parameters"]["jsCode"] = patch_expandir_notificado(
+                node["parameters"]["jsCode"], notificado="✅ Sim"
+            )
     patch_telegram_nodes(wf)
     patch_notificado_sheets(wf)
     patch_detalhado_columns(wf)

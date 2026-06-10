@@ -7,7 +7,7 @@ Azure Container Apps, Key Vault references, ACR images, Log Analytics, and deplo
 ## Read First
 
 - [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) (Azure section)
-- `scrapers/infra/`, `scrapers/scripts/deploy-azure.sh`
+- `infra/` (Bicep), `scripts/deploy-scraper-azure.sh`
 - `muvstok-api/scripts/deploy_muv_api.sh`, `deploy_muv_worker.sh`
 - [muvstok-api/.agent/standards/azure-playbook.md](../../muvstok-api/.agent/standards/azure-playbook.md)
 

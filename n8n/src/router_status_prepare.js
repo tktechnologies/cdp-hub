@@ -25,7 +25,7 @@ function workflowName() {
   return '';
 }
 function isDevWorkflow() {
-  return /^DEV\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));
+  return /^DEV\s*-/i.test(workflowName());
 }
 function devEnvName(name) {
   const map = {

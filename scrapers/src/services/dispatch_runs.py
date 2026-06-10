@@ -17,7 +17,7 @@ from src.models.schemas import (
 
 SCRAPER_TERMINAL = frozenset({"completed", "partial", "failed"})
 STOKAPI_TERMINAL = frozenset({"succeeded", "partially_succeeded", "failed", "completed"})
-FINAL_OPEN = frozenset({None, "", "pending"})
+FINAL_OPEN = frozenset({None, "", "pending", "failed"})
 FINAL_CLAIMED = frozenset({"claiming"})
 
 
@@ -93,6 +93,8 @@ def _build_claim(row: DispatchRun) -> dict:
         "command_route": row.command_route,
         "delivery_mode": row.delivery_mode,
         "sheet_row_numbers": row.sheet_row_numbers or [],
+        "scraper_job_ids": row.scraper_job_ids or [],
+        "stokapi_job_id": row.stokapi_job_id,
         "scraper_summary": row.scraper_summary,
         "stokapi_summary": row.stokapi_summary,
         "total_skus": row.total_skus,
@@ -225,7 +227,7 @@ async def record_pipeline_result(
 
         both_terminal = _both_terminal(row)
         final_status = row.final_notification_status
-        already_notified = final_status in ("sent", "skipped_no_target", "failed")
+        already_notified = final_status in ("sent", "skipped_no_target")
 
         ready_for_final = False
         claim: dict | None = None
@@ -241,6 +243,7 @@ async def record_pipeline_result(
                             DispatchRun.final_notification_status.is_(None),
                             DispatchRun.final_notification_status == "",
                             DispatchRun.final_notification_status == "pending",
+                            DispatchRun.final_notification_status == "failed",
                         )
                     )
                     .values(
@@ -267,6 +270,16 @@ async def record_pipeline_result(
             already_notified=already_notified,
             claim=claim,
         )
+
+
+async def get_dispatch_run_by_batch(batch_group_id: str) -> DispatchRunResponse | None:
+    """Lookup a dispatch run by batch_group_id (ops audit)."""
+    async with async_session() as session:
+        result = await session.execute(
+            select(DispatchRun).where(DispatchRun.batch_group_id == batch_group_id)
+        )
+        row = result.scalar_one_or_none()
+        return _to_response(row) if row else None
 
 
 async def list_ready_final_notifications() -> list[DispatchRunResponse]:

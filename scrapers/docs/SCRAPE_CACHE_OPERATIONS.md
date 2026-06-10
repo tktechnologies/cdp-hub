@@ -67,7 +67,7 @@ After merging cache code, redeploy image and ensure Container Apps have cache en
 
 ```bash
 # Rebuild + deploy (existing flow)
-IMAGE_TAG=scrape-cache-$(date +%Y%m%d-%H%M) ./scripts/deploy-azure.sh
+IMAGE_TAG=scrape-cache-$(date +%Y%m%d-%H%M) ../../scripts/deploy-scraper-azure.sh
 ```
 
 Or update only Container App env without full rebuild if image already contains cache code.

@@ -9,6 +9,8 @@ import uuid
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SHARED = ROOT / "n8n" / "src"
+sys.path.insert(0, str(ROOT / "scripts"))
+from cdp_skus_sheet_columns import sheet_column_id, sheet_display_name  # noqa: E402
 
 NODE_FILES = {
     "🔍 DQ: Validar & Deduplicar": "router_dq.js",
@@ -91,9 +93,10 @@ PROGRESS_WORKFLOW = ROOT / "n8n" / "workflows" / "cdp_progress.json"
 
 
 def schema_entry(col_id: str, col_type: str, *, read_only: bool = False) -> dict:
+    actual_col_id = sheet_column_id(col_id)
     entry = {
-        "id": col_id,
-        "displayName": col_id,
+        "id": actual_col_id,
+        "displayName": sheet_display_name(col_id),
         "required": False,
         "defaultMatch": False,
         "display": True,
@@ -113,9 +116,9 @@ def patch_router_processado_node(node: dict) -> None:
     columns["mappingMode"] = "defineBelow"
     columns["value"] = {
         "row_number": "={{ $json.row_number }}",
-        "PROCESSADO": "={{ $json.PROCESSADO }}",
-        "ENCONTRADO": "={{ $json.ENCONTRADO }}",
-        "NOTIFICADO": "={{ $json.NOTIFICADO }}",
+        sheet_column_id("PROCESSADO"): "={{ $json.PROCESSADO }}",
+        sheet_column_id("ENCONTRADO"): "={{ $json.ENCONTRADO }}",
+        sheet_column_id("NOTIFICADO"): "={{ $json.NOTIFICADO }}",
     }
     columns["matchingColumns"] = ["row_number"]
     columns["schema"] = [
@@ -207,6 +210,73 @@ def link(node: str, index: int = 0) -> dict:
     return {"node": node, "type": "main", "index": index}
 
 
+STOKAPI_ERROR_CHANNEL_IF = "❓ Erro API Diversos: Telegram?"
+STOKAPI_ERROR_EMAIL_NODE = "📧 Email: erro API Diversos"
+STOKAPI_ERROR_FORMAT_NODE = "📋 Formatar erro API Diversos"
+STOKAPI_ERROR_TELEGRAM_NODE = "📱 Telegram: erro API Diversos"
+ROUTER_GMAIL_CREDENTIAL = {"id": "rQesNRyarukVs0N4", "name": "gmail lucas@tktech"}
+
+
+def ensure_stokapi_error_delivery(nodes: list[dict], conns: dict) -> None:
+    """Route API Diversos dispatch errors to Telegram or email requester."""
+    channel_if = next((n for n in nodes if n.get("name") == STOKAPI_ERROR_CHANNEL_IF), None)
+    if channel_if is None:
+        channel_if = {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": True,
+                        "typeValidation": "strict",
+                        "version": 1,
+                    },
+                    "conditions": [
+                        {
+                            "id": "tg",
+                            "leftValue": "={{ $json.reply_channel }}",
+                            "rightValue": "telegram",
+                            "operator": {"type": "string", "operation": "equals"},
+                        }
+                    ],
+                    "combinator": "and",
+                },
+                "options": {},
+            },
+            "id": str(uuid.uuid4()),
+            "name": STOKAPI_ERROR_CHANNEL_IF,
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [2496, 2800],
+        }
+        nodes.append(channel_if)
+
+    email_node = next((n for n in nodes if n.get("name") == STOKAPI_ERROR_EMAIL_NODE), None)
+    if email_node is None:
+        email_node = {
+            "parameters": {
+                "sendTo": "={{ $json.email_to }}",
+                "subject": "={{ $json.msg_email_subject }}",
+                "message": "={{ $json.msg_email_html }}",
+                "options": {"appendAttribution": False},
+            },
+            "id": str(uuid.uuid4()),
+            "name": STOKAPI_ERROR_EMAIL_NODE,
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [2720, 2880],
+            "credentials": {"gmailOAuth2": dict(ROUTER_GMAIL_CREDENTIAL)},
+            "continueOnFail": True,
+        }
+        nodes.append(email_node)
+
+    conns[STOKAPI_ERROR_FORMAT_NODE] = {"main": [[link(STOKAPI_ERROR_CHANNEL_IF)]]}
+    conns[STOKAPI_ERROR_CHANNEL_IF] = {
+        "main": [
+            [link(STOKAPI_ERROR_TELEGRAM_NODE)],
+            [link(STOKAPI_ERROR_EMAIL_NODE)],
+        ]
+    }
+
+
 def patch_router_http_dispatch(wf: dict, workflow_name: str) -> None:
     if workflow_name != "cdp_router":
         return
@@ -237,6 +307,7 @@ def patch_router_http_dispatch(wf: dict, workflow_name: str) -> None:
     conns["📊 Registrar Execução"] = {
         "main": [[link("📋 POST dispatch-runs")]]
     }
+    ensure_stokapi_error_delivery(nodes, conns)
 
     for node in nodes:
         if node.get("name") in {
@@ -291,6 +362,12 @@ def patch_workflow(path: pathlib.Path) -> None:
         if node.get("type", "").endswith("code"):
             node.setdefault("parameters", {})["jsCode"] = code
             node["parameters"]["mode"] = node["parameters"].get("mode", "runOnceForAllItems")
+            if name == "⚙️ Formatar Payload Scraper":
+                node["notes"] = (
+                    "CDP v1.0: active default sites gm,ml,vw,eu; production "
+                    "CDP_SCRAPER_SITES adds melibox. Blocked sites stay disabled "
+                    "until fresh proxy smoke passes."
+                )
         apply_parameter_patches(node)
         patch_router_processado_node(node)
 

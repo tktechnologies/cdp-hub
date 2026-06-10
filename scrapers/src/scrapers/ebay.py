@@ -267,9 +267,7 @@ class EbayScraper(BaseScraper):
             if "?" in product_url:
                 product_url = product_url.split("?")[0]
 
-            exact = (
-                self.validate_exact_match(sku, found_sku) if found_sku else False
-            )
+            exact = self.validate_exact_match(sku, found_sku) if found_sku else False
 
             results.append(
                 PartResult(

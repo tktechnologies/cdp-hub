@@ -46,7 +46,7 @@ Router always sends `force_refresh: false` on `POST /api/v1/jobs`.
 | Handoff snapshot | `scrapers/docs/MAINTENANCE_CHECKPOINT.md` |
 | Local dev | `make -C scrapers setup dev` / `make worker` |
 | Tests | `make -C scrapers test lint` |
-| Azure deploy | `scrapers/scripts/deploy-azure.sh`, `scrapers/infra/` |
+| Azure deploy | `scripts/deploy-scraper-azure.sh`, `infra/` |
 
 ## API Diversos / StokAPI
 

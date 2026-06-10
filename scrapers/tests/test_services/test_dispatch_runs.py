@@ -134,7 +134,9 @@ async def test_second_terminal_result_claims_once():
 @pytest.mark.asyncio
 async def test_failed_dispatch_branch_counts_as_terminal():
     await dispatch_runs.upsert_dispatch_run(
-        DispatchRunUpsertRequest(batch_group_id="bg-fail-1", reply_channel="email", reply_email="a@b.com")
+        DispatchRunUpsertRequest(
+            batch_group_id="bg-fail-1", reply_channel="email", reply_email="a@b.com"
+        )
     )
     await dispatch_runs.record_pipeline_result(
         "bg-fail-1",
@@ -174,7 +176,9 @@ async def test_one_finished_branch_never_sends_partial():
 @pytest.mark.asyncio
 async def test_final_notification_patch_sent_and_skipped():
     await dispatch_runs.upsert_dispatch_run(
-        DispatchRunUpsertRequest(batch_group_id="bg-final-1", reply_channel="email", reply_email="u@x.com")
+        DispatchRunUpsertRequest(
+            batch_group_id="bg-final-1", reply_channel="email", reply_email="u@x.com"
+        )
     )
     claimed = await dispatch_runs.record_pipeline_result(
         "bg-final-1",
@@ -206,6 +210,79 @@ async def test_final_notification_patch_sent_and_skipped():
         FinalNotificationPatch(status="skipped_no_target"),
     )
     assert skipped.final_notification_status == "skipped_no_target"
+
+
+@pytest.mark.asyncio
+async def test_failed_final_notification_can_be_reclaimed():
+    await dispatch_runs.upsert_dispatch_run(
+        DispatchRunUpsertRequest(
+            batch_group_id="bg-retry-1", chat_id="999", reply_channel="telegram"
+        )
+    )
+    await dispatch_runs.record_pipeline_result(
+        "bg-retry-1",
+        PipelineResultRequest(source="scraper", status="completed", summary=_summary(with_price=1)),
+    )
+    claimed = await dispatch_runs.record_pipeline_result(
+        "bg-retry-1",
+        PipelineResultRequest(source="stokapi", status="succeeded", summary=_summary(with_price=1)),
+    )
+    await dispatch_runs.patch_final_notification(
+        claimed.run_id,
+        FinalNotificationPatch(
+            status="failed", final_channel="telegram", final_error="credential missing"
+        ),
+    )
+    retry = await dispatch_runs.record_pipeline_result(
+        "bg-retry-1",
+        PipelineResultRequest(source="scraper", status="completed", summary=_summary(with_price=1)),
+    )
+    assert retry.ready_for_final is True
+    assert retry.already_notified is False
+    assert retry.claim is not None
+
+
+@pytest.mark.asyncio
+async def test_get_dispatch_run_by_batch():
+    await dispatch_runs.upsert_dispatch_run(
+        DispatchRunUpsertRequest(
+            batch_group_id="bg-lookup-1",
+            reply_email="user@example.com",
+            scraper_job_ids=["job-a"],
+            stokapi_job_id="job-b",
+            total_skus=2,
+        )
+    )
+    found = await dispatch_runs.get_dispatch_run_by_batch("bg-lookup-1")
+    assert found is not None
+    assert found.batch_group_id == "bg-lookup-1"
+    assert found.scraper_job_ids == ["job-a"]
+    assert found.stokapi_job_id == "job-b"
+    assert await dispatch_runs.get_dispatch_run_by_batch("bg-missing") is None
+
+
+@pytest.mark.asyncio
+async def test_claim_includes_job_ids():
+    await dispatch_runs.upsert_dispatch_run(
+        DispatchRunUpsertRequest(
+            batch_group_id="bg-claim-ids",
+            scraper_job_ids=["scraper-1"],
+            stokapi_job_id="stok-1",
+            total_skus=1,
+        )
+    )
+    await dispatch_runs.record_pipeline_result(
+        "bg-claim-ids",
+        PipelineResultRequest(source="scraper", status="completed", summary=_summary(with_price=0)),
+    )
+    ready = await dispatch_runs.record_pipeline_result(
+        "bg-claim-ids",
+        PipelineResultRequest(source="stokapi", status="succeeded", summary=_summary(with_price=0)),
+    )
+    assert ready.claim is not None
+    assert ready.claim["scraper_job_ids"] == ["scraper-1"]
+    assert ready.claim["stokapi_job_id"] == "stok-1"
+    assert ready.claim["batch_group_id"] == "bg-claim-ids"
 
 
 @pytest.mark.asyncio

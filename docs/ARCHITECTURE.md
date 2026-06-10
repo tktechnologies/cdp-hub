@@ -12,16 +12,17 @@ and Telegram/email.
 
 ```text
 cdp-app/
+├── infra/              # Platform Azure Bicep (scraper-stack + modules)
 ├── scrapers/           # Scraper API + Celery + cdp_scraper receiver
 ├── muvstok-api/        # API Diversos (StokAPI) + Redis Streams worker + cdp_stokapi
-├── n8n/                # Router Code (src/), workflows, settings  ← canonical (Phase 1)
+├── n8n/                # Router Code (src/), workflows, settings  ← canonical
 ├── contracts/          # Shared JSON Schema (jobs + callbacks)
 ├── docs/               # Platform documentation
-├── scripts/            # sync-all-n8n.sh, smoke_dual_pipeline.sh
+├── scripts/            # sync-all-n8n.sh, deploy-scraper-azure.sh, smoke_dual_pipeline.sh
 └── .agent/             # Tier 1 platform agent workspace
 ```
 
-**Phase 1 (complete):** Workflow JSON lives only at repo root `n8n/`. Legacy docs under `scrapers/n8n/docs/` are deprecated. See [decisions/ADR-0003-monorepo-n8n-layout.md](decisions/ADR-0003-monorepo-n8n-layout.md).
+**Phase 1–2 (complete):** Workflow JSON lives only at repo root `n8n/`. Legacy `scrapers/n8n/` redirect stubs removed. See [decisions/ADR-0003-monorepo-n8n-layout.md](decisions/ADR-0003-monorepo-n8n-layout.md).
 
 ## Services
 

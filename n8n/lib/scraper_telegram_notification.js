@@ -35,7 +35,7 @@ function workflowName() {
 }
 
 function isDevWorkflow() {
-  return /^DEV\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));
+  return /^DEV\s*-/i.test(workflowName());
 }
 
 function envFor(name) {
@@ -67,7 +67,7 @@ function pecaLabel(n) {
 function reportUrl() {
   const configured = envFor('CDP_RESULTADOS_SHEETS_URL');
   if (configured || isDevWorkflow()) return configured;
-  return 'https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=533358674';
+  return 'https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=1185876304';
 }
 
 function escapeHtml(value) {

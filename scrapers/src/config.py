@@ -150,7 +150,9 @@ class Settings(BaseSettings):
     proxy_urls: list[str] = []
     proxy_bypass: str = "localhost,127.0.0.1"
     proxy_fail_closed: bool = False
-    proxy_affinity_enabled: bool = True
+    proxy_affinity_enabled: bool = False
+    proxy_strict_alternation: bool = True
+    proxy_rotate_context_per_search: bool = True
     proxy_state_per_identity: bool = True
     anti_bot_circuit_breaker_enabled: bool = True
     anti_bot_circuit_breaker_threshold: int = 3

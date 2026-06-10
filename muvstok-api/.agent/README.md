@@ -8,7 +8,7 @@ Start with `rules.md`, then `index.md`. For router / dual pipeline / `make sync-
 
 - `rules.md`: non-negotiable project rules.
 - `index.md`: task router for what to read and use.
-- `memory/`: durable project context, decisions, implementation state, glossary, and known issues.
+- `memory/`: durable project context, StokAPI runtime state, glossary, known issues (n8n IDs: root `.agent/memory/`).
 - `standards/`: coding, testing, security, observability, and Azure practices.
 - `workflows/`: task contracts, implementation flow, reviews, and operations.
 - `skills/`: reusable project-specific skills with `SKILL.md` files.

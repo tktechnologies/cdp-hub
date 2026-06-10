@@ -39,7 +39,7 @@ Boundaries (do not cross):
 Before done:
 - make -C scrapers test lint (or targeted pytest)
 - make migrate if schema changed
-- Update docs/CHANGELOG.md or TASKS.md if user-facing; update .agent/memory if production facts changed
+- Update docs/CHANGELOG.md or MAINTENANCE_CHECKPOINT.md if user-facing; update .agent/memory if production facts changed
 
 End of turn: what changed, what was verified, risks, next step. Never commit secrets or customer data.
 ```

@@ -97,3 +97,4 @@ Receivers are owned by services but **published together** in one sync script.
 - `.analisar` / `.sku` pass all valid SKUs by default; optional sampling is controlled by `CDP_DISPATCH_SAMPLE_SIZE` in `router_limitar_skus.js`.
 - **Secrets:** Key Vault → Container App env; never in workflow JSON or agent memory files.
 - **Documentation:** Platform truth in `docs/`; service truth in service `docs/` + `.agent/memory/`; avoid duplicating full architecture in three places — link to canonical docs.
+- **Single source of truth:** Live workflow IDs and reporting semantics live only in root `.agent/` (see `.agent/knowledge/workspace-sync.md`); service workspaces link up, never copy ID tables.

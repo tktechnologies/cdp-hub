@@ -60,9 +60,9 @@ Router Code edits: `n8n/src/` → `python3 scripts/sync_workflow_code_from_share
 
 ## Azure Monitor alerting
 
-`muvstok-api/infra/` is still placeholder-level, and the root StokAPI Bicep module is scaffolded with deploy disabled. Until infrastructure is wired:
+StokAPI Bicep (`infra/modules/stokapi-apps.bicep`) is still placeholder-level with deploy disabled. Until infrastructure is wired:
 
-- **Planned alerts** (documented in `scrapers/docs/PRODUCTION_PLAN.md` and `scrapers/docs/AZURE_REBUILD_PLAN.md`): failed jobs, elevated `blocked` scraper rate, worker crashes, Redis/queue depth.
+- **Planned alerts** (see `scrapers/docs/MAINTENANCE_CHECKPOINT.md`): failed jobs, elevated `blocked` scraper rate, worker crashes, Redis/queue depth.
 - **Current signals:** Prometheus metrics endpoints (Scraper + StokAPI), structured logs (`event_name` fields), n8n execution history for `cdp_router` / `cdp_scraper` / `cdp_stokapi`.
 - **After Bicep:** wire Azure Monitor action groups (email/Teams) to Application Insights alert rules for HTTP 5xx, queue lag, and callback delivery failures.
 

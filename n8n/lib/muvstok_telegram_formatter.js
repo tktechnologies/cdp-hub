@@ -29,7 +29,7 @@ function workflowName() {
 }
 
 function isDevWorkflow() {
-  return /^DEV\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));
+  return /^DEV\s*-/i.test(workflowName());
 }
 
 function envFor(name) {
@@ -45,7 +45,7 @@ const configuredReportUrl = envFor('CDP_RESULTADOS_SHEETS_URL');
 const reportUrl =
   configuredReportUrl || (isDevWorkflow()
     ? ''
-    : 'https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=533358674');
+    : 'https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=1185876304');
 
 if (String(j.delivery_mode || '').trim().toLowerCase() === 'aggregate') {
   return [{ json: { skip: true, reason: 'aggregate_delivery' } }];

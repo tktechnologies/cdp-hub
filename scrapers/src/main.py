@@ -59,6 +59,7 @@ async def attach_request_id(request: Request, call_next):
     response.headers["X-Request-ID"] = request_id
     return response
 
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
@@ -85,4 +86,5 @@ async def metrics():
     from fastapi.responses import Response
 
     from src.utils.monitoring import get_metrics
+
     return Response(content=get_metrics(), media_type="text/plain")

@@ -7,11 +7,13 @@ Platform-level IaC for the CDP monorepo. **Does not deploy from CI by default** 
 | Path | Purpose |
 |------|---------|
 | `main.bicep` | Platform entry — orchestrates scraper stack + optional StokAPI apps |
-| `main.parameters.example.json` | Example parameters (no secrets committed) |
-| `modules/stokapi-apps.bicep` | StokAPI Container Apps placeholder (Phase 6) |
-| `../scrapers/infra/modules/` | Canonical scraper modules (ACR, Postgres, Redis, Container Apps, n8n) |
+| `scraper-stack.bicep` | Scraper + n8n Azure resources (ACR, Postgres, Redis, Key Vault, Container Apps) |
+| `main.parameters.example.json` | Platform wrapper parameters (no secrets committed) |
+| `main.parameters.development.example.json` | Development platform parameters |
+| `scraper-stack.parameters.example.json` | Scraper-stack parameters for direct deploy scripts |
+| `modules/` | Bicep modules (ACR, Postgres, Redis, Key Vault, Container Apps, n8n, StokAPI placeholder) |
 
-Scraper modules remain under `scrapers/infra/` to avoid duplicating large Bicep files. Root `main.bicep` references them via relative paths.
+StokAPI Container Apps are deployed via `muvstok-api/scripts/deploy_muv_*.sh` today; `modules/stokapi-apps.bicep` is a Phase 6 placeholder.
 
 ## Validate locally (no deploy)
 
@@ -20,7 +22,24 @@ make bicep-build
 make bicep-what-if   # requires Azure CLI login + RG access
 ```
 
-## Service deploy runbooks
+Direct scraper-stack what-if:
 
-- Scraper: [docs/runbooks/deploy-scraper.md](../docs/runbooks/deploy-scraper.md)
-- StokAPI: [docs/runbooks/deploy-stokapi.md](../docs/runbooks/deploy-stokapi.md)
+```bash
+az bicep build --file infra/scraper-stack.bicep
+az deployment group what-if \
+  --resource-group automation \
+  --template-file infra/scraper-stack.bicep \
+  --parameters @infra/scraper-stack.parameters.example.json
+```
+
+## Deploy runbooks
+
+| Stack | Script |
+|-------|--------|
+| Scraper production (full rebuild) | `scripts/deploy-scraper-azure.sh` |
+| Scraper development | `scripts/deploy-scraper-azure-dev.sh` |
+| Scraper image only (prod API + worker) | `scripts/deploy-scraper-image.sh` |
+| StokAPI API | `muvstok-api/scripts/deploy_muv_api.sh` |
+| StokAPI worker | `muvstok-api/scripts/deploy_muv_worker.sh` |
+
+See also [docs/runbooks/deploy-scraper.md](../docs/runbooks/deploy-scraper.md) and [docs/runbooks/deploy-stokapi.md](../docs/runbooks/deploy-stokapi.md).

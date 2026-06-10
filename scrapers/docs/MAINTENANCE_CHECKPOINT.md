@@ -1,8 +1,8 @@
 # Maintenance Checkpoint
 
-**Last updated:** 2026-06-02
+**Last updated:** 2026-06-09
 
-**Live snapshot:** [`.agent/memory/implementation-state.md`](../.agent/memory/implementation-state.md) and platform [`.agent/memory/implementation-state.md`](../../.agent/memory/implementation-state.md). Historical site matrix: [`SCRAPER_STATUS_BRIEFING.md`](SCRAPER_STATUS_BRIEFING.md) (2026-05-21).
+**Live snapshot:** [`.agent/memory/implementation-state.md`](../.agent/memory/implementation-state.md) and platform [`.agent/memory/implementation-state.md`](../../.agent/memory/implementation-state.md). Historical site matrix: [`archive/SCRAPER_STATUS_BRIEFING.md`](archive/SCRAPER_STATUS_BRIEFING.md) (2026-05-21).
 
 ---
 
@@ -11,8 +11,8 @@
 | Area | Status |
 |------|--------|
 | Azure API + worker | **Live** — verify current image tag in Azure Container Apps |
-| Scrapers | Active: `gm`, `ml`, `vw`, `eu`, `pecadireta`; `melibox` optional (router env) |
-| Proxy | **Code ready** — `PROXY_URLS` must be set in Key Vault before `PROXY_FAIL_CLOSED=true` in prod |
+| Scrapers | Active: `gm`, `ml`, `vw`, `eu`, `melibox`; disabled pending smoke: `pecadireta`; archived: `goparts`, `procurapecas`, `ebay` |
+| Proxy | **Applied in production Container Apps** — Key Vault persist still needs Secrets Officer/RBAC |
 | Redis scrape cache | **Enabled** — 24h TTL; router sends `force_refresh: false` |
 | n8n | **Canonical:** `cdp_router`, `cdp_scraper`, `cdp_stokapi` — [docs/n8n/LIVE_WORKFLOWS.md](../../docs/n8n/LIVE_WORKFLOWS.md) |
 | Progress | `cdp_progress` + `dispatch-runs` API — see platform implementation state |
@@ -35,11 +35,11 @@ N8N: `https://automacao.tktechnologies.com.br`
 
 | Phase | Action |
 |-------|--------|
-| A | Buy 1× BR ISP/static residential HTTP proxy; store in Key Vault `proxy-urls` |
-| B | `scripts/proxy_readiness_check.py` — Playwright + egress IP |
-| C | `scripts/proxy_site_smoke.py --from-env` — Melibox first, then regression sites |
+| A | IPRoyal BR ISP proxies applied to production Container Apps; persist `proxy-urls` in Key Vault when RBAC allows |
+| B | `scripts/proxy_readiness_check.py` — Playwright + egress IP before any provider change |
+| C | `scripts/proxy_site_smoke.py --from-env` — Melibox first, then Peça Direta/regression sites with `force_refresh` validation |
 | D | Restart Container Apps; clear stale `browser_states/` if switching egress |
-| E | Re-enable archived scrapers only after smoke — see `.agent/workflows/proxy-rollout.md` |
+| E | Re-enable disabled/archived scrapers only after fresh 403-free smoke — see `.agent/workflows/proxy-rollout.md` |
 
 **IPRoyal setup (step-by-step):** [docs/runbooks/iproyal-isp-proxy-setup.md](runbooks/iproyal-isp-proxy-setup.md)  
 **Providers (shortlist):** IPRoyal (first test), Decodo, Bright Data (enterprise). Prefer ISP/static BR over Azure datacenter pool.
@@ -84,9 +84,9 @@ API_BASE_URL=... API_KEY=... uv run python scripts/production_scraper_curl_smoke
 
 ## Open Priorities
 
-See `docs/TASKS.md`. Top items:
+Top items:
 
-1. Configure `PROXY_URLS` in production Key Vault + validate Melibox
+1. Persist `PROXY_URLS` in production Key Vault and run fresh Peça Direta smoke before re-enable
 2. ML monitoring uses SKU `51766536` in curl smoke (replacing stale `06K907811B`)
 3. Redis TLS validation (`CERT_NONE` → proper)
 4. Trim Key Vault webhook secret at source

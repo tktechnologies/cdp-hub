@@ -37,7 +37,7 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 plugins = ["pydantic.mypy"]
-exclude = ["scrapers/infra/", "infra/"]
+exclude = ["infra/"]
 
 [[tool.mypy.overrides]]
 module = ["tests.*", "scripts.*"]

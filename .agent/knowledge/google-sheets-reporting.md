@@ -8,7 +8,21 @@ produces each row.
 
 | Tab | Purpose | Owner |
 |-----|---------|-------|
-| `SKUs` | Intake rows and processing flags (`CODIGO`, `PROCESSADO`, `ENCONTRADO`) | Router + receivers |
+| `SKUs` | Intake rows and processing flags (`CODIGO`, `PROCESSADO 🤖`, `ENCONTRADO 🤖`, `NOTIFICADO 🤖`) | Router + receivers |
+
+**SKUs tab contract:** row-1 headers use `PROCESSADO 🤖`, `ENCONTRADO 🤖`,
+`NOTIFICADO 🤖` (robot suffix marks bot-managed columns). Optional user columns:
+`CODIGO`, `UF`, `ITEM`. Tab gid `843035952` (workbook
+`1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII`). Workflows accept legacy names
+without `🤖` when reading.
+
+**Row updates (D–F):** Google Sheets *Update Row* nodes match on `row_number`
+from a prior *Read* in the same execution. Code nodes that remap status must
+spread the full read row (`{ ...row, PROCESSADO: … }`) and preserve
+`pairedItem` from the read output. Matching on `CODIGO` alone breaks duplicate
+SKU rows. Router merges via `$('📊 Ler CDP_SKUs')`; receivers use
+read → remap → update; notifier uses `📄 Ler CDP_SKUs (NOTIFICADO)` →
+`🧭 Mapear NOTIFICADO por row`.
 | `Detalhado` | Per-listing or placeholder rows from Scraper and API Diversos | `cdp_scraper`, `cdp_stokapi` |
 | `Historico` | Per-job summary rows | Receivers |
 | `Resumo` | SKU-level best-price or summary output | Receivers / formulas |
@@ -59,9 +73,11 @@ never write `estado`.
 | Change | Files |
 |--------|-------|
 | Scraper row flattening | `scrapers/scripts/patch_scraper_receiver_workflow.py`, `n8n/workflows/cdp_scraper.json` |
-| API Diversos row flattening | `muvstok-api/scripts/patch_muvstok_receiver_workflow.py`, `muvstok-api/n8n/lib/`, `n8n/workflows/cdp_stokapi.json` |
+| API Diversos row flattening | `muvstok-api/scripts/patch_muvstok_receiver_workflow.py`, `n8n/lib/`, `n8n/workflows/cdp_stokapi.json` |
 | Dashboard schema/formulas | `muvstok-api/scripts/ensure_google_sheets_schema.py` and platform docs |
-| Router intake flags | `n8n/src/emparelhar_scraper.js`, receiver workflow mappings |
+| Router intake flags | `n8n/src/emparelhar_scraper.js`, `scripts/patch_cdp_skus_sheet_nodes.py` |
+| NOTIFIER `NOTIFICADO` | `n8n/src/notifier_expandir_notificado.js`, `n8n/src/notifier_mapear_notificado.js` |
+| Receiver ENCONTRADO / NOTIFICADO | `scrapers/scripts/patch_scraper_receiver_workflow.py`, `muvstok-api/scripts/patch_muvstok_receiver_workflow.py` |
 
 For scraper-specific result semantics, read
 `scrapers/.agent/rules.md`. For API Diversos-specific result semantics, read

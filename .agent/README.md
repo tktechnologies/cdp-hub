@@ -12,7 +12,8 @@
 | [rules/](rules/) | Task-scoped rule summaries for platform, services, n8n, Python, contracts, infra |
 | [knowledge/](knowledge/) | Cross-service ownership, reporting semantics, and workspace sync maps |
 | [knowledge/google-sheets-reporting.md](knowledge/google-sheets-reporting.md) | Sheets KPI definitions, formula rules, pivots, dashboard UX |
-| [memory/implementation-state.md](memory/implementation-state.md) | Live workflow IDs, cross-service snapshot |
+| [memory/implementation-state.md](memory/implementation-state.md) | **Canonical** live workflow IDs + cross-service snapshot |
+| [knowledge/workspace-sync.md](knowledge/workspace-sync.md) | What to duplicate vs link across workspaces |
 | [references/monorepo-map.md](references/monorepo-map.md) | Directory map |
 
 ## Boundaries

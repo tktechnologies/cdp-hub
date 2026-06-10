@@ -3,7 +3,7 @@
 ## Always read first
 
 1. `rules.md`
-2. `memory/implementation-state.md`
+2. `memory/implementation-state.md` (scraper runtime — not live n8n IDs)
 3. `docs/MAINTENANCE_CHECKPOINT.md`
 
 If the task touches **router** or **both pipelines**, switch to platform tier: [../../.agent/index.md](../../.agent/index.md).
@@ -20,6 +20,8 @@ If the task touches **router** or **both pipelines**, switch to platform tier: [
 | n8n publish preflight | `skills/n8n-release-preflight/SKILL.md` |
 | Router / dual pipeline / platform workflow sync | **Platform** `../../.agent/skills/n8n-router-sync/SKILL.md` |
 | BR ISP proxy purchase / prod config | `workflows/proxy-rollout.md`, `commands/proxy-readiness.md` |
+| Local dev setup | `workflows/local-development.md`, `docs/LOCAL_VALIDATION.md` |
+| Pre-release scraper check | `workflows/scraper-release-check.md` |
 | Repo cleanup | `skills/repo-hygiene/SKILL.md` |
 
 ## Delegation
@@ -40,6 +42,6 @@ delegation or parallel agent work.
 ## Completion
 
 - Run `make test` (or targeted pytest) for behavior changes
-- Update `docs/CHANGELOG.md`, `docs/TASKS.md` when user-facing
+- Update `docs/CHANGELOG.md` when user-facing; use `docs/MAINTENANCE_CHECKPOINT.md` for handoff
 - Router Code → platform `n8n/src/`
 - Update `memory/implementation-state.md` if production facts changed

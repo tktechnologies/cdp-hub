@@ -4,9 +4,17 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from cdp_skus_sheet_columns import (  # noqa: E402
+    PICK_SHEET_FIELD_JS,
+    sheet_column_id,
+    sheet_display_name,
+)
+
 WF_PATH = REPO_ROOT / "n8n/workflows/cdp_stokapi.json"
 HELPERS_PATH = REPO_ROOT / "n8n/lib/muvstok_sheet_helpers.js"
 TELEGRAM_FMT_PATH = REPO_ROOT / "n8n/lib/muvstok_telegram_formatter.js"
@@ -19,7 +27,8 @@ LISTING_ROW_FN = r"""function listingRow(sku, row, statusItem, searchTimeMs) {
   const skuFound = na(pickField(row, 'sku', 'SKU', 'skuSemCaractereEspecial') || sku);
   const stock = pickField(row, 'qtdeEstoque', 'qtdEstoque', 'stock_quantity');
   const filial = branchLabel(row);
-  const empresa = companyLabel(row) || filial || 'N/A';
+  const company = companyLabel(row);
+  const empresa = (company && company !== filial) ? company : '';
   const saleStr = naSalePriceFromRow(row);
   const costStr = naCostPriceFromRow(row);
   const ms = Number(searchTimeMs);
@@ -27,6 +36,7 @@ LISTING_ROW_FN = r"""function listingRow(sku, row, statusItem, searchTimeMs) {
   const health = normalizeSourceHealth('', { sku_result: resultStatus });
   const hasPrice = saleStr !== '';
   const encontrado = sheetStatusForResult(resultStatus, hasPrice);
+  const title = productTitle(row);
   return {
     job_id: jobId,
     sku_searched: skuSearched,
@@ -36,23 +46,22 @@ LISTING_ROW_FN = r"""function listingRow(sku, row, statusItem, searchTimeMs) {
     price: saleStr,
     preco_medio: costStr,
     currency: 'BRL',
-    availability: availabilityForResult(resultStatus, stock),
     seller: filial || 'N/A',
     uf: sellerUf(row),
     empresa: empresa,
     cnpj: cnpjFromRow(row),
     product_url: productUrlForSheet(skuSearched, row),
-    origin: 'Brasil',
-    raw_title: productTitle(row) || rawTitleForResult(resultStatus, statusItem),
+    regiao: 'Brasil',
+    raw_title: title || (hasPrice ? '' : ''),
     scraped_at: completedAt,
     search_time_ms: String(Number.isFinite(ms) && ms >= 0 ? Math.round(ms) : 0),
     condition: 'novo',
-    job_duration_s: String(jobDuration),
     brand: brandLabel(row) || 'N/A',
     site_code: CDP_SITE_CODE,
     status_resultado: resultStatus,
     source_health: health,
     has_valid_price: hasPrice,
+    fonte_pipeline: CDP_ORIGEM_LABEL,
     _encontrado: encontrado,
   };
 }"""
@@ -157,31 +166,31 @@ DETALHADO_COLUMN_EXPRESSIONS: dict[str, str] = {
     "sku_encontrado": "={{ $json.sku_found }}",
     "correspondencia_exata": "={{ $json.exact_match }}",
     "site": "={{ $json.site }}",
+    "codigo_site": "={{ $json.site_code }}",
+    "status_resultado": "={{ $json.status_resultado }}",
+    "has_valid_price": "={{ $json.has_valid_price }}",
+    "source_health": "={{ $json.source_health }}",
     "preco": "={{ $json.price }}",
     "preco-medio": "={{ $json.preco_medio }}",
     "moeda": "={{ $json.currency }}",
-    "disponibilidade": "={{ $json.availability }}",
+    "condicao": "={{ $json.condition }}",
     "vendedor": "={{ $json.seller }}",
     "uf": "={{ $json.uf }}",
     "empresa": "={{ $json.empresa }}",
     "cnpj": "={{ $json.cnpj }}",
     "url_produto": "={{ $json.product_url }}",
-    "origem": "={{ $json.origin }}",
     "titulo_bruto": "={{ $json.raw_title }}",
+    "marca": "={{ $json.brand }}",
+    "regiao": "={{ $json.regiao }}",
     "coletado_em": "={{ $json.scraped_at }}",
     "tempo_busca_ms": "={{ $json.search_time_ms }}",
-    "condicao": "={{ $json.condition }}",
-    "duracao_job_s": "={{ $json.job_duration_s }}",
-    "marca": "={{ $json.brand }}",
-    "codigo_site": "={{ $json.site_code }}",
-    "status_resultado": "={{ $json.status_resultado }}",
-    "source_health": "={{ $json.source_health }}",
-    "has_valid_price": "={{ $json.has_valid_price }}",
+    "fonte_pipeline": "={{ $json.fonte_pipeline }}",
 }
 
 DETALHADO_COLUMN_ALIASES = {
     "id_job": "job_id",
     "estado": "uf",
+    "origem": "regiao",
 }
 
 RESUMO_PATCHES: list[tuple[str, str]] = [
@@ -207,6 +216,7 @@ RESUMO_PUSH_FN = r"""function pushResumo(out, sku, listings, st, skuResult) {
     json: {
       CODIGO: skuStr,
       STATUS: status,
+      STATUS_RESULTADO: resultStatus,
       MELHOR_PRECO: melhor,
       SITE: bestSite || (foundOrNoPrice ? CDP_SITE_LABEL : 'N/A'),
       LINK: '',
@@ -240,7 +250,8 @@ MAPEAR_NOTES = (
     "reads sku_updates from staticData (set by Extrair linhas)."
 )
 SHEET_STATUS_PRIORITY_JS = (
-    "function normalizeSheetStatus(value) {\n"
+    PICK_SHEET_FIELD_JS
+    + "function normalizeSheetStatus(value) {\n"
     "  let s = String(value || '').trim().toLowerCase();\n"
     "  try { s = s.normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''); } catch (e) {}\n"
     "  s = s.replace(/[^a-z0-9]+/g, ' ').trim();\n"
@@ -276,16 +287,21 @@ MAPEAR_JS = (
     "  if (key) byCodigo[key] = u;\n"
     "}\n"
     + SHEET_STATUS_PRIORITY_JS
-    + "const rows = $input.all().map((i) => i.json);\n"
+    + "const items = $input.all();\n"
     "const out = [];\n"
-    "for (const row of rows) {\n"
+    "for (let i = 0; i < items.length; i++) {\n"
+    "  const item = items[i];\n"
+    "  const row = item.json || {};\n"
     "  const rn = row.row_number;\n"
     "  if (rn === undefined || rn === null || rn === '') continue;\n"
     "  const codigo = String(row.CODIGO == null ? '' : row.CODIGO).trim().toUpperCase();\n"
     "  const u = byCodigo[codigo];\n"
     "  if (!u) continue;\n"
-    "  const encontrado = chooseSheetStatus(row.ENCONTRADO, u.ENCONTRADO);\n"
-    "  out.push({ json: { row_number: rn, PROCESSADO: u.PROCESSADO, ENCONTRADO: encontrado } });\n"
+    "  const encontrado = chooseSheetStatus(pickSheetField(row, 'ENCONTRADO'), u.ENCONTRADO);\n"
+    "  out.push({\n"
+    "    json: { ...row, PROCESSADO: u.PROCESSADO, ENCONTRADO: encontrado },\n"
+    "    pairedItem: item.pairedItem ?? { item: i },\n"
+    "  });\n"
     "}\n"
     "return out;\n"
 )
@@ -633,7 +649,11 @@ def patch_detalhado(code: str, helpers: str) -> str:
     )
     code = code.replace(
         "skus_encontrados: succeeded,\n  skus_falhos: failed,",
+        "skus_encontrados: foundPriceCount,\n  skus_falhos: notFoundCount + blockedCount + errorCount,\n  skus_not_found: notFoundCount,\n  skus_blocked: blockedCount,\n  skus_error: errorCount,",
+    )
+    code = code.replace(
         "skus_encontrados: foundPriceCount,\n  skus_falhos: notFoundCount + blockedCount + errorCount,",
+        "skus_encontrados: foundPriceCount,\n  skus_falhos: notFoundCount + blockedCount + errorCount,\n  skus_not_found: notFoundCount,\n  skus_blocked: blockedCount,\n  skus_error: errorCount,",
     )
     code = code.replace(
         "solicitante: chatId || '—',",
@@ -651,6 +671,16 @@ def patch_detalhado(code: str, helpers: str) -> str:
         "error_sku_count: errorCount,\n    detail_rows: rows.length,",
         "error_sku_count: errorCount,\n    delivery_mode: String(meta.delivery_mode || q.delivery_mode || '').trim().toLowerCase(),\n    batch_group_id: String(meta.batch_group_id || q.batch_group_id || '').trim(),\n    reply_channel: replyChannel || notify,\n    command_origin: commandOrigin || replyChannel || notify,\n    reply_email: replyEmail,\n    duration_seconds: jobDuration,\n    detail_rows: rows.length,\n    error: errorText,",
     )
+    if "sd.muvstok_last_callback = {" in code and "delivery_mode:" not in code:
+        code = code.replace(
+            "error_sku_count: errorCount,\n    reply_channel: replyChannel || notify,",
+            "error_sku_count: errorCount,\n    delivery_mode: String(meta.delivery_mode || q.delivery_mode || '').trim().toLowerCase(),\n    batch_group_id: String(meta.batch_group_id || q.batch_group_id || '').trim(),\n    reply_channel: replyChannel || notify,",
+        )
+    if "sd.muvstok_last_callback = {" in code and "duration_seconds:" not in code:
+        code = code.replace(
+            "reply_email: replyEmail,\n    detail_rows: rows.length,",
+            "reply_email: replyEmail,\n    duration_seconds: jobDuration,\n    detail_rows: rows.length,\n    error: errorText,",
+        )
     code = code.replace(
         "ENCONTRADO: s.found ? '✅ Encontrado' : '❌ Não encontrado'",
         "ENCONTRADO: s.encontrado || (s.found ? '✅ Encontrado' : '❌ Não encontrado')",
@@ -694,8 +724,19 @@ def patch_detalhado_sheet_columns(wf: dict) -> None:
         key: normalized.get(key, expr)
         for key, expr in DETALHADO_COLUMN_EXPRESSIONS.items()
     }
+    drop_legacy = {
+        "disponibilidade",
+        "duracao_job_s",
+        "origem",
+        "melibox_posicao",
+        "melibox_tipo",
+        "melibox_oferta_pct",
+        "melibox_envio",
+        "melibox_frete",
+        "melibox_pagina",
+    }
     for key, expr in normalized.items():
-        if key.startswith("melibox_"):
+        if key.startswith("melibox_") or key in drop_legacy:
             continue
         if key not in ordered:
             ordered[key] = expr
@@ -714,8 +755,8 @@ def patch_cdp_skus_node(wf: dict) -> None:
     cols["mappingMode"] = "defineBelow"
     cols["value"] = {
         "row_number": "={{ $json.row_number }}",
-        "PROCESSADO": "={{ $json.PROCESSADO }}",
-        "ENCONTRADO": "={{ $json.ENCONTRADO }}",
+        sheet_column_id("PROCESSADO"): "={{ $json.PROCESSADO }}",
+        sheet_column_id("ENCONTRADO"): "={{ $json.ENCONTRADO }}",
     }
     cols["matchingColumns"] = ["row_number"]
     cols["schema"] = [
@@ -730,8 +771,8 @@ def patch_cdp_skus_node(wf: dict) -> None:
             "readOnly": True,
         },
         {
-            "id": "PROCESSADO",
-            "displayName": "PROCESSADO",
+            "id": sheet_column_id("PROCESSADO"),
+            "displayName": sheet_display_name("PROCESSADO"),
             "required": False,
             "defaultMatch": False,
             "display": True,
@@ -739,8 +780,8 @@ def patch_cdp_skus_node(wf: dict) -> None:
             "canBeUsedToMatch": True,
         },
         {
-            "id": "ENCONTRADO",
-            "displayName": "ENCONTRADO",
+            "id": sheet_column_id("ENCONTRADO"),
+            "displayName": sheet_display_name("ENCONTRADO"),
             "required": False,
             "defaultMatch": False,
             "display": True,

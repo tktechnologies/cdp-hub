@@ -77,10 +77,16 @@ class ProcuraPecasScraper(BaseScraper):
         # Check for no results
         body_text = await page.inner_text("body")
         lower_text = body_text.lower()
-        if any(phrase in lower_text for phrase in [
-            "nenhum resultado", "não encontramos", "nenhum produto",
-            "página não encontrada", "404",
-        ]):
+        if any(
+            phrase in lower_text
+            for phrase in [
+                "nenhum resultado",
+                "não encontramos",
+                "nenhum produto",
+                "página não encontrada",
+                "404",
+            ]
+        ):
             logger.info("Procura Peças: no results found", sku=sku)
             return []
 
@@ -224,9 +230,7 @@ class ProcuraPecasScraper(BaseScraper):
                 else:
                     product_url = f"{BASE_URL}/{href}"
 
-            exact = (
-                self.validate_exact_match(sku, found_sku) if found_sku else False
-            )
+            exact = self.validate_exact_match(sku, found_sku) if found_sku else False
 
             results.append(
                 PartResult(

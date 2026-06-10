@@ -10,7 +10,7 @@ import time
 import unicodedata
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import Any, Protocol
 
 import httpx
 
@@ -22,6 +22,10 @@ logger = logging.getLogger("muvstok.dealership_directory")
 @dataclass(frozen=True, slots=True)
 class DealershipInfo:
     id_empresa: str
+    id_grupoempresa: str = ""
+    projeto: str = ""
+    montadora: str = ""
+    nm_corporacao: str = ""
     uf: str = ""
     cnpj: str = ""
     nome_fantasia: str = ""
@@ -32,7 +36,6 @@ class DealershipInfo:
     endereco: str = ""
     numero: str = ""
     cep: str = ""
-    montadora: str = ""
 
     @property
     def company_label(self) -> str:
@@ -41,6 +44,12 @@ class DealershipInfo:
     @property
     def branch_label(self) -> str:
         return self.apelido or self.nome_fantasia or self.grupo_empresa
+
+
+class CompanyLocationReader(Protocol):
+    async def list_all(self) -> list[Any]:
+        """Return persisted company-location rows."""
+        ...
 
 
 def normalize_dealership_id(value: Any) -> str:
@@ -85,8 +94,13 @@ def _normalize_uf(value: str) -> str:
 class DealershipDirectory:
     """Cached lookup from Muvstok `codigoFilial` to dealership metadata."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        company_locations: CompanyLocationReader | None = None,
+    ) -> None:
         self._settings = settings
+        self._company_locations = company_locations
         self._cache: dict[str, DealershipInfo] = {}
         self._loaded_at = 0.0
 
@@ -142,6 +156,26 @@ class DealershipDirectory:
         ttl = max(60, int(self._settings.muvstok_dealership_directory_ttl_seconds))
         if self._cache and time.monotonic() - self._loaded_at < ttl:
             return self._cache
+        if self._company_locations is not None:
+            try:
+                rows = await self._company_locations.list_all()
+                self._cache = {
+                    info.id_empresa: info
+                    for row in rows
+                    if (info := dealership_info_from_company_location(row)).id_empresa
+                }
+                self._loaded_at = time.monotonic()
+                logger.info(
+                    "dealership_directory_db_loaded",
+                    extra={"row_count": len(self._cache)},
+                )
+                if self._cache or not self._settings.muvstok_dealership_directory_url_fallback_enabled:
+                    return self._cache
+            except Exception as exc:
+                logger.warning("dealership_directory_db_load_failed", extra={"error": str(exc)})
+                self._loaded_at = time.monotonic()
+                if not self._settings.muvstok_dealership_directory_url_fallback_enabled:
+                    return self._cache
         url = self._settings.muvstok_dealership_directory_url.strip()
         if not url:
             self._cache = {}
@@ -161,25 +195,61 @@ class DealershipDirectory:
 
 
 def parse_dealership_csv(text: str) -> dict[str, DealershipInfo]:
-    reader = csv.DictReader(io.StringIO(text))
     out: dict[str, DealershipInfo] = {}
+    for record in parse_company_location_csv(text):
+        info = DealershipInfo(**record)
+        out[info.id_empresa] = info
+    return out
+
+
+def parse_company_location_csv(text: str) -> list[dict[str, str]]:
+    reader = csv.DictReader(io.StringIO(text))
+    records: list[dict[str, str]] = []
     for raw in reader:
         row = {_norm_key(k): (v or "").strip() for k, v in raw.items() if k is not None}
         key = normalize_dealership_id(row.get("id_empresa"))
         if not key:
             continue
-        out[key] = DealershipInfo(
-            id_empresa=key,
-            uf=_normalize_uf(row.get("uf", "")),
-            cnpj=_normalize_cnpj(row.get("cnpj", "")),
-            nome_fantasia=row.get("nome_fantasia", ""),
-            apelido=row.get("apelido", ""),
-            grupo_empresa=row.get("grupo_empresa", ""),
-            cidade=row.get("cidade", ""),
-            bairro=row.get("bairro", ""),
-            endereco=row.get("endereco", ""),
-            numero=row.get("numero", ""),
-            cep=row.get("cep", ""),
-            montadora=row.get("montadora", ""),
+        records.append(
+            {
+                "id_empresa": key,
+                "id_grupoempresa": normalize_dealership_id(row.get("id_grupoempresa")),
+                "projeto": row.get("projeto", ""),
+                "montadora": row.get("montadora", ""),
+                "nm_corporacao": row.get("nm_corporacao", ""),
+                "grupo_empresa": row.get("grupo_empresa", ""),
+                "cnpj": _normalize_cnpj(row.get("cnpj", "")),
+                "nome_fantasia": row.get("nome_fantasia", ""),
+                "apelido": row.get("apelido", ""),
+                "cep": row.get("cep", ""),
+                "endereco": row.get("endereco", ""),
+                "numero": row.get("numero", ""),
+                "uf": _normalize_uf(row.get("uf", "")),
+                "cidade": row.get("cidade", ""),
+                "bairro": row.get("bairro", ""),
+            }
         )
-    return out
+    return records
+
+
+def dealership_info_from_company_location(row: Any) -> DealershipInfo:
+    def value(name: str) -> str:
+        return str(getattr(row, name, "") or "").strip()
+
+    return DealershipInfo(
+        id_empresa=normalize_dealership_id(value("id_empresa")),
+        id_grupoempresa=normalize_dealership_id(value("id_grupoempresa")),
+        projeto=value("projeto"),
+        montadora=value("montadora"),
+        nm_corporacao=value("nm_corporacao"),
+        uf=_normalize_uf(value("uf")),
+        cnpj=_normalize_cnpj(value("cnpj")),
+        nome_fantasia=value("nome_fantasia"),
+        apelido=value("apelido"),
+        grupo_empresa=value("grupo_empresa"),
+        cidade=value("cidade"),
+        bairro=value("bairro"),
+        endereco=value("endereco"),
+        numero=value("numero"),
+        cep=value("cep"),
+    )

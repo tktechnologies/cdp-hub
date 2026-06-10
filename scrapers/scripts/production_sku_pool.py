@@ -13,7 +13,7 @@ from typing import Any
 
 ACTIVE_SITES = ("gm", "ml", "vw", "eu", "pecadireta", "melibox")
 
-# Meeting / operator SKU set (scripts/batch_meeting_skus.py)
+# Meeting / operator SKU set (scripts/archive/batch_meeting_skus.py)
 _MEETING_SKUS: tuple[tuple[str, str], ...] = (
     ("60910T14M00ZZ", ""),
     ("661003M6M00ZZ", ""),

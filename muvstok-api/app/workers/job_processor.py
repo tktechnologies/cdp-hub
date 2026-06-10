@@ -13,6 +13,7 @@ from app.core.config import Settings, get_settings
 from app.db.session import AsyncSessionLocal
 from app.domain.job_status import JobStatus
 from app.repositories.callback_repository import CallbackRepository
+from app.repositories.company_location_repository import CompanyLocationRepository
 from app.repositories.error_repository import ErrorRepository
 from app.repositories.job_repository import JobRepository
 from app.repositories.muvstok_api_data_repository import MuvstokApiDataRepository
@@ -38,12 +39,15 @@ class JobProcessor:
         muvstok_client = MuvstokClient(self._settings)
         callback_client = CallbackClient(self._settings)
         sku_cache = SkuCache(self._settings)
-        dealership_directory = DealershipDirectory(self._settings)
 
         try:
             async with AsyncSessionLocal() as session:
                 job_repo = JobRepository(session)
                 job = await job_repo.get_job_model(job_id)
+                dealership_directory = DealershipDirectory(
+                    self._settings,
+                    company_locations=CompanyLocationRepository(session),
+                )
 
                 if job.status in (JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELED):
                     logger.info(

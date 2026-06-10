@@ -1,0 +1,34 @@
+{
+  "cases": [
+    {
+      "id": "gm-known",
+      "site": "gm",
+      "sku": "22781768",
+      "brand": "GM",
+      "expected_statuses": ["success"],
+      "require_exact": true,
+      "require_price": true,
+      "expected_currency": "BRL"
+    },
+    {
+      "id": "ml-known",
+      "site": "ml",
+      "sku": "51766536",
+      "brand": "",
+      "expected_statuses": ["success"],
+      "require_exact": true,
+      "require_price": true,
+      "expected_currency": "BRL"
+    },
+    {
+      "id": "pecadireta-known",
+      "site": "pecadireta",
+      "sku": "06K907811B",
+      "brand": "",
+      "expected_statuses": ["success", "no_price"],
+      "require_exact": true,
+      "require_price": false,
+      "expected_currency": "BRL"
+    }
+  ]
+}

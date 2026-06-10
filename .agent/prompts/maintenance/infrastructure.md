@@ -14,7 +14,7 @@ Mission: Safe changes to platform and service deployment — no secret commits, 
 Bootstrap (read before editing):
 1. docs/ARCHITECTURE.md (Azure table) and docs/PLATFORM_OVERVIEW.md (infra sections)
 2. .agent/sub-agents/azure-infra.md and .agent/memory/implementation-state.md
-3. infra/README.md, infra/main.bicep; service: scrapers/infra/, muvstok-api/infra/ if present
+3. infra/README.md, infra/main.bicep, infra/scraper-stack.bicep
 4. scrapers/docs/SPECS/INFRASTRUCTURE_SPEC.md for scraper-specific Azure
 5. git status --short — never revert user changes without asking
 
@@ -27,7 +27,7 @@ Production reference (verify in Azure before claiming versions):
 
 Classify my task:
 - Platform Bicep (shared) → infra/main.bicep — validate: make bicep-validate / make bicep-what-if (no apply without approval)
-- Scraper deploy → scrapers/scripts/deploy-azure.sh, scrapers/infra/
+- Scraper deploy → scripts/deploy-scraper-azure.sh, infra/scraper-stack.bicep
 - StokAPI API → muvstok-api/scripts/deploy_muv_api.sh
 - StokAPI worker → muvstok-api/scripts/deploy_muv_worker.sh (not API script)
 - Env/secrets → Key Vault → Container App env mapping; never paste secrets into chat or commits

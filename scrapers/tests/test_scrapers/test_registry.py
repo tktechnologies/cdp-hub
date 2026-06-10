@@ -3,7 +3,12 @@
 import pytest
 
 from src.models.schemas import SiteId
-from src.scrapers import SCRAPER_REGISTRY, _active_scrapers, _should_use_mock
+from src.scrapers import (
+    ARCHIVED_SCRAPER_REGISTRY,
+    SCRAPER_REGISTRY,
+    _active_scrapers,
+    _should_use_mock,
+)
 from src.scrapers.melibox import MeliboxScraper
 from src.scrapers.mock_gm import MockGMScraper
 
@@ -48,9 +53,17 @@ class TestRegistryFallback:
             SiteId.MELIBOX,
         }
 
+    def test_blocked_sites_are_archived(self):
+        assert set(ARCHIVED_SCRAPER_REGISTRY) == {
+            SiteId.GOPARTS,
+            SiteId.PROCURA_PECAS,
+            SiteId.EBAY,
+        }
+
     @pytest.mark.asyncio
     async def test_get_scraper_returns_mock(self, monkeypatch):
         monkeypatch.setattr("src.scrapers.settings.mock_scrapers", True)
         from src.scrapers import get_scraper
+
         scraper = await get_scraper(SiteId.GM)
         assert isinstance(scraper, MockGMScraper)

@@ -29,6 +29,7 @@ class Base(AsyncAttrs, DeclarativeBase):
 
 class ScrapeJob(Base):
     """A batch scraping job containing multiple SKU lookups."""
+
     __tablename__ = "scrape_jobs"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid4()))
@@ -94,6 +95,7 @@ class DispatchRun(Base):
 
 class ScrapeItem(Base):
     """Individual SKU lookup within a job."""
+
     __tablename__ = "scrape_items"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid4()))
@@ -110,6 +112,7 @@ class ScrapeItem(Base):
 
 class PartResultRecord(Base):
     """Persisted part search result."""
+
     __tablename__ = "part_results"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid4()))
@@ -137,6 +140,7 @@ class PartResultRecord(Base):
 
 class SessionState(Base):
     """Track browser session health per site."""
+
     __tablename__ = "session_states"
 
     site = Column(String(20), primary_key=True)
@@ -149,6 +153,7 @@ class SessionState(Base):
 
 
 # ─── Database Engine ──────────────────────────────────────────────
+
 
 def normalize_asyncpg_url(database_url: str) -> tuple[str, dict[str, object]]:
     """Move asyncpg SSL URL flags into connect_args where asyncpg expects them."""

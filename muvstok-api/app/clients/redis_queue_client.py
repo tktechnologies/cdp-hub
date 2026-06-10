@@ -12,7 +12,17 @@ RedisField = bytes | bytearray | memoryview | str | int | float
 class RedisQueueClient:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._redis = Redis.from_url(settings.redis_url, decode_responses=True)
+        read_timeout_seconds = max(
+            float(settings.redis_socket_timeout_seconds),
+            (float(settings.redis_read_block_ms) / 1000.0) + 5.0,
+        )
+        self._redis = Redis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_timeout=read_timeout_seconds,
+            socket_connect_timeout=settings.redis_socket_connect_timeout_seconds,
+            health_check_interval=30,
+        )
 
     @property
     def job_stream_name(self) -> str:
@@ -58,7 +68,7 @@ class RedisQueueClient:
             for message_id, fields in entries
         ]
 
-    async def read_jobs(self, count: int = 1, block_ms: int = 5_000) -> list[dict[str, Any]]:
+    async def read_jobs(self, count: int = 1, block_ms: int = 1_000) -> list[dict[str, Any]]:
         await self.ensure_group()
         reclaimed = await self.reclaim_pending(count=count)
         if reclaimed:

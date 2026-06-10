@@ -1,39 +1,15 @@
 # CDP Scraper — System Overview
 
 > Automated automotive parts price comparison across multiple supplier websites.
-> Operators that spent **~5 hours/day** manually searching parts now run this in **~90 minutes unattended**.
 
----
+**Platform context** (router, dual pipeline, n8n): [../../docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) and [../../docs/architecture/DUAL_PIPELINE.md](../../docs/architecture/DUAL_PIPELINE.md).
 
-## Unified `.analisar` (2026-05-22)
+**Live ops handoff:** [MAINTENANCE_CHECKPOINT.md](MAINTENANCE_CHECKPOINT.md).
 
-> **Canonical (2026-06):** `.analisar` / `.sku` dispatch **all valid SKUs** by default (optional `CDP_DISPATCH_SAMPLE_SIZE` in router). Platform truth: [../../docs/architecture/DUAL_PIPELINE.md](../../docs/architecture/DUAL_PIPELINE.md).
-
-One Telegram/e-mail command runs **Scraper (sites)** and **API Diversos
-(stock)** in parallel. Historical meeting material was removed because it
-described legacy 5-SKU sampling; use the platform dual-pipeline doc above for
-current behavior.
-
-## Production status
-
-See `docs/MAINTENANCE_CHECKPOINT.md` (updated 2026-06-02) for the live handoff.
-
-- Azure: `cdp-scrapers-api-prod`, `cdp-scrapers-worker-prod`, N8N `https://automacao.tktechnologies.com.br`
-- Scrape cache: validated on `/lookup` and `/jobs`
-- **P0:** Brazilian ISP proxy in Key Vault — `scripts/proxy_readiness_check.py`, `scripts/proxy_site_smoke.py`, `.agent/workflows/proxy-rollout.md`
-- Melibox: blocked on Azure egress without BR ISP; archived sites need per-site smoke before re-registry
-- Live n8n: `../../docs/n8n/LIVE_WORKFLOWS.md`
-
-Production queue note:
-- The Celery worker uses `NullPool` for async PostgreSQL sessions when
-  `JOB_EXECUTION_BACKEND=celery`, preventing asyncpg connection reuse across
-  Celery task event loops.
-- Async Azure PostgreSQL SSL URL flags are normalized into asyncpg
-  `connect_args`.
-- Shared scraper anti-bot behavior now lives in `BaseScraper`: realistic
-  Chromium context profile, configurable UA list, persistent storage state,
-  proxy context assignment, action pacing, main-document `403` / `429`
-  detection, bounded backoff, and explicit `blocked` site results.
+**Scraper-specific runtime notes:**
+- Celery worker uses `NullPool` when `JOB_EXECUTION_BACKEND=celery` (asyncpg safe across task loops).
+- Anti-bot behavior lives in `BaseScraper`: Chromium profile, storage state, proxy context, `403`/`429` → `blocked`.
+- **P0:** BR ISP proxy in Key Vault — `scripts/proxy_readiness_check.py`, `.agent/workflows/proxy-rollout.md`.
 
 ---
 
@@ -370,17 +346,7 @@ make test
 5. Add tests in `tests/test_scrapers/`
 6. Reference: `src/scrapers/gm.py`
 
-## 3.7 Implementation Phases
-
-| Phase | Scope | Status |
-|---|---|---|
-| **Phase 1** | GM scraper + FastAPI + PostgreSQL + Docker Compose | ✅ Complete |
-| **Phase 2** | Real scraper implementations and source-specific rules | 🔄 In Progress |
-| **Phase 3** | Mock testing and local verification | ✅ Complete |
-| **Phase 4** | Azure infrastructure, deployment, proxy rotation, scaling | 🔄 In Progress |
-| **AI Maintenance** | Specs, startup prompt, changelog, audit workflow | ✅ Active |
-
-## 3.8 Key Files
+## 3.7 Key Files
 
 | File | Purpose |
 |---|---|

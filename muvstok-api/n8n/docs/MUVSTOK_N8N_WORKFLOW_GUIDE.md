@@ -199,6 +199,6 @@ empty; found status requires `FOUND_PRICE` + `has_valid_price`.
 
 - `specs/002-api-contract.md` — job API
 - `../../docs/n8n/LIVE_WORKFLOWS.md` — live IDs
-- `../../scrapers/n8n/docs/N8N_WORKFLOW_GUIDE.md` — scraper receiver patterns (service docs)
+- `../../docs/n8n/WORKFLOW_GUIDE.md` — scraper receiver patterns (platform docs)
 - `../../n8n/workflows/cdp_scraper.json` — scraper receiver JSON (monorepo root)
 - `docs/MUVSTOK_SHEETS_AUDIT.md` — sheet column audit

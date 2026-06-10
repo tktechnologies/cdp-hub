@@ -170,6 +170,34 @@ class MuvstokApiData(Base, TimestampMixin):
     )
 
 
+class CompanyLocation(Base, TimestampMixin):
+    __tablename__ = "company_locations"
+
+    id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
+    id_empresa: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    id_grupoempresa: Mapped[str] = mapped_column(String(50), nullable=False, default="")
+    projeto: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    montadora: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    nm_corporacao: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    grupo_empresa: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    cnpj: Mapped[str] = mapped_column(String(14), nullable=False, default="")
+    nome_fantasia: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    apelido: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    cep: Mapped[str] = mapped_column(String(16), nullable=False, default="")
+    endereco: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    numero: Mapped[str] = mapped_column(String(50), nullable=False, default="")
+    uf: Mapped[str] = mapped_column(String(2), nullable=False, default="")
+    cidade: Mapped[str] = mapped_column(String(150), nullable=False, default="")
+    bairro: Mapped[str] = mapped_column(String(150), nullable=False, default="")
+    metadata_json: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, default=dict)
+
+    __table_args__ = (
+        Index("ix_company_locations_cnpj", "cnpj"),
+        Index("ix_company_locations_uf", "uf"),
+        Index("ix_company_locations_montadora", "montadora"),
+    )
+
+
 class CallbackAttempt(Base, TimestampMixin):
     __tablename__ = "callback_attempts"
 

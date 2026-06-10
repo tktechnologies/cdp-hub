@@ -49,7 +49,7 @@ ignore = ["B008", "E501", "S101", "S104"]
 
 [tool.ruff.lint.per-file-ignores]
 "app/core/config.py" = ["S105"]
-"scripts/*.py" = ["ASYNC251", "S310", "S603", "S607", "S608"]
+"scripts/*.py" = ["ASYNC251", "S112", "S310", "S603", "S607", "S608"]
 "tests/*.py" = ["S105", "S106"]
 
 [tool.mypy]

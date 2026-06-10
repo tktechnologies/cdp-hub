@@ -172,7 +172,7 @@ has_valid_price = false
 Latest smoke artifact:
 
 ```text
-docs/validation/latest_production_curl_smoke.json
+scrapers/docs/validation/latest_production_curl_smoke.json
 ```
 
 As of 2026-05-14:

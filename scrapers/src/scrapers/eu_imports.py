@@ -206,7 +206,7 @@ class EUImportsScraper(BaseScraper):
 
         try:
             cleaned = re.sub(r"[^\d.,]", "", price_text)
-            # handle formats like 890.22 vs 890,22. EU uses commas for decimals mostly, 
+            # handle formats like 890.22 vs 890,22. EU uses commas for decimals mostly,
             # but US formatting uses periods. In the debug script, it was "890.22 $".
             if "." in cleaned and "," in cleaned:
                 # 1,234.56 or 1.234,56
@@ -218,7 +218,7 @@ class EUImportsScraper(BaseScraper):
                     cleaned = cleaned.replace(".", "").replace(",", ".")
             elif "," in cleaned:
                 cleaned = cleaned.replace(",", ".")
-            
+
             value = float(cleaned)
             return value if value > 0 else None, currency
         except (ValueError, AttributeError):

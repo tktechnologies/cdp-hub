@@ -10,5 +10,6 @@ Index for agents and humans. Full text in each file.
 | [ADR-0004](ADR-0004-scraper-cache-at-worker.md) | Scraper cache enforced in worker, not n8n | Accepted |
 | [ADR-0005](ADR-0005-three-tier-agent-workspaces.md) | Three-tier agent workspaces | Accepted |
 | [ADR-0006](ADR-0006-dev-production-environments.md) | Dev vs prod Azure + n8n | Accepted |
+| [ADR-0007](ADR-0007-platform-infra-at-root.md) | Platform Bicep at repo root `infra/` | Accepted |
 
 Platform design summary: [../ARCHITECTURE.md](../ARCHITECTURE.md) · Agent tiers: [../architecture/AGENT_ARCHITECTURE.md](../architecture/AGENT_ARCHITECTURE.md)

@@ -8,7 +8,7 @@ Canonical routing for AI work on **scrapers/**.
 |------|---------|
 | `index.md` | Task router |
 | `rules.md` | Non-negotiable scraper rules |
-| `memory/implementation-state.md` | Production snapshot pointers |
+| `memory/implementation-state.md` | Scraper runtime only (sites, proxy, cache) — n8n IDs live in root `.agent/memory/` |
 | `boundaries/n8n.md` | What this service owns in n8n |
 | `prompts/agent-startup.md` | Fresh chat bootstrap |
 | `commands/` | Repeatable scraper recipes |

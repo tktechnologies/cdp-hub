@@ -28,7 +28,7 @@ Paths are monorepo-root paths.
 ## Live checks (MCP)
 
 1. `search_workflows` → query `cdp`
-2. `get_workflow_details` for `6id6dkinK9xTLfsb` (**cdp_router**) and `VfBSV3WU6on8BXm8` (**cdp_scraper**)
+2. Read current IDs from `docs/n8n/LIVE_WORKFLOWS.md`, then `get_workflow_details` for **cdp_router** and **cdp_scraper**
 3. Confirm active; receiver webhook: `POST …/webhook/scraper-result`
 
 ## Local contract checks

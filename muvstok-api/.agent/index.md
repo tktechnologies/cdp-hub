@@ -12,7 +12,7 @@ Root service catalog: [../../.agent/knowledge/service-catalog.md](../../.agent/k
 
 1. `rules.md`
 2. `memory/project-memory.md`
-3. `memory/implementation-state.md`
+3. `memory/implementation-state.md` (StokAPI runtime — not live n8n IDs)
 4. Relevant spec in `specs/`
 5. Relevant skill in `skills/`
 

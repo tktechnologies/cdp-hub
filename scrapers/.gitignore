@@ -11,6 +11,7 @@ build/
 .env.local
 .env.production
 docs/validation/*.local.json
+docs/validation/latest_*.json
 infra/*.local.json
 .venv/
 venv/

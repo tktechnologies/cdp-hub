@@ -149,7 +149,7 @@ Persisted `scrape_items.site_results` stores the per-site status snapshot for ea
 ## Documentation Rules
 - Any code behavior change must update the relevant docs in the same turn.
 - Use `docs/SPECS/DOC_MAINTENANCE_SPEC.md` as the documentation maintenance contract.
-- Keep `docs/CHANGELOG.md` and `docs/TASKS.md` current.
+- Keep `docs/CHANGELOG.md` and `docs/MAINTENANCE_CHECKPOINT.md` current.
 - Keep `.agent/` aligned with repeated agent workflows.
 
 ## Required Checks

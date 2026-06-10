@@ -212,7 +212,7 @@ Update (no secrets):
 
 - `scrapers/.agent/memory/implementation-state.md` — provider: IPRoyal ISP BR, date, Melibox result
 - `../../.agent/memory/implementation-state.md` — same one-line note
-- Mark task **5.18** done in `docs/TASKS.md`
+- Mark proxy rollout complete in `docs/MAINTENANCE_CHECKPOINT.md`
 
 Optional production checks:
 

@@ -29,8 +29,7 @@ SCRAPER_REGISTRY: dict[SiteId, type[BaseScraper]] = {
     SiteId.MELIBOX: MeliboxScraper,
 }
 
-# Archived scrapers are kept for reference but are not runnable through the
-# production registry or default demos.
+# Legacy alias — archived sites are enabled in SCRAPER_REGISTRY when proxy rollout passes.
 ARCHIVED_SCRAPER_REGISTRY: dict[SiteId, type[BaseScraper]] = {
     SiteId.GOPARTS: GoPartsScraper,
     SiteId.PROCURA_PECAS: ProcuraPecasScraper,
@@ -78,9 +77,8 @@ async def get_scraper(site_id: SiteId) -> BaseScraper:
             scraper_class = registered_scraper_class
 
         scraper = scraper_class()
-        await scraper.initialize()
         _active_scrapers[site_id] = scraper
-        logger.info("Scraper initialized", site=site_id.value, mock=use_mock)
+        logger.info("Scraper ready", site=site_id.value, mock=use_mock)
 
     return _active_scrapers[site_id]
 

@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// cdp_notifier — parse receiver handoff webhook and prepare pipeline-result API call.\n\nfunction env(name) {\n  try {\n    if (typeof $env !== 'undefined' && $env && $env[name]) {\n      return String($env[name]).trim();\n    }\n  } catch (e) {}\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));\n}\n\nfunction devEnvName(name) {\n  return {\n    CDP_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',\n    MUVSTOK_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',\n    CDP_API_KEY: 'CDP_DEV_API_KEY',\n    MUVSTOK_API_KEY: 'CDP_DEV_API_KEY',\n    API_KEY: 'CDP_DEV_API_KEY',\n  }[name] || '';\n}\n\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const mapped = devEnvName(name);\n  return mapped ? env(mapped) : env(name);\n}\n\nfunction trimTrailingSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\n\nfunction parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') {\n    try {\n      p = JSON.parse(p);\n    } catch (e) {\n      p = {};\n    }\n  }\n  return p && typeof p === 'object' ? p : {};\n}\n\nconst wh = $('🔔 Webhook cdp-notifier').first().json;\nconst body = parseBody(wh.body);\nconst batchGroupId = String(body.batch_group_id || '').trim();\nconst source = String(body.source || '').trim().toLowerCase();\nconst status = String(body.status || 'completed').trim().toLowerCase();\nconst summary = body.summary && typeof body.summary === 'object' ? body.summary : {};\n\nif (!batchGroupId || (source !== 'scraper' && source !== 'stokapi')) {\n  return [{ json: { skip: true, reason: 'invalid_handoff' } }];\n}\n\nconst apiBase = trimTrailingSlashes(\n  envFor('CDP_SCRAPER_API_BASE') || envFor('MUVSTOK_SCRAPER_API_BASE') || ''\n);\nconst apiKey = envFor('CDP_API_KEY') || envFor('MUVSTOK_API_KEY') || envFor('API_KEY');\n\nreturn [\n  {\n    json: {\n      skip: false,\n      pipeline_result_url:\n        apiBase + '/api/v1/dispatch-runs/by-batch/' + encodeURIComponent(batchGroupId) + '/pipeline-result',\n      pipeline_result_api_key: apiKey,\n      pipeline_result_body: {\n        source,\n        status,\n        summary,\n      },\n      handoff: body,\n    },\n  },\n];\n",
+        "jsCode": "// cdp_notifier — parse receiver handoff webhook and prepare pipeline-result API call.\n\nfunction env(name) {\n  try {\n    if (typeof $env !== 'undefined' && $env && $env[name]) {\n      return String($env[name]).trim();\n    }\n  } catch (e) {}\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName());\n}\n\nfunction devEnvName(name) {\n  return {\n    CDP_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',\n    MUVSTOK_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',\n    CDP_API_KEY: 'CDP_DEV_API_KEY',\n    MUVSTOK_API_KEY: 'CDP_DEV_API_KEY',\n    API_KEY: 'CDP_DEV_API_KEY',\n  }[name] || '';\n}\n\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const mapped = devEnvName(name);\n  return mapped ? env(mapped) : env(name);\n}\n\nfunction trimTrailingSlashes(value) {\n  let out = String(value || '').trim();\n  while (out.endsWith('/')) out = out.slice(0, -1);\n  return out;\n}\n\nfunction parseBody(raw) {\n  let p = raw;\n  if (typeof p === 'string') {\n    try {\n      p = JSON.parse(p);\n    } catch (e) {\n      p = {};\n    }\n  }\n  return p && typeof p === 'object' ? p : {};\n}\n\nconst wh = $('🔔 Webhook cdp-notifier').first().json;\nconst body = parseBody(wh.body);\nconst batchGroupId = String(body.batch_group_id || '').trim();\nconst source = String(body.source || '').trim().toLowerCase();\nconst status = String(body.status || 'completed').trim().toLowerCase();\nconst summary = body.summary && typeof body.summary === 'object' ? body.summary : {};\n\nif (!batchGroupId || (source !== 'scraper' && source !== 'stokapi')) {\n  return [{ json: { skip: true, reason: 'invalid_handoff' } }];\n}\n\nconst apiBase = trimTrailingSlashes(\n  envFor('CDP_SCRAPER_API_BASE') || envFor('MUVSTOK_SCRAPER_API_BASE') || ''\n);\nconst apiKey = envFor('CDP_API_KEY') || envFor('MUVSTOK_API_KEY') || envFor('API_KEY');\n\nreturn [\n  {\n    json: {\n      skip: false,\n      pipeline_result_url:\n        apiBase + '/api/v1/dispatch-runs/by-batch/' + encodeURIComponent(batchGroupId) + '/pipeline-result',\n      pipeline_result_api_key: apiKey,\n      pipeline_result_body: {\n        source,\n        status,\n        summary,\n      },\n      handoff: body,\n    },\n  },\n];\n",
         "mode": "runOnceForAllItems"
       },
       "id": "763077db-09c5-44c3-a03a-81c17b204b3b",
@@ -138,7 +138,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// cdp_notifier — format final Telegram/email from pipeline-result claim.\n\nconst WEBSCRAPERS_LABEL = 'WEBSCRAPERS';\nconst ESTOQUE_LABEL = 'ESTOQUE ONLINE';\n\nfunction env(name) {\n  try {\n    if (typeof $env !== 'undefined' && $env && $env[name]) {\n      return String($env[name]).trim();\n    }\n  } catch (e) {}\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName()) || /^dev$/i.test(env('CDP_ENV'));\n}\n\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const map = { CDP_RESULTADOS_SHEETS_URL: 'CDP_DEV_RESULTADOS_SHEETS_URL' };\n  const mapped = map[name] || '';\n  return mapped ? env(mapped) : env(name);\n}\n\nfunction reportUrl() {\n  const configured = envFor('CDP_RESULTADOS_SHEETS_URL');\n  if (configured || isDevWorkflow()) return configured;\n  return 'https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=533358674';\n}\n\nfunction escapeHtml(value) {\n  return String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n}\n\nfunction durPt(seconds) {\n  const s = Math.max(0, Math.round(Number(seconds) || 0));\n  if (s >= 3600) {\n    const h = Math.floor(s / 3600);\n    const m = Math.floor((s % 3600) / 60);\n    return h + 'h' + (m ? ' ' + m + 'min' : '');\n  }\n  if (s >= 60) return Math.floor(s / 60) + ' min';\n  return s > 0 ? s + ' s' : '';\n}\n\nfunction sectionLines(label, summary) {\n  const s = summary || {};\n  const lines = [\n    '*' + label + '*',\n    '· Com preço: ' + (Number(s.with_price) || 0),\n    '· Sem preço: ' + (Number(s.no_price) || 0),\n    '· Não encontrado: ' + (Number(s.not_found) || 0),\n    '· Bloqueado: ' + (Number(s.blocked) || 0),\n    '· Erros: ' + (Number(s.errors) || 0),\n  ];\n  const dur = durPt(s.duration_seconds);\n  if (dur) lines.push('· Duração: ' + dur);\n  if (String(s.status || '').toLowerCase() === 'failed') {\n    lines.push('· Status: falha' + (s.failed_reason ? ' — ' + String(s.failed_reason).slice(0, 120) : ''));\n  }\n  return lines;\n}\n\nconst apiResp = $input.first().json;\nconst claim = apiResp.claim || apiResp.body?.claim || null;\nif (!apiResp.ready_for_final || !claim) {\n  return [{ json: { skip_send: true, not_ready: true, reason: 'not_ready' } }];\n}\n\nconst scraper = claim.scraper_summary || {};\nconst stokapi = claim.stokapi_summary || {};\nconst url = reportUrl();\nlet replyChannel = String(claim.reply_channel || '').trim().toLowerCase();\nconst chatId = String(claim.chat_id || '').trim();\nconst replyEmail = String(claim.reply_email || '').trim();\n\nif (!replyChannel) {\n  if (replyEmail) replyChannel = 'email';\n  else if (chatId) replyChannel = 'telegram';\n}\n\nif (!chatId && !replyEmail) {\n  return [\n    {\n      json: {\n        skip_send: true,\n        skipped_no_target: true,\n        run_id: claim.run_id,\n        sheet_row_numbers: claim.sheet_row_numbers || [],\n      },\n    },\n  ];\n}\n\nconst tgLines = [\n  '✅ *Consulta CDP concluída*',\n  '',\n  ...sectionLines(WEBSCRAPERS_LABEL, scraper),\n  '',\n  ...sectionLines(ESTOQUE_LABEL, stokapi),\n  '',\n  '📎 [Abrir relatório](' + url + ')',\n];\n\nconst htmlSections =\n  '<h2 style=\"margin:0 0 12px;font-size:18px\">Consulta CDP concluída</h2>' +\n  '<p style=\"margin:0 0 16px;font-size:14px;line-height:1.6\">Resumo consolidado de sites e estoque.</p>' +\n  '<div style=\"margin:0 0 14px\"><strong>' +\n  escapeHtml(WEBSCRAPERS_LABEL) +\n  '</strong><br>Com preço: ' +\n  (Number(scraper.with_price) || 0) +\n  ' · Sem preço: ' +\n  (Number(scraper.no_price) || 0) +\n  ' · Não encontrado: ' +\n  (Number(scraper.not_found) || 0) +\n  ' · Bloqueado: ' +\n  (Number(scraper.blocked) || 0) +\n  ' · Erros: ' +\n  (Number(scraper.errors) || 0) +\n  (scraper.duration_seconds ? '<br>Duração: ' + escapeHtml(durPt(scraper.duration_seconds)) : '') +\n  '</div>' +\n  '<div style=\"margin:0 0 20px\"><strong>' +\n  escapeHtml(ESTOQUE_LABEL) +\n  '</strong><br>Com preço: ' +\n  (Number(stokapi.with_price) || 0) +\n  ' · Sem preço: ' +\n  (Number(stokapi.no_price) || 0) +\n  ' · Não encontrado: ' +\n  (Number(stokapi.not_found) || 0) +\n  ' · Bloqueado: ' +\n  (Number(stokapi.blocked) || 0) +\n  ' · Erros: ' +\n  (Number(stokapi.errors) || 0) +\n  '</div>' +\n  '<p style=\"margin:0\"><a href=\"' +\n  escapeHtml(url) +\n  '\" style=\"display:inline-block;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;padding:12px 18px;font-weight:700\">Abrir relatório</a></p>';\n\nreturn [\n  {\n    json: {\n      skip_send: false,\n      run_id: claim.run_id,\n      reply_channel: replyChannel,\n      chat_id: chatId,\n      email_to: replyEmail,\n      sheet_row_numbers: claim.sheet_row_numbers || [],\n      msg_telegram: tgLines.join('\\n'),\n      msg_email_subject: 'Consulta CDP concluída',\n      msg_email_html:\n        '<div style=\"font-family:Arial,sans-serif;color:#1f2937;max-width:640px\">' + htmlSections + '</div>',\n    },\n  },\n];\n",
+        "jsCode": "// cdp_notifier - format one final Telegram/email from the aggregate pipeline claim.\n\nconst WEBSCRAPERS_LABEL = 'WEBSCRAPERS';\nconst ESTOQUE_LABEL = 'ESTOQUE ONLINE';\n\nfunction env(name) {\n  try {\n    if (typeof $env !== 'undefined' && $env && $env[name]) {\n      return String($env[name]).trim();\n    }\n  } catch (e) {}\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\n\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName());\n}\n\nfunction envFor(name) {\n  if (!isDevWorkflow()) return env(name);\n  const map = { CDP_RESULTADOS_SHEETS_URL: 'CDP_DEV_RESULTADOS_SHEETS_URL' };\n  const mapped = map[name] || '';\n  return mapped ? env(mapped) : env(name);\n}\n\nfunction reportUrl() {\n  const configured = envFor('CDP_RESULTADOS_SHEETS_URL');\n  if (configured || isDevWorkflow()) return configured;\n  return 'https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=1185876304';\n}\n\nfunction escapeHtml(value) {\n  return String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n}\n\nfunction durPt(seconds) {\n  const s = Math.max(0, Math.round(Number(seconds) || 0));\n  if (s >= 3600) {\n    const h = Math.floor(s / 3600);\n    const m = Math.floor((s % 3600) / 60);\n    return h + 'h' + (m ? ' ' + m + 'min' : '');\n  }\n  if (s >= 60) return Math.floor(s / 60) + ' min';\n  return s > 0 ? s + ' s' : '';\n}\n\nfunction pecaLabel(n) {\n  const x = Number(n) || 0;\n  return x === 1 ? '1 pe\\u00e7a' : x + ' pe\\u00e7as';\n}\n\nfunction consultaLine(n) {\n  const x = Number(n) || 0;\n  if (!x) return 'Resultado consolidado de sites e estoque.';\n  return pecaLabel(x) + (x === 1 ? ' consultada em sites e estoque.' : ' consultadas em sites e estoque.');\n}\n\nfunction numberField(summary, key) {\n  return Number((summary || {})[key]) || 0;\n}\n\nfunction totalSignals(summary) {\n  return (\n    numberField(summary, 'with_price') +\n    numberField(summary, 'no_price') +\n    numberField(summary, 'not_found') +\n    numberField(summary, 'blocked') +\n    numberField(summary, 'errors')\n  );\n}\n\nfunction sectionLines(icon, label, summary) {\n  const s = summary || {};\n  const lines = [icon + ' *' + label + '*'];\n  lines.push('Com pre\\u00e7o: *' + numberField(s, 'with_price') + '*');\n  if (numberField(s, 'no_price') > 0) lines.push('Sem pre\\u00e7o: *' + numberField(s, 'no_price') + '*');\n  if (numberField(s, 'not_found') > 0) lines.push('N\\u00e3o encontrado: *' + numberField(s, 'not_found') + '*');\n  if (numberField(s, 'blocked') > 0) lines.push('Bloqueado: *' + numberField(s, 'blocked') + '*');\n  if (numberField(s, 'errors') > 0) lines.push('Erros/timeouts: *' + numberField(s, 'errors') + '*');\n  const dur = durPt(s.duration_seconds);\n  if (dur) lines.push('Dura\\u00e7\\u00e3o: ' + dur);\n  if (totalSignals(s) === 0) lines.push('Sem resumo registrado.');\n  if (String(s.status || '').toLowerCase() === 'failed') {\n    lines.push('Status: falha' + (s.failed_reason ? ' - ' + String(s.failed_reason).slice(0, 120) : ''));\n  }\n  return lines;\n}\n\nfunction sectionHtml(label, summary) {\n  const s = summary || {};\n  const warning =\n    numberField(s, 'blocked') > 0 || numberField(s, 'errors') > 0 || String(s.status || '').toLowerCase() === 'failed';\n  return (\n    '<div style=\"border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin:0 0 12px\">' +\n    '<div style=\"font-size:13px;color:#111827;font-weight:700;margin-bottom:8px\">' +\n    escapeHtml(label) +\n    '</div>' +\n    '<div style=\"font-size:14px;line-height:1.7;color:#374151\">' +\n    '<strong>Com pre\\u00e7o:</strong> ' +\n    numberField(s, 'with_price') +\n    '<br><strong>Sem pre\\u00e7o:</strong> ' +\n    numberField(s, 'no_price') +\n    '<br><strong>N\\u00e3o encontrado:</strong> ' +\n    numberField(s, 'not_found') +\n    '<br><strong>Bloqueado:</strong> ' +\n    numberField(s, 'blocked') +\n    '<br><strong>Erros/timeouts:</strong> ' +\n    numberField(s, 'errors') +\n    (s.duration_seconds ? '<br><strong>Dura\\u00e7\\u00e3o:</strong> ' + escapeHtml(durPt(s.duration_seconds)) : '') +\n    (warning ? '<br><strong>Status:</strong> conclu\\u00eddo com avisos' : '') +\n    '</div>' +\n    '</div>'\n  );\n}\n\nconst apiResp = $input.first().json;\nconst claim = apiResp.claim || apiResp.body?.claim || null;\nif (!apiResp.ready_for_final || !claim) {\n  return [{ json: { skip_send: true, not_ready: true, reason: 'not_ready' } }];\n}\n\nconst scraper = claim.scraper_summary || {};\nconst stokapi = claim.stokapi_summary || {};\nconst url = reportUrl();\nconst totalSkus = Number(claim.total_skus) || 0;\nconst consultadaLine = consultaLine(totalSkus);\nconst totalWithPrice = numberField(scraper, 'with_price') + numberField(stokapi, 'with_price');\nconst hasWarnings =\n  numberField(scraper, 'blocked') +\n    numberField(scraper, 'errors') +\n    numberField(stokapi, 'blocked') +\n    numberField(stokapi, 'errors') >\n  0;\n\nlet replyChannel = String(claim.reply_channel || '').trim().toLowerCase();\nconst chatId = String(claim.chat_id || '').trim();\nconst replyEmail = String(claim.reply_email || '').trim();\n\nif (!replyChannel) {\n  if (replyEmail) replyChannel = 'email';\n  else if (chatId) replyChannel = 'telegram';\n}\n\nif (!chatId && !replyEmail) {\n  return [\n    {\n      json: {\n        skip_send: true,\n        skipped_no_target: true,\n        run_id: claim.run_id,\n        sheet_row_numbers: claim.sheet_row_numbers || [],\n      },\n    },\n  ];\n}\n\nconst tgLines = [\n  '\\u{1F916} *Assistente CDP*',\n  '',\n  '\\u2705 *Consulta CDP conclu\\u00edda*',\n  consultadaLine,\n  'Resultados com pre\\u00e7o: *' + totalWithPrice + '*',\n  '',\n];\ntgLines.push(...sectionLines('\\u{1F50E}', WEBSCRAPERS_LABEL, scraper));\ntgLines.push('');\ntgLines.push(...sectionLines('\\u{1F4E6}', ESTOQUE_LABEL, stokapi));\nif (url) {\n  tgLines.push('');\n  tgLines.push('\\u{1F4CE} Relat\\u00f3rio: ' + url);\n}\n\nconst htmlSections =\n  '<h2 style=\"margin:0 0 8px;font-size:20px;color:#111827\">Consulta CDP conclu\\u00edda</h2>' +\n  '<p style=\"margin:0 0 16px;font-size:14px;line-height:1.6;color:#475569\">' +\n  escapeHtml(consultadaLine) +\n  '</p>' +\n  sectionHtml(WEBSCRAPERS_LABEL, scraper) +\n  sectionHtml(ESTOQUE_LABEL, stokapi) +\n  (url\n    ? '<p style=\"margin:18px 0 0\"><a href=\"' +\n      escapeHtml(url) +\n      '\" style=\"display:inline-block;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;padding:12px 18px;font-weight:700\">Abrir relat\\u00f3rio</a></p>'\n    : '');\n\nconst scraperJobIds = Array.isArray(claim.scraper_job_ids) ? claim.scraper_job_ids : [];\nconst scraperJobId = String(scraperJobIds[0] || '').trim();\n\nreturn [\n  {\n    json: {\n      skip_send: false,\n      run_id: claim.run_id,\n      batch_group_id: String(claim.batch_group_id || '').trim(),\n      scraper_job_id: scraperJobId,\n      scraper_job_ids: scraperJobIds,\n      stokapi_job_id: String(claim.stokapi_job_id || '').trim(),\n      reply_channel: replyChannel,\n      chat_id: chatId,\n      email_to: replyEmail,\n      sheet_row_numbers: claim.sheet_row_numbers || [],\n      msg_telegram: tgLines.join('\\n'),\n      msg_email_subject: 'Consulta CDP conclu\\u00edda - resultado consolidado',\n      msg_email_html:\n        '<div style=\"font-family:Arial,sans-serif;color:#1f2937;max-width:640px\">' + htmlSections + '</div>',\n    },\n  },\n];\n",
         "mode": "runOnceForAllItems"
       },
       "id": "9ca82fa5-c3fa-412b-ab86-32f8cdb5ce96",
@@ -220,7 +220,8 @@
         "chatId": "={{ $json.chat_id }}",
         "text": "={{ $json.msg_telegram }}",
         "additionalFields": {
-          "parse_mode": "Markdown"
+          "parse_mode": "Markdown",
+          "appendAttribution": false
         }
       },
       "id": "e86bdb51-8ac9-439b-819c-e72bc543f0f9",
@@ -233,8 +234,8 @@
       ],
       "credentials": {
         "telegramApi": {
-          "id": "telegram",
-          "name": "Telegram account"
+          "id": "UmDqGKD8k0bA10j2",
+          "name": "cdp-bot-assistente"
         }
       },
       "continueOnFail": true,
@@ -247,6 +248,13 @@
         "message": "={{ $json.msg_email_html }}",
         "options": {
           "appendAttribution": false
+        },
+        "attachmentsUi": {
+          "attachmentsBinary": [
+            {
+              "property": "data"
+            }
+          ]
         }
       },
       "id": "00f18594-7075-42b2-8886-89bc8e8ae9a6",
@@ -259,11 +267,10 @@
       ],
       "credentials": {
         "gmailOAuth2": {
-          "id": "gmail",
-          "name": "Gmail account"
+          "id": "rQesNRyarukVs0N4",
+          "name": "gmail lucas@tktech"
         }
       },
-      "continueOnFail": true,
       "webhookId": "4d2df83d-fa80-4f55-9db7-1be98cbf162c"
     },
     {
@@ -302,7 +309,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// cdp_notifier — expand sheet_row_numbers for NOTIFICADO column updates.\n\nconst prep = $('📣 Formatar mensagem final').first().json;\nconst rows = Array.isArray(prep.sheet_row_numbers) ? prep.sheet_row_numbers : [];\nconst status = prep.skipped_no_target ? '🚫 Sem destino' : '✅ Notificado';\n\nif (!rows.length) {\n  return [];\n}\n\nreturn rows\n  .map((rowNumber) => Number(rowNumber))\n  .filter((n) => Number.isFinite(n) && n > 0)\n  .map((row_number) => ({\n    json: {\n      row_number,\n      NOTIFICADO: status,\n    },\n  }));\n",
+        "jsCode": "// cdp_notifier — trigger sheet NOTIFICADO updates (row numbers from final formatter).\n\nconst prep = $('📣 Formatar mensagem final').first().json;\nconst rows = Array.isArray(prep.sheet_row_numbers) ? prep.sheet_row_numbers : [];\nconst status = prep.skipped_no_target ? '🚫 Sem destino' : '✅ Notificado';\n\nif (!rows.length) {\n  return [];\n}\n\nreturn [\n  {\n    json: {\n      sheet_row_numbers: rows\n        .map((rowNumber) => Number(rowNumber))\n        .filter((n) => Number.isFinite(n) && n > 0),\n      NOTIFICADO: status,\n    },\n  },\n];\n",
         "mode": "runOnceForAllItems"
       },
       "id": "461ff770-4a76-4515-a498-5807b94b65ff",
@@ -313,7 +320,207 @@
         2560,
         360
       ],
-      "notes": ""
+      "notes": "Collapse row_numbers for NOTIFICADO; read+remap preserves sheet lineage."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII",
+          "mode": "list",
+          "cachedResultName": "cdp_skus",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 843035952,
+          "mode": "list",
+          "cachedResultName": "SKUs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII/edit#gid=843035952"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "NOTIFICADO 🤖": "={{ $json.NOTIFICADO }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "NOTIFICADO 🤖",
+              "displayName": "NOTIFICADO 🤖",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e2adb906-e44b-4fb5-ba41-009f87749a87",
+      "name": "✅ Marcar NOTIFICADO → CDP_SKUs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2800,
+        360
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      },
+      "notes": "Aggregate delivery: mark NOTIFICADO on cdp_skus after final Telegram/email. Requires canonical headers PROCESSADO/ENCONTRADO/NOTIFICADO (no emoji in row 1)."
+    },
+    {
+      "id": "ee3c3b6a-2d5b-4ee0-9cf1-0acc5b50b0fd",
+      "name": "📄 Ler CDP_SKUs (NOTIFICADO)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2640,
+        360
+      ],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII",
+          "mode": "list",
+          "cachedResultName": "cdp_skus",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 843035952,
+          "mode": "list",
+          "cachedResultName": "SKUs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII/edit#gid=843035952"
+        },
+        "options": {}
+      },
+      "notes": "Read SKUs rows so NOTIFICADO updates match by row_number.",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ep05fPlF3xggWhWc",
+          "name": "gcp sheets lucas@tktech"
+        }
+      }
+    },
+    {
+      "id": "559cb53f-f9b5-4188-8d28-34e18c27d8d3",
+      "name": "🧭 Mapear NOTIFICADO por row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2720,
+        360
+      ],
+      "parameters": {
+        "jsCode": "// cdp_notifier — merge NOTIFICADO status onto sheet rows (preserve row_number lineage).\n\nconst trigger = $('🔧 Expandir NOTIFICADO').first().json || {};\nconst status = trigger.NOTIFICADO || '✅ Notificado';\nconst marksByRow = {};\nfor (const rn of trigger.sheet_row_numbers || []) {\n  const n = Number(rn);\n  if (Number.isFinite(n) && n > 0) marksByRow[n] = status;\n}\n\nconst items = $input.all();\nconst out = [];\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i];\n  const row = item.json || {};\n  const rn = row.row_number;\n  if (marksByRow[rn] === undefined) continue;\n  out.push({\n    json: {\n      ...row,\n      NOTIFICADO: marksByRow[rn],\n    },\n    pairedItem: item.pairedItem ?? { item: i },\n  });\n}\nreturn out;\n",
+        "mode": "runOnceForAllItems"
+      },
+      "notes": "Merge NOTIFICADO onto sheet rows; preserve pairedItem for update."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "send",
+              "leftValue": "={{ $json.skip_send }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "false"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "59ca79a6-5d69-4230-9fc7-2c092adf180f",
+      "name": "❓ Enviar mensagem?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ (String(/^DEV\\s*-/.test($workflow.name) ? ($env.CDP_DEV_SCRAPER_API_BASE || '') : ($env.CDP_SCRAPER_API_BASE || $env.MUVSTOK_SCRAPER_API_BASE || '')).trim().replace(/\\/+$/, '')) + '/api/v1/jobs/' + encodeURIComponent($('📣 Formatar mensagem final').first().json.scraper_job_id || '') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ /^DEV\\s*-/.test($workflow.name) ? ($env.CDP_DEV_API_KEY || $env.CDP_API_KEY) : ($env.CDP_API_KEY || $env.MUVSTOK_API_KEY || $env.API_KEY) }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "f66f1fce-a2e5-4ff0-9fd6-3a8e5f4a2633",
+      "name": "📥 GET scraper job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2320,
+        320
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// cdp_notifier — build job-scoped UTF-8 CSV for aggregate final email attachment.\n\nfunction numericPrice(value) {\n  if (value === null || value === undefined || value === '') return null;\n  const n = Number(value);\n  return Number.isFinite(n) && n > 0 ? n : null;\n}\n\nfunction partHasValidPrice(part) {\n  return !!(part && part.exact_match && numericPrice(part.price) !== null);\n}\n\nfunction siteParts(site) {\n  if (Array.isArray(site?.results)) return site.results;\n  if (Array.isArray(site?.parts)) return site.parts;\n  return [];\n}\n\nfunction siteHasValidPrice(site) {\n  if (site?.has_valid_price === true || String(site?.sku_result || '').toUpperCase() === 'FOUND_PRICE') {\n    return true;\n  }\n  return siteParts(site).some(partHasValidPrice);\n}\n\nfunction siteHasExactEvidence(site) {\n  if (String(site?.sku_result || '').toUpperCase() === 'NO_PRICE') return true;\n  if (String(site?.status || '').toLowerCase() === 'no_price') return true;\n  return siteParts(site).some((part) => !!part?.exact_match);\n}\n\nfunction skuHasValidPrice(row) {\n  if (row?.has_valid_price === true || String(row?.sku_result || '').toUpperCase() === 'FOUND_PRICE') {\n    return true;\n  }\n  const best = row?.best_price || null;\n  if (best && best.exact_match !== false && numericPrice(best.price) !== null) return true;\n  return (Array.isArray(row?.site_results) ? row.site_results : []).some(siteHasValidPrice);\n}\n\nfunction canonicalSkuStatus(row) {\n  const explicit = String(row?.sku_result || '').trim().toUpperCase();\n  if (explicit) return explicit;\n  const sites = Array.isArray(row?.site_results) ? row.site_results : [];\n  if (skuHasValidPrice(row)) return 'FOUND_PRICE';\n  if (row?.has_any_exact_evidence === true || sites.some(siteHasExactEvidence)) return 'NO_PRICE';\n  const statuses = sites.map((site) => String(site?.sku_result || site?.status || '').trim().toUpperCase());\n  if (statuses.includes('BLOCKED')) return 'BLOCKED';\n  if (statuses.includes('TIMEOUT')) return 'TIMEOUT';\n  if (statuses.includes('ERROR')) return 'ERROR';\n  return 'NOT_FOUND';\n}\n\nfunction bestExactOffer(skuResult) {\n  let bestPrice = null;\n  let bestSite = '';\n  let bestUrl = '';\n  for (const sr of skuResult.site_results || []) {\n    for (const part of sr.results || []) {\n      if (!partHasValidPrice(part)) continue;\n      const price = numericPrice(part.price);\n      if (bestPrice === null || price < bestPrice) {\n        bestPrice = price;\n        bestSite = sr.site_name || sr.site || '';\n        bestUrl = part.product_url || '';\n      }\n    }\n  }\n  return { bestPrice, bestSite, bestUrl };\n}\n\nfunction statusLabel(status) {\n  if (status === 'FOUND_PRICE') return 'Encontrado';\n  if (status === 'NO_PRICE') return 'Sem preco';\n  if (status === 'BLOCKED') return 'Bloqueado';\n  if (status === 'TIMEOUT' || status === 'ERROR') return 'Erro';\n  return 'Sem resultado';\n}\n\nfunction csvEscape(val) {\n  const s = String(val ?? '');\n  if (/[;\\r\\n\"]/.test(s)) return '\"' + s.replace(/\"/g, '\"\"') + '\"';\n  return s;\n}\n\nconst fmt = $('📣 Formatar mensagem final').first().json;\nconst jobPayload = $input.first().json;\nconst results = Array.isArray(jobPayload.results) ? jobPayload.results : [];\nconst batchGroupId = String(fmt.batch_group_id || 'job').trim();\nconst jobId = String(jobPayload.job_id || fmt.scraper_job_id || 'unknown').trim();\nconst dateStamp = new Date().toISOString().slice(0, 10);\n\nconst rows = [];\nfor (const skuResult of results) {\n  const sku = skuResult.sku || '';\n  const canonical = canonicalSkuStatus(skuResult);\n  const offer = canonical === 'FOUND_PRICE' ? bestExactOffer(skuResult) : { bestPrice: null, bestSite: '', bestUrl: '' };\n  const siteSummary = [];\n  for (const sr of skuResult.site_results || []) {\n    const siteName = sr.site_name || sr.site || '';\n    const srStatus = String(sr.sku_result || sr.status || '').toLowerCase() || 'sem_resultado';\n    siteSummary.push(siteName + (siteHasValidPrice(sr) ? ' OK' : ' ' + srStatus));\n  }\n  rows.push({\n    SKU: sku,\n    STATUS: statusLabel(canonical),\n    'MELHOR PREÇO':\n      offer.bestPrice !== null\n        ? 'BRL ' + Number(offer.bestPrice).toLocaleString('pt-BR', { minimumFractionDigits: 2 })\n        : 'N/A',\n    SITE: offer.bestSite || 'N/A',\n    LINK: offer.bestUrl || 'N/A',\n    'SITES CHECADOS': siteSummary.join(' | '),\n    DATA: new Date().toLocaleDateString('pt-BR'),\n  });\n}\n\nconst header = ['SKU', 'STATUS', 'MELHOR PREÇO', 'SITE', 'LINK', 'SITES CHECADOS', 'DATA'];\nconst csvLines = [header.map(csvEscape).join(';')];\nfor (const row of rows) {\n  csvLines.push(header.map((h) => csvEscape(row[h] ?? '')).join(';'));\n}\nconst csvText = '\\ufeff' + csvLines.join('\\r\\n');\nconst b64 = Buffer.from(csvText, 'utf8').toString('base64');\nconst fname = `cdp_${batchGroupId}_${dateStamp}.csv`;\n\nreturn [\n  {\n    json: {\n      ...fmt,\n      csv_filename: fname,\n      csv_row_count: rows.length,\n    },\n    binary: {\n      data: {\n        data: b64,\n        mimeType: 'text/csv; charset=utf-8',\n        fileName: fname,\n        fileExtension: 'csv',\n      },\n    },\n  },\n];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "778e6201-4189-4684-83b3-ca08b03a4730",
+      "name": "🗂️ Gerar CSV final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        320
+      ],
+      "notes": "Aggregate final email: job-scoped UTF-8 CSV (opens in Excel)."
     }
   ],
   "connections": {
@@ -364,21 +571,21 @@
     },
     "❓ Pronto para envio final?": {
       "main": [
-        [],
         [
           {
             "node": "📣 Formatar mensagem final",
             "type": "main",
             "index": 0
           }
-        ]
+        ],
+        []
       ]
     },
     "📣 Formatar mensagem final": {
       "main": [
         [
           {
-            "node": "❓ Sem destino?",
+            "node": "❓ Enviar mensagem?",
             "type": "main",
             "index": 0
           }
@@ -414,7 +621,7 @@
         ],
         [
           {
-            "node": "📧 Email: resultado final",
+            "node": "📥 GET scraper job",
             "type": "main",
             "index": 0
           }
@@ -448,6 +655,73 @@
         [
           {
             "node": "🔧 Expandir NOTIFICADO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Expandir NOTIFICADO": {
+      "main": [
+        [
+          {
+            "node": "📄 Ler CDP_SKUs (NOTIFICADO)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 Ler CDP_SKUs (NOTIFICADO)": {
+      "main": [
+        [
+          {
+            "node": "🧭 Mapear NOTIFICADO por row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧭 Mapear NOTIFICADO por row": {
+      "main": [
+        [
+          {
+            "node": "✅ Marcar NOTIFICADO → CDP_SKUs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Enviar mensagem?": {
+      "main": [
+        [
+          {
+            "node": "❓ Sem destino?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "📥 GET scraper job": {
+      "main": [
+        [
+          {
+            "node": "🗂️ Gerar CSV final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🗂️ Gerar CSV final": {
+      "main": [
+        [
+          {
+            "node": "📧 Email: resultado final",
             "type": "main",
             "index": 0
           }

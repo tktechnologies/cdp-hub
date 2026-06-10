@@ -160,9 +160,7 @@ def test_response_observer_records_navigation_403(monkeypatch):
     page = FakeObservedPage()
 
     scraper._attach_anti_bot_observers(page)
-    page.handlers["response"](
-        FakeResponse(status=403, request=FakeRequest(navigation=True))
-    )
+    page.handlers["response"](FakeResponse(status=403, request=FakeRequest(navigation=True)))
 
     assert scraper._last_http_block == {
         "status": 403,

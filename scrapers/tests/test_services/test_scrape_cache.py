@@ -60,7 +60,10 @@ class TestCacheKeyHelpers:
         assert normalize_cache_sku("A-000.1234/567") == "A0001234567"
 
     def test_mercedes_eu_rule(self):
-        assert normalize_cache_sku("A0001234567", brand="Mercedes", site_id=SiteId.EUROPE) == "0001234567"
+        assert (
+            normalize_cache_sku("A0001234567", brand="Mercedes", site_id=SiteId.EUROPE)
+            == "0001234567"
+        )
 
     def test_build_cache_key_includes_site(self):
         key = build_cache_key("93338835", "GM", SiteId.GM)
@@ -96,7 +99,9 @@ class TestScrapeCacheService:
         mock_redis = AsyncMock()
         mock_redis.ping = AsyncMock()
         mock_redis.get = AsyncMock(side_effect=lambda key: store.get(key))
-        mock_redis.setex = AsyncMock(side_effect=lambda key, _ttl, value: store.__setitem__(key, value))
+        mock_redis.setex = AsyncMock(
+            side_effect=lambda key, _ttl, value: store.__setitem__(key, value)
+        )
 
         monkeypatch.setattr("src.services.scrape_cache.settings.scrape_cache_enabled", True)
         monkeypatch.setattr("src.services.scrape_cache.settings.scrape_cache_pg_fallback", False)
@@ -144,7 +149,9 @@ class TestScrapeCacheService:
         mock_redis = AsyncMock()
         mock_redis.ping = AsyncMock()
         mock_redis.get = AsyncMock(side_effect=lambda key: store.get(key))
-        mock_redis.setex = AsyncMock(side_effect=lambda key, _ttl, value: store.__setitem__(key, value))
+        mock_redis.setex = AsyncMock(
+            side_effect=lambda key, _ttl, value: store.__setitem__(key, value)
+        )
 
         monkeypatch.setattr("src.services.scrape_cache.settings.scrape_cache_enabled", True)
         monkeypatch.setattr("src.services.scrape_cache.settings.scrape_cache_pg_fallback", False)

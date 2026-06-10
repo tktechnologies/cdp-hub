@@ -29,10 +29,12 @@ def _part(price: float, currency: Currency, site: SiteId = SiteId.GM) -> PartRes
 
 
 def test_best_price_is_lowest_when_currency_matches():
-    best = _find_best_price([
-        _part(150.0, Currency.BRL),
-        _part(99.0, Currency.BRL, SiteId.MERCADO_LIVRE),
-    ])
+    best = _find_best_price(
+        [
+            _part(150.0, Currency.BRL),
+            _part(99.0, Currency.BRL, SiteId.MERCADO_LIVRE),
+        ]
+    )
 
     assert best is not None
     assert best.price == 99.0
@@ -40,10 +42,12 @@ def test_best_price_is_lowest_when_currency_matches():
 
 
 def test_best_price_is_empty_when_currencies_are_mixed():
-    best = _find_best_price([
-        _part(150.0, Currency.BRL),
-        _part(20.0, Currency.USD, SiteId.EUROPE),
-    ])
+    best = _find_best_price(
+        [
+            _part(150.0, Currency.BRL),
+            _part(20.0, Currency.USD, SiteId.EUROPE),
+        ]
+    )
 
     assert best is None
 

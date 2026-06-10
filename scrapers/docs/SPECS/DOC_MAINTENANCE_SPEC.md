@@ -11,10 +11,10 @@ Update:
 - `docs/SPECS/SPECS.md` for source-of-truth product, architecture, or rule changes.
 - `docs/SPECS/INFRASTRUCTURE_SPEC.md` for Azure, IaC, deployment, or networking changes.
 - `docs/SPECS/PROXY_ROTATION_SPEC.md` for proxy, anti-bot, or outbound networking changes.
-- `docs/TASKS.md` for project status and next work.
+- `docs/MAINTENANCE_CHECKPOINT.md` for live handoff and next work.
 - `docs/CHANGELOG.md` for user-visible or agent-visible changes.
 - `docs/SYSTEM_OVERVIEW.md` for architecture or component status changes.
-- `docs/PRODUCTION_PLAN.md` for production rollout or deployment changes.
+- `docs/archive/PRODUCTION_PLAN.md` for historical production rollout context only.
 - `.agent/` instructions when agent workflows, rules, or repeated processes change.
 
 ## Changelog Format

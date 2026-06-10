@@ -14,7 +14,7 @@ Repository mission:
 
 Before making changes, run a project audit:
 1. Read `.agent/rules.md` and `.agent/index.md`.
-2. Read `.agent/memory/implementation-state.md`.
+2. Read `.agent/memory/implementation-state.md` (StokAPI runtime). For live n8n IDs: `cdp-app/.agent/memory/implementation-state.md` and `docs/n8n/LIVE_WORKFLOWS.md`.
 3. Read relevant specs in `specs/`.
 4. Read relevant skills in `.agent/skills/`.
 5. Check `git status --short` and never revert user changes.

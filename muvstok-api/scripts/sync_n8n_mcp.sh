@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
-# Push Muvstok workflows to live n8n via Cursor MCP (no N8N_API_KEY required).
-# Run from repo root in a shell where user-n8n-mcp is enabled, or ask the agent to run MCP update_workflow.
+# Push platform n8n workflows from the monorepo root (no service-local sync scripts).
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-echo "MCP sync (from repo root):"
-echo "  python3 scripts/generate_sender_sdk.py"
-echo "  python3 scripts/sync_n8n_via_mcp_http.py"
+MONOREPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+echo "n8n sync (from monorepo root):"
+echo "  cd $MONOREPO_ROOT"
+echo "  python3 scripts/sync_workflow_code_from_shared.py"
+echo "  make sync-n8n          # requires explicit approval; uses scripts/n8n_publish.py"
 echo ""
 echo "Or Cursor MCP: validate_workflow → update_workflow → publish_workflow"
-echo ""
-echo "REST fallback (needs N8N_API_KEY from n8n UI):"
-echo "  source scripts/export_n8n_env.sh && python3 scripts/sync_n8n_workflows.py"
+echo "See docs/n8n/LIVE_WORKFLOWS.md and .agent/skills/n8n-router-sync/SKILL.md"

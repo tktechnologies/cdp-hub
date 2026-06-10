@@ -82,9 +82,7 @@ class ScrapeCacheService:
         if self._client is None:
             try:
                 redis_kwargs: dict[str, Any] = {"decode_responses": True}
-                redis_url, tls_kwargs = normalize_redis_tls_url(
-                    settings.scrape_cache_redis_url
-                )
+                redis_url, tls_kwargs = normalize_redis_tls_url(settings.scrape_cache_redis_url)
                 redis_kwargs.update(tls_kwargs)
                 self._client = Redis.from_url(
                     redis_url,

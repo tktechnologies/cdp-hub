@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 class SiteId(StrEnum):
     """Supported scraping target sites."""
+
     GM = "gm"
     MERCADO_LIVRE = "ml"
     VW = "vw"
@@ -92,8 +93,10 @@ def _has_valid_price(result: "PartResult") -> bool:
 
 # ─── Request Models ───────────────────────────────────────────────
 
+
 class SKUItem(BaseModel):
     """Single SKU to search across sites."""
+
     sku: str = Field(..., description="Part SKU code to search", examples=["A0001234567"])
     brand: str = Field(default="", description="Part brand (e.g., Mercedes, GM, VW)")
     description: str = Field(default="", description="Optional part description")
@@ -101,6 +104,7 @@ class SKUItem(BaseModel):
 
 class ScrapeJobRequest(BaseModel):
     """Request to start a new scraping job."""
+
     items: list[SKUItem] = Field(..., min_length=1, max_length=500)
     sites: list[SiteId] = Field(
         default=[
@@ -113,11 +117,10 @@ class ScrapeJobRequest(BaseModel):
         description=(
             "Which active sites to search. Melibox requires login and is explicit-only. "
             "GoParts, Procura Peças, and eBay are archived and not included in defaults."
-        )
+        ),
     )
     callback_url: str | None = Field(
-        default=None,
-        description="Webhook URL to POST results when job completes"
+        default=None, description="Webhook URL to POST results when job completes"
     )
     priority: int = Field(default=5, ge=1, le=10, description="Job priority 1-10 (10=highest)")
     force_refresh: bool = Field(
@@ -140,6 +143,7 @@ class ScrapeJobRequest(BaseModel):
 
 class TelegramDemoJobRequest(BaseModel):
     """Meeting/demo helper request that sends completion results to Telegram via n8n."""
+
     chat_id: str = Field(..., description="Telegram chat ID that should receive the result message")
     items: list[SKUItem] = Field(..., min_length=1, max_length=3)
     sites: list[SiteId] = Field(
@@ -156,6 +160,7 @@ class TelegramDemoJobRequest(BaseModel):
 
 class InterviewDemoRequest(BaseModel):
     """Start the local headed interview demo from a remote automation flow."""
+
     chat_id: str = Field(..., description="Telegram chat ID requesting the demo")
     sites: str = Field(default="gm,ml,vw", description="Comma-separated demo site IDs")
     timeout_seconds: float = Field(default=180.0, ge=30.0, le=600.0)
@@ -164,6 +169,7 @@ class InterviewDemoRequest(BaseModel):
 
 class SingleSKURequest(BaseModel):
     """Quick single-SKU lookup (synchronous)."""
+
     sku: str
     brand: str = ""
     sites: list[SiteId] = Field(default=[SiteId.GM, SiteId.MERCADO_LIVRE, SiteId.VW])
@@ -175,8 +181,10 @@ class SingleSKURequest(BaseModel):
 
 # ─── Response Models ──────────────────────────────────────────────
 
+
 class PartResult(BaseModel):
     """Single part result from one site."""
+
     sku_searched: str
     sku_found: str
     exact_match: bool
@@ -201,6 +209,7 @@ class PartResult(BaseModel):
 
 class SiteResult(BaseModel):
     """Aggregated results from one site for one SKU."""
+
     site: SiteId
     site_name: str
     status: str = Field(description="success, not_found, no_price, blocked, error, timeout")
@@ -232,6 +241,14 @@ class SiteResult(BaseModel):
     cached_at: datetime | None = Field(
         default=None,
         description="When the cached snapshot was originally scraped",
+    )
+    proxy_host: str = Field(
+        default="",
+        description="Outbound proxy IP/host used for the live scrape (empty when direct or cached).",
+    )
+    proxy_identity: str = Field(
+        default="",
+        description="Stable non-secret proxy fingerprint for the live scrape.",
     )
 
     def model_post_init(self, __context: object) -> None:
@@ -269,6 +286,7 @@ class SiteResult(BaseModel):
 
 class SKUResult(BaseModel):
     """All results for a single SKU across all searched sites."""
+
     sku: str
     brand: str = ""
     site_results: list[SiteResult] = []
@@ -328,6 +346,7 @@ class SKUResult(BaseModel):
 
 class ScrapeJobResponse(BaseModel):
     """Response after creating a scraping job."""
+
     job_id: str
     status: JobStatus
     total_items: int
@@ -338,12 +357,14 @@ class ScrapeJobResponse(BaseModel):
 
 class TelegramDemoJobResponse(ScrapeJobResponse):
     """Response for demo jobs routed back to Telegram."""
+
     callback_url: str
     telegram_chat_id: str
 
 
 class InterviewDemoStartResponse(BaseModel):
     """Response returned immediately after starting an interview demo."""
+
     demo_id: str
     status: str
     telegram_chat_id: str
@@ -352,6 +373,7 @@ class InterviewDemoStartResponse(BaseModel):
 
 class InterviewDemoStatusResponse(BaseModel):
     """Current status and summary of a local interview demo run."""
+
     demo_id: str
     status: str
     telegram_chat_id: str
@@ -366,6 +388,7 @@ class InterviewDemoStatusResponse(BaseModel):
 
 class ScrapeJobResult(BaseModel):
     """Full job result with all SKU results."""
+
     job_id: str
     status: JobStatus
     results: list[SKUResult] = []
@@ -400,6 +423,7 @@ class ScrapeJobResult(BaseModel):
 
 
 # ─── Dispatch run registry (dual pipeline progress) ─────────────
+
 
 class DispatchRunUpsertRequest(BaseModel):
     """Register or refresh an active dual-pipeline run."""
@@ -507,6 +531,7 @@ class FinalNotificationPatch(BaseModel):
 
 
 # ─── Health & Monitoring ──────────────────────────────────────────
+
 
 class SiteHealth(BaseModel):
     site: SiteId

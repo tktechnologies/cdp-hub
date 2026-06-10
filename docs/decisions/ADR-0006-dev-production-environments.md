@@ -29,8 +29,8 @@ sheets, or customer traffic.
 
 | Environment | Scraper | StokAPI | Image-only scraper |
 |-------------|---------|---------|-------------------|
-| Production | `scrapers/scripts/deploy-azure.sh` | `deploy_muv_api.sh` / `deploy_muv_worker.sh` | `scripts/deploy-scraper-image.sh` |
-| Development | `scrapers/scripts/deploy-azure-dev.sh` or `IMAGE_TAG=dev-* scripts/deploy-scraper-image.sh` with dev app names | `muvstok-api/scripts/deploy_muv_dev.sh` creates/updates `cdp-muv-api-dev` and `cdp-muv-worker-dev` | `IMAGE_TAG=dev-* scripts/deploy-scraper-image.sh` with dev app names |
+| Production | `scripts/deploy-scraper-azure.sh` | `deploy_muv_api.sh` / `deploy_muv_worker.sh` | `scripts/deploy-scraper-image.sh` |
+| Development | `scripts/deploy-scraper-azure-dev.sh` or `IMAGE_TAG=dev-* scripts/deploy-scraper-image.sh` with dev app names | `muvstok-api/scripts/deploy_muv_dev.sh` creates/updates `cdp-muv-api-dev` and `cdp-muv-worker-dev` | `IMAGE_TAG=dev-* scripts/deploy-scraper-image.sh` with dev app names |
 
 ## n8n
 

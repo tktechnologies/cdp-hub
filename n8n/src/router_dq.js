@@ -24,12 +24,22 @@ function normalizeSku(value) {
     .replace(/[\s\-\.\\/]/g, '');
 }
 
+function pickSheetField(row, base) {
+  if (!row || typeof row !== 'object') return '';
+  const robot = base + ' 🤖';
+  for (const k of [base, robot]) {
+    const v = row[k];
+    if (v !== null && v !== undefined && String(v).trim() !== '') return v;
+  }
+  return row[base] ?? row[robot] ?? '';
+}
+
 for (const item of raw) {
   const row = item.json;
   const rawSku = row.CODIGO ?? row.SKU ?? row.sku ?? row.codigo;
   const sku = normalizeSku(rawSku);
 
-  const processado = normalizeStatus(row.PROCESSADO);
+  const processado = normalizeStatus(pickSheetField(row, 'PROCESSADO'));
   if (processado === 'processado' || processado === 'sim' || processado === 'true') {
     skippedProcessado++;
     continue;

@@ -1,5 +1,7 @@
 # StokAPI n8n boundaries
 
+> **Canonical live IDs and platform rules:** [`.agent/boundaries/n8n.md`](../../../.agent/boundaries/n8n.md), [`.agent/memory/implementation-state.md`](../../../.agent/memory/implementation-state.md), [`docs/n8n/LIVE_WORKFLOWS.md`](../../../docs/n8n/LIVE_WORKFLOWS.md).
+
 Workflow JSON lives at the **monorepo root** (`n8n/workflows/`), not under `muvstok-api/`.
 
 Paths below are monorepo-root paths unless they are Markdown links.

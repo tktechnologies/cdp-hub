@@ -3,7 +3,7 @@
 	test test-all test-scraper test-stokapi \
 	lint lint-all format-all check-muvstok \
 	setup clean \
-	inject-n8n sync-n8n-prep sync-n8n n8n-dev-workflows sync-n8n-dev import-n8n-dev \
+	inject-n8n sync-n8n-prep sync-n8n n8n-dev-workflows n8n-dev-sdk sync-n8n-dev import-n8n-dev \
 	smoke-cache interview-demo \
 	migrate-scraper migrate-stokapi \
 	bicep-build bicep-what-if bicep-validate \
@@ -106,10 +106,20 @@ sync-n8n: ## Inject + push to live n8n (requires user approval)
 n8n-dev-workflows: ## Generate DEV workflow JSON copies for shared n8n
 	python3 $(ROOT)scripts/sync_workflow_code_from_shared.py
 	python3 $(ROOT)scripts/build_cdp_notifier_workflow.py
+	python3 $(ROOT)scripts/patch_cdp_notifier_workflow.py
 	python3 $(ROOT)scripts/patch_receiver_notifier_handoff.py
 	python3 $(ROOT)scrapers/scripts/patch_scraper_receiver_workflow.py
 	python3 $(ROOT)muvstok-api/scripts/patch_muvstok_receiver_workflow.py
 	python3 $(ROOT)scripts/generate_dev_n8n_workflows.py
+	$(MAKE) n8n-dev-sdk
+
+n8n-dev-sdk: ## Generate DEV workflow SDK files from DEV JSON copies
+	mkdir -p $(ROOT)n8n/sdk
+	node $(ROOT)scrapers/scripts/n8n_workflow_json_to_sdk.mjs $(ROOT)n8n/workflows/dev/dev_cdp_router.json --workflow-id=L8foaUWF2CYhp42n --workflow-name="DEV - cdp_router" > $(ROOT)n8n/sdk/dev_cdp_router.workflow.ts
+	node $(ROOT)scrapers/scripts/n8n_workflow_json_to_sdk.mjs $(ROOT)n8n/workflows/dev/dev_cdp_scraper.json --workflow-id=mjkPMAB0spid7YvU --workflow-name="DEV - cdp_scraper" > $(ROOT)n8n/sdk/dev_cdp_scraper.workflow.ts
+	node $(ROOT)scrapers/scripts/n8n_workflow_json_to_sdk.mjs $(ROOT)n8n/workflows/dev/dev_cdp_stokapi.json --workflow-id=Kx7ZQLnaOINhX2Uk --workflow-name="DEV - cdp_stokapi" > $(ROOT)n8n/sdk/dev_cdp_stokapi.workflow.ts
+	node $(ROOT)scrapers/scripts/n8n_workflow_json_to_sdk.mjs $(ROOT)n8n/workflows/dev/dev_cdp_progress.json --workflow-id=DCrWffIqKnpK1wYy --workflow-name="DEV - cdp_progress" > $(ROOT)n8n/sdk/dev_cdp_progress.workflow.ts
+	node $(ROOT)scrapers/scripts/n8n_workflow_json_to_sdk.mjs $(ROOT)n8n/workflows/dev/dev_cdp_notifier.json --workflow-id=ssk4HbowArZILiAl --workflow-name="DEV - cdp_notifier" > $(ROOT)n8n/sdk/dev_cdp_notifier.workflow.ts
 
 sync-n8n-dev: ## Push DEV workflow copies to shared n8n (requires DEV workflow IDs)
 	N8N_TARGET=dev bash $(ROOT)scripts/sync-all-n8n.sh
@@ -117,10 +127,12 @@ sync-n8n-dev: ## Push DEV workflow copies to shared n8n (requires DEV workflow I
 import-n8n-dev: ## First import of DEV workflow copies; prints CDP_DEV_* IDs
 	python3 $(ROOT)scripts/sync_workflow_code_from_shared.py
 	python3 $(ROOT)scripts/build_cdp_notifier_workflow.py
+	python3 $(ROOT)scripts/patch_cdp_notifier_workflow.py
 	python3 $(ROOT)scripts/patch_receiver_notifier_handoff.py
 	python3 $(ROOT)scrapers/scripts/patch_scraper_receiver_workflow.py
 	python3 $(ROOT)muvstok-api/scripts/patch_muvstok_receiver_workflow.py
 	python3 $(ROOT)scripts/generate_dev_n8n_workflows.py --require-telegram-credential
+	$(MAKE) n8n-dev-sdk
 	@echo "CDP_DEV_ROUTER_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_router.json --publish)"
 	@echo "CDP_DEV_SCRAPER_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_scraper.json --publish)"
 	@echo "CDP_DEV_STOKAPI_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_stokapi.json --publish)"
@@ -153,7 +165,7 @@ deploy-scraper-prod: ## Build dated image + update prod API/worker
 	bash $(ROOT)scripts/deploy-scraper-image.sh
 
 deploy-scraper-dev: ## Full dev scraper stack (KV, Postgres, apps)
-	bash $(ROOT)scrapers/scripts/deploy-azure-dev.sh
+	bash $(ROOT)scripts/deploy-scraper-azure-dev.sh
 
 import-n8n-progress: inject-n8n ## First import of cdp_progress; prints workflow ID
 	@WF_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/cdp_progress.json --publish); \

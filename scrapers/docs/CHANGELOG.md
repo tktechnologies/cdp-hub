@@ -57,7 +57,7 @@
   `docs/SCRAPE_CACHE_OPERATIONS.md`, and agent prompt
   `.claude/prompts/scrape-cache-local-and-azure.md` for local → Azure validation.
 - Wired Azure Container Apps env vars for `SCRAPE_CACHE_*` in
-  `infra/modules/container-app.bicep` and `infra/main.bicep` (Redis DB 1).
+  `infra/modules/container-app.bicep` and `infra/scraper-stack.bicep` (Redis DB 1).
 - Added Redis-backed scrape result cache (`src/services/scrape_cache.py`):
   per-site SKU snapshots with 24h default TTL, shorter TTL for `not_found` and
   `blocked`, PostgreSQL warm fallback, and graceful degradation when Redis is

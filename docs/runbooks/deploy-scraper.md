@@ -7,14 +7,23 @@
 
 ## CI/CD (preferred)
 
-Push to `main` on scraper repo triggers `.github/workflows/cd.yml` → ACR → Container Apps `cdp-scrapers-api-prod`, `cdp-scrapers-worker-prod`.
+Monorepo workflow `.github/workflows/cd-prod.yml` (manual dispatch) or push-triggered `.github/workflows/cd-dev.yml` for development.
 
-## Manual
+Image-only production roll: `make deploy-scraper-prod` → `scripts/deploy-scraper-image.sh`.
+
+## Manual (full stack rebuild)
 
 ```bash
-cd scrapers
-./scripts/deploy-azure.sh
+./scripts/deploy-scraper-azure.sh
 ```
+
+Development stack:
+
+```bash
+./scripts/deploy-scraper-azure-dev.sh
+```
+
+Bicep templates: `infra/scraper-stack.bicep` (direct) or `infra/main.bicep` (platform wrapper).
 
 ## Verify
 

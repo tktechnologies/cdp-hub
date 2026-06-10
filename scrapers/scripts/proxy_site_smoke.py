@@ -35,7 +35,7 @@ from src.scrapers import (  # noqa: E402
     get_scraper,
     shutdown_all_scrapers,
 )
-from src.utils.proxy_manager import reset_proxy_manager  # noqa: E402
+from src.utils.proxy_manager import get_proxy_manager, reset_proxy_manager  # noqa: E402
 
 SITE_CHOICES = (
     "gm",
@@ -59,6 +59,7 @@ DEFAULT_ROLLOUT_CASES: tuple[tuple[str, str, str], ...] = (
     ("ml", "51766536", ""),
     ("goparts", "06K907811B", ""),
     ("procurapecas", "06K907811B", ""),
+    ("ebay", "51766536", ""),
 )
 
 
@@ -119,7 +120,7 @@ def _cases_from_args(args: argparse.Namespace) -> list[tuple[str, str, str]]:
 
     sites = {"melibox", "pecadireta", "gm", "vw", "eu", "ml"}
     if args.include_archived:
-        sites.update({"goparts", "procurapecas"})
+        sites.update({"goparts", "procurapecas", "ebay"})
     return [case for case in DEFAULT_ROLLOUT_CASES if case[0] in sites]
 
 
@@ -139,17 +140,17 @@ async def _scrape_case(
     timeout_seconds: float,
 ) -> SmokeOutcome:
     site_id = SiteId(site)
-    archived = None
+    proxy_manager = get_proxy_manager()
+    proxy_manager.begin_sku(sku, brand)
+    archived_scraper = None
     try:
         if site_id in SCRAPER_REGISTRY:
             scraper = await get_scraper(site_id)
+        elif site_id in ARCHIVED_SCRAPER_REGISTRY:
+            scraper = ARCHIVED_SCRAPER_REGISTRY[site_id]()
+            archived_scraper = scraper
         else:
-            scraper_class = ARCHIVED_SCRAPER_REGISTRY.get(site_id)
-            if scraper_class is None:
-                raise ValueError(f"No scraper for site: {site}")
-            archived = scraper_class()
-            await archived.initialize()
-            scraper = archived
+            raise ValueError(f"No scraper for site: {site}")
 
         result: SiteResult = await asyncio.wait_for(
             scraper.scrape_sku(sku, brand),
@@ -176,8 +177,9 @@ async def _scrape_case(
             proxy_configured=bool(settings.proxy_urls),
         )
     finally:
-        if archived is not None:
-            await archived.shutdown()
+        if archived_scraper is not None:
+            await archived_scraper.shutdown()
+        proxy_manager.clear_sku()
 
 
 async def _run(args: argparse.Namespace) -> int:
