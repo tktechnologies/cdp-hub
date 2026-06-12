@@ -138,7 +138,7 @@ emits an empty item, DQ counts it as 0 rows, `.analisar` replies with
 object-shaped errors instead of `[object Object]`. Live read-back confirmed the
 router is active with those fixes.
 
-**GitHub:** `tktech/main` and `tktech/dev` @ `96422e1` (v1 handoff, 2026-06-10); CI green on Scraper + Contracts; StokAPI lint fixed in follow-up commit. GitHub OIDC app registrations created 2026-06-12: DEV client `05123bc9-e960-4fd6-8fb7-2e2471f91c4a` (`environment:development`, scoped to `automation` + ACR + DEV KV); PROD client `cf0b1694-d3fb-486e-b780-a98425e159ae` (`environment:production`, scoped to `automation`, `stokai-tk`, both ACRs, and prod/STOKAI KVs). GitHub `production` environment now has OIDC, n8n, and STOKAI CD secrets/vars; no required-review protection is configured yet.
+**GitHub:** `tktech/main` and `tktech/dev` @ `96422e1` (v1 handoff, 2026-06-10); CI green on Scraper + Contracts; StokAPI lint fixed in follow-up commit. GitHub OIDC app registrations created 2026-06-12: DEV client `05123bc9-e960-4fd6-8fb7-2e2471f91c4a` (`environment:development`, scoped to `automation` + ACR + DEV KV); PROD client `cf0b1694-d3fb-486e-b780-a98425e159ae` (`environment:production`, scoped to `automation`, `stokai-tk`, both ACRs, and prod/STOKAI KVs). GitHub `production` environment now has OIDC, n8n, and STOKAI CD secrets/vars; no required-review protection is configured yet. No-op `CD - Production` and `CD - STOKAI Production` workflow dispatches passed Azure login on commit `719082e` (2026-06-12); all deploy toggles were false.
 
 ### Scraper (`scrapers/`)
 
