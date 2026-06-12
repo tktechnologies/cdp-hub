@@ -32,8 +32,8 @@ SKU request (lookup or job)
 |-------------|--------|-------------|
 | `success` | Yes | 86400 s (24h) |
 | `no_price` | Yes | 86400 s |
-| `not_found` | Yes | 21600 s (6h) |
-| `blocked` | Short | 1800 s (30m) |
+| `not_found` | Yes | 86400 s (24h) |
+| `blocked` | Yes | 86400 s (24h) |
 | `error`, `timeout` | No | — |
 
 ## Configuration
@@ -43,8 +43,8 @@ SKU request (lookup or job)
 | `SCRAPE_CACHE_ENABLED` | `true` | Master switch |
 | `SCRAPE_CACHE_REDIS_URL` | `redis://localhost:6379/1` | Cache Redis URL |
 | `SCRAPE_CACHE_TTL_SECONDS` | `86400` | success / no_price TTL |
-| `SCRAPE_CACHE_TTL_NOT_FOUND_SECONDS` | `21600` | not_found TTL |
-| `SCRAPE_CACHE_TTL_BLOCKED_SECONDS` | `1800` | blocked TTL |
+| `SCRAPE_CACHE_TTL_NOT_FOUND_SECONDS` | `86400` | not_found TTL |
+| `SCRAPE_CACHE_TTL_BLOCKED_SECONDS` | `86400` | blocked TTL |
 | `SCRAPE_CACHE_PG_FALLBACK` | `true` | Warm Redis from PostgreSQL on miss |
 | `SCRAPE_CACHE_BYPASS_STATUSES` | `error,timeout` | Never write cache |
 | `SCRAPE_SITES_SEQUENTIAL` | `true` | Live scrapes run one site at a time by default to reduce anti-bot pressure |

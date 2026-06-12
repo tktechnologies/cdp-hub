@@ -12,9 +12,9 @@ produces each row.
 
 **SKUs tab contract:** row-1 headers use `PROCESSADO 🤖`, `ENCONTRADO 🤖`,
 `NOTIFICADO 🤖` (robot suffix marks bot-managed columns). Optional user columns:
-`CODIGO`, `UF`, `ITEM`. Tab gid `843035952` (workbook
-`1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII`). Workflows accept legacy names
-without `🤖` when reading.
+`CODIGO`, `UF`, `ITEM`. Production workbook:
+`1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII`. Workflows select the `SKUs` tab by name
+and accept legacy names without `🤖` when reading.
 
 **Row updates (D–F):** Google Sheets *Update Row* nodes match on `row_number`
 from a prior *Read* in the same execution. Code nodes that remap status must

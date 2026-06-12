@@ -746,7 +746,7 @@ const completedAt = payload.completed_at || new Date().toISOString();
 const configuredSheetsUrl = envFor('CDP_RESULTADOS_SHEETS_URL');
 const sheetsUrl = configuredSheetsUrl || (isDevWorkflow()
   ? ''
-  : 'https://docs.google.com/spreadsheets/d/1O6H__UGqja7FZsQkA-WcePKtbKS-bcb5XFzmbJTrhPw/edit');
+  : 'https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=2127243308');
 
 const rows = [];
 for (const skuResult of results) {

@@ -22,7 +22,7 @@ Repeat requests for the **same SKU + site** within 24 hours do **not** run Playw
 
 | Layer | Technology | TTL |
 |-------|------------|-----|
-| Hot cache | Redis DB 1 (`SCRAPE_CACHE_REDIS_URL`) | `SCRAPE_CACHE_TTL_SECONDS=86400` (success / no_price) |
+| Hot cache | Redis DB 1 (`SCRAPE_CACHE_REDIS_URL`) | 86400s for success / no_price / not_found / blocked |
 | Warm fallback | PostgreSQL latest job rows | Same 24h window |
 | Bypass | `force_refresh=true` on API | Live scrape only |
 

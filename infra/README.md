@@ -15,6 +15,13 @@ Platform-level IaC for the CDP monorepo. **Does not deploy from CI by default** 
 
 StokAPI Container Apps are deployed via `muvstok-api/scripts/deploy_muv_*.sh` today; `modules/stokapi-apps.bicep` is a Phase 6 placeholder.
 
+STOKAI production lives in resource group `stokai-tk` with CDP-owned resources
+named `cdp-*` (`cdp-stokai-kv-prod`, `cdp-stokai-pg-prod`,
+`cdp-stokai-redis-prod`, `cdp-stokai-prod-env`, and CDP Container Apps). ACR is
+`cdpstokaitkacr` because Azure Container Registry names cannot contain hyphens.
+n8n is intentionally not deployed in `stokai-tk`; shared n8n remains in
+`automation`.
+
 ## Validate locally (no deploy)
 
 ```bash
@@ -37,9 +44,12 @@ az deployment group what-if \
 | Stack | Script |
 |-------|--------|
 | Scraper production (full rebuild) | `scripts/deploy-scraper-azure.sh` |
+| STOKAI production (full rebuild, no n8n) | `scripts/deploy-stokai-azure.sh` |
 | Scraper development | `scripts/deploy-scraper-azure-dev.sh` |
 | Scraper image only (prod API + worker) | `scripts/deploy-scraper-image.sh` |
 | StokAPI API | `muvstok-api/scripts/deploy_muv_api.sh` |
 | StokAPI worker | `muvstok-api/scripts/deploy_muv_worker.sh` |
 
-See also [docs/runbooks/deploy-scraper.md](../docs/runbooks/deploy-scraper.md) and [docs/runbooks/deploy-stokapi.md](../docs/runbooks/deploy-stokapi.md).
+See also [docs/runbooks/deploy-scraper.md](../docs/runbooks/deploy-scraper.md),
+[docs/runbooks/deploy-stokai.md](../docs/runbooks/deploy-stokai.md), and
+[docs/runbooks/deploy-stokapi.md](../docs/runbooks/deploy-stokapi.md).

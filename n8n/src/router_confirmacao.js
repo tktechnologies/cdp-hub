@@ -202,6 +202,77 @@ if (commandLabel === '.analisar') {
   } catch (e) {}
 }
 
+if (total < 1) {
+  const reason =
+    skippedProcessado > 0 && sheetTotal > 0 ? 'all_processed' : 'no_pending_skus';
+  const pendingText =
+    reason === 'all_processed'
+      ? 'Todas as peças encontradas na planilha já estavam marcadas como processadas.'
+      : 'A planilha CDP_SKUs não retornou peças pendentes para consulta.';
+  const pendingSuffix =
+    skippedProcessado > 0
+      ? '\n_(' + skippedProcessado + ' já processadas foram ignoradas)_'
+      : '';
+  const msgTelegramEmpty = [
+    '🤖 *Assistente CDP*',
+    '',
+    'Recebi sua consulta (*' + commandLabel + '*), mas não há peças pendentes para iniciar.',
+    '',
+    pendingText + pendingSuffix,
+    '',
+    'Atualize a planilha com novos códigos ou limpe o status PROCESSADO das peças que devem ser consultadas.',
+  ].join('\n');
+  const msgEmailEmptyHtml =
+    '<div style="margin:0;padding:0;background:#f6f8fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937">' +
+    '<div style="max-width:640px;margin:0 auto;padding:28px 18px">' +
+    '<div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">' +
+    '<div style="padding:22px 24px;border-bottom:1px solid #eef2f7">' +
+    '<div style="font-size:12px;text-transform:uppercase;letter-spacing:0;color:#64748b;font-weight:700">Nenhuma consulta iniciada</div>' +
+    '<h1 style="font-size:24px;line-height:1.25;margin:8px 0 0;color:#111827">Não há peças pendentes</h1>' +
+    '</div>' +
+    '<div style="padding:22px 24px">' +
+    '<p style="font-size:15px;line-height:1.6;margin:0 0 14px">Recebemos o comando <strong>' +
+    escapeHtml(commandLabel) +
+    '</strong>, mas nenhuma peça pendente foi encontrada para iniciar a consulta.</p>' +
+    '<p style="font-size:15px;line-height:1.6;margin:0 0 14px">' +
+    escapeHtml(pendingText) +
+    '</p>' +
+    (skippedProcessado > 0
+      ? '<p style="font-size:14px;line-height:1.6;margin:0 0 14px;color:#64748b">' +
+        escapeHtml(skippedProcessado + ' peças já processadas foram ignoradas.') +
+        '</p>'
+      : '') +
+    '<p style="font-size:14px;line-height:1.6;margin:0;color:#475569">Atualize a planilha com novos códigos ou limpe o status PROCESSADO das peças que devem ser consultadas.</p>' +
+    '</div>' +
+    '</div>' +
+    '<div style="font-size:12px;line-height:1.5;color:#94a3b8;text-align:center;padding:14px 0 0">Mensagem automática do Assistente CDP.</div>' +
+    '</div>' +
+    '</div>';
+
+  return [
+    {
+      json: {
+        total,
+        mins: 0,
+        origem,
+        command_origin: commandOrigin || origem,
+        reply_channel: replyChannel || origem,
+        triggered,
+        chat_id: chatId,
+        email_from: emailFrom,
+        notify: replyChannel === 'telegram' ? chatId : replyChannel === 'email' ? emailFrom : '',
+        no_skus: true,
+        skip_dispatch: true,
+        no_skus_reason: reason,
+        skipped_processado: skippedProcessado,
+        msg_telegram: msgTelegramEmpty,
+        msg_email_html: msgEmailEmptyHtml,
+        msg_email_subject: 'Consulta CDP sem peças pendentes',
+      },
+    },
+  ];
+}
+
 const msgTelegram = [
   '🤖 *Assistente CDP*',
   '',

@@ -1,14 +1,15 @@
 # API Diversos Google Sheets audit
 
-**Updated:** 2026-06-03
+**Updated:** 2026-06-12
 
-Spreadsheet: [cdp_resultados](https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit)
+Spreadsheet: [cdp_resultados](https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=2127243308)
 
 | Tab | gid (reference) |
 |-----|-----------------|
-| Detalhado | `1185876304` (legacy gids `533358674`, `1831011286` — use tab name **Detalhado**) |
-| Resumo | `79112561` |
-| Historico | `1406942676` |
+| Painel | `2127243308` |
+| Resumo | `815371065` |
+| Detalhado | `1185876304` (legacy gids `533358674`, `1831011286`, `1370816365` — use tab name **Detalhado**) |
+| Historico | `79112561` |
 
 Filter API Diversos rows: `codigo_site = api-diversos` or `origem = API Diversos` on **Historico** (legacy rows may still show `muvstok` until migration).
 
@@ -52,6 +53,12 @@ Filter API Diversos rows: `codigo_site = api-diversos` or `origem = API Diversos
 | `source_health` | callback `source_health` | `WORKING`/`OK`, `BLOCKED`, `TIMEOUT`, `ERROR`, `NOT_QUERIED` |
 | `has_valid_price` | normalized price classifier | `TRUE` only when a positive usable sale price exists |
 
+Location enrichment loads `company_locations` from Postgres first. STOKAI
+deploys set `MUVSTOK_DEALERSHIP_DIRECTORY_URL_FALLBACK_ENABLED=true`, so an
+empty/new metadata table falls back to the configured public directory CSV.
+Rows match by `codigoFilial` first, then by exact normalized unique
+branch/seller name.
+
 ## Result semantics (2026-06-03)
 
 - `status=succeeded` means the worker completed the SKU lookup; it is not a
@@ -62,6 +69,21 @@ Filter API Diversos rows: `codigo_site = api-diversos` or `origem = API Diversos
   and `SEM_DADOS` are never counted as found.
 - `BLOCKED` is separate from `NOT_FOUND`. Keep block/access failures visible in
   `source_health` and `status_resultado`.
+
+## Live audit (2026-06-12)
+
+- `Detalhado` headers are canonical (`vendedor`, `uf`, `empresa`, `cnpj`) and
+  `FOUND_PRICE` / `has_valid_price` semantics are consistent.
+- Current `Detalhado` data has 154/154 priced API Diversos rows missing both
+  `uf` and `cnpj`; branch-name directory matching recovers 152 of those rows
+  from the public directory. The remaining 2 rows are
+  `RECOL JURUA VW - CRUZEIRO DO SUL`, which is not present as a VW entry in the
+  current directory.
+- `Resumo` currently has the legacy six headers and is missing
+  `STATUS_RESULTADO`; run the sheet audit apply path before relying on Resumo
+  status formulas.
+- `Painel` is still showing the older value-based dashboard labels; refresh it
+  with the v2 formula block from `google_sheets_audit_schema.py`.
 
 ## Stock type codes in `titulo_bruto`
 

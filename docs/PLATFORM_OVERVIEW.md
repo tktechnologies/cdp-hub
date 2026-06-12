@@ -1,6 +1,6 @@
 # CDP Platform — API & Azure reference
 
-**Updated:** 2026-06-02
+**Updated:** 2026-06-11
 
 This file is the **deep reference** for endpoints, router Code files, progress env vars, and Azure names. For layout, dual pipeline, and agent tiers, read [ARCHITECTURE.md](ARCHITECTURE.md) first.
 
@@ -16,12 +16,19 @@ This file is the **deep reference** for endpoints, router Code files, progress e
 
 | Service | Directory | Azure apps |
 |---------|-----------|------------|
-| Scraper | `scrapers/` | `cdp-scrapers-api-prod`, `cdp-scrapers-worker-prod` |
-| StokAPI (API Diversos) | `muvstok-api/` | `cdp-muv-api`, `cdp-muv-worker` |
+| Scraper (`automation`) | `scrapers/` | `cdp-scrapers-api-prod`, `cdp-scrapers-worker-prod` |
+| StokAPI (`automation`) | `muvstok-api/` | `cdp-muv-api`, `cdp-muv-worker` |
+| Scraper (`stokai-tk`) | `scrapers/` | `cdp-stokai-scrapers-api-prod`, `cdp-stokai-scrapers-worker-prod` |
+| StokAPI (`stokai-tk`) | `muvstok-api/` | `cdp-stokai-muv-api`, `cdp-stokai-muv-worker` |
 | n8n | `n8n/` | `cdp-n8n-prod` → `https://automacao.tktechnologies.com.br` |
 | Dev (scraper) | `scrapers/` | `cdp-scrapers-api-dev`, `cdp-scrapers-worker-dev`, KV `cdp-scrapers-kv-dev` |
 
-Shared prod: RG `automation`, Key Vault `cdp-scrapers-kv-prod`, ACR `cdpscraperprodacr.azurecr.io`. Dev/prod split: [decisions/ADR-0006-dev-production-environments.md](decisions/ADR-0006-dev-production-environments.md). Database/Redis: [DATABASE.md](DATABASE.md).
+Shared/backup prod: RG `automation`, Key Vault `cdp-scrapers-kv-prod`, ACR
+`cdpscraperprodacr.azurecr.io`. STOKAI prod target: RG `stokai-tk`, Key Vault
+`cdp-stokai-kv-prod`, ACR `cdpstokaitkacr.azurecr.io`. Dev/prod split:
+[decisions/ADR-0006-dev-production-environments.md](decisions/ADR-0006-dev-production-environments.md).
+Database/Redis: [DATABASE.md](DATABASE.md). STOKAI deploy/runbook:
+[runbooks/deploy-stokai.md](runbooks/deploy-stokai.md).
 
 ## n8n workflow IDs
 

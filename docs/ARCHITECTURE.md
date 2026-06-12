@@ -1,6 +1,6 @@
 # CDP Architecture
 
-**Updated:** 2026-06-06. Canonical platform design doc (consolidates [PLATFORM_OVERVIEW.md](PLATFORM_OVERVIEW.md), [architecture/DUAL_PIPELINE.md](architecture/DUAL_PIPELINE.md), and agent routing).
+**Updated:** 2026-06-11. Canonical platform design doc (consolidates [PLATFORM_OVERVIEW.md](PLATFORM_OVERVIEW.md), [architecture/DUAL_PIPELINE.md](architecture/DUAL_PIPELINE.md), and agent routing).
 
 ## Purpose
 
@@ -26,13 +26,22 @@ cdp-app/
 
 ## Services
 
-| Service | Directory | Queue | Azure (prod) |
-|---------|-----------|-------|----------------|
-| Scraper | `scrapers/` | Celery + Redis DB 0/1 | `cdp-scrapers-api-prod`, `cdp-scrapers-worker-prod` |
-| StokAPI | `muvstok-api/` | Redis Streams | `cdp-muv-api`, `cdp-muv-worker` |
-| n8n | `n8n/` | — | `cdp-n8n-prod` |
+| Service | Directory | Queue | Azure (`automation`) | Azure (`stokai-tk`) |
+|---------|-----------|-------|----------------------|--------------------|
+| Scraper | `scrapers/` | Celery + Redis DB 0/1 | `cdp-scrapers-api-prod`, `cdp-scrapers-worker-prod` | `cdp-stokai-scrapers-api-prod`, `cdp-stokai-scrapers-worker-prod` |
+| StokAPI | `muvstok-api/` | Redis Streams | `cdp-muv-api`, `cdp-muv-worker` | `cdp-stokai-muv-api`, `cdp-stokai-muv-worker` |
+| n8n | `n8n/` | — | `cdp-n8n-prod` | not deployed |
 
-Shared: resource group `automation`, Key Vault `cdp-scrapers-kv-prod`, ACR `cdpscraperprodacr.azurecr.io`. Development stack uses `*-dev` resources — see [decisions/ADR-0006-dev-production-environments.md](decisions/ADR-0006-dev-production-environments.md).
+Shared backup production: resource group `automation`, Key Vault
+`cdp-scrapers-kv-prod`, ACR `cdpscraperprodacr.azurecr.io`. STOKAI production
+target: resource group `stokai-tk`, Key Vault `cdp-stokai-kv-prod`, ACR
+`cdpstokaitkacr.azurecr.io`. Development stack uses `*-dev` resources — see
+[decisions/ADR-0006-dev-production-environments.md](decisions/ADR-0006-dev-production-environments.md).
+
+The active cutover model is one shared n8n instance in `automation`. STOKAI
+workflow copies (`STOKAI - cdp_*`) point at the `stokai-tk` APIs through
+`CDP_STOKAI_*` env vars; router/progress stay inactive until direct price
+smokes and receiver callback smokes pass.
 
 ## Dual pipeline
 

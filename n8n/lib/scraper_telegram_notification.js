@@ -67,7 +67,7 @@ function pecaLabel(n) {
 function reportUrl() {
   const configured = envFor('CDP_RESULTADOS_SHEETS_URL');
   if (configured || isDevWorkflow()) return configured;
-  return 'https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=1185876304';
+  return 'https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=2127243308';
 }
 
 function escapeHtml(value) {

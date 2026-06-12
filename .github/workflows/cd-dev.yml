@@ -12,6 +12,10 @@ concurrency:
   group: cd-development
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  id-token: write
+
 env:
   RESOURCE_GROUP: automation
   ACR_NAME: cdpscraperprodacr

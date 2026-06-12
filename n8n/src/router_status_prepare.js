@@ -24,24 +24,32 @@ function workflowName() {
   } catch (e) {}
   return '';
 }
-function isDevWorkflow() {
-  return /^DEV\s*-/i.test(workflowName());
+function workflowTarget() {
+  const name = workflowName();
+  if (/^DEV\s*-/i.test(name)) return 'dev';
+  if (/^STOKAI\s*-/i.test(name)) return 'stokai';
+  return 'prod';
 }
-function devEnvName(name) {
+function isDevWorkflow() {
+  return workflowTarget() === 'dev';
+}
+function targetEnvName(name, target) {
+  const prefix = target === 'stokai' ? 'CDP_STOKAI' : 'CDP_DEV';
   const map = {
-    CDP_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',
-    MUVSTOK_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',
-    CDP_MUVSTOK_API_BASE: 'CDP_DEV_MUVSTOK_API_BASE',
-    CDP_API_KEY: 'CDP_DEV_API_KEY',
-    MUVSTOK_API_KEY: 'CDP_DEV_API_KEY',
-    API_KEY: 'CDP_DEV_API_KEY',
-    CDP_MUVSTOK_API_KEY: 'CDP_DEV_MUVSTOK_API_KEY',
+    CDP_SCRAPER_API_BASE: `${prefix}_SCRAPER_API_BASE`,
+    MUVSTOK_SCRAPER_API_BASE: `${prefix}_SCRAPER_API_BASE`,
+    CDP_MUVSTOK_API_BASE: `${prefix}_MUVSTOK_API_BASE`,
+    CDP_API_KEY: `${prefix}_API_KEY`,
+    MUVSTOK_API_KEY: `${prefix}_API_KEY`,
+    API_KEY: `${prefix}_API_KEY`,
+    CDP_MUVSTOK_API_KEY: `${prefix}_MUVSTOK_API_KEY`,
   };
   return map[name] || '';
 }
 function envFor(name) {
-  if (!isDevWorkflow()) return env(name);
-  const mapped = devEnvName(name);
+  const target = workflowTarget();
+  if (target === 'prod') return env(name);
+  const mapped = targetEnvName(name, target);
   return mapped ? env(mapped) : '';
 }
 
@@ -115,11 +123,11 @@ if (chatId && run.chat_id && chatId !== String(run.chat_id).trim()) {
 const scraperBase = trimTrailingSlashes(
   envFor('CDP_SCRAPER_API_BASE') ||
     envFor('MUVSTOK_SCRAPER_API_BASE') ||
-    (isDevWorkflow() ? '' : DEFAULT_SCRAPER_API_BASE)
+    (workflowTarget() === 'prod' ? DEFAULT_SCRAPER_API_BASE : '')
 );
 const stokapiBase = trimTrailingSlashes(
   envFor('CDP_MUVSTOK_API_BASE') ||
-    (isDevWorkflow() ? '' : 'https://cdp-muv-api.bravecoast-b14d791e.eastus2.azurecontainerapps.io')
+    (workflowTarget() === 'prod' ? 'https://cdp-muv-api.bravecoast-b14d791e.eastus2.azurecontainerapps.io' : '')
 );
 const apiKey = envFor('CDP_API_KEY') || envFor('MUVSTOK_API_KEY') || envFor('API_KEY');
 const stokapiKey = envFor('CDP_MUVSTOK_API_KEY') || apiKey;

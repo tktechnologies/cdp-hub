@@ -1,17 +1,19 @@
 # CDP Platform — Implementation State
 
-**Last reviewed:** 2026-06-10 · **Live workflow IDs:** [docs/n8n/LIVE_WORKFLOWS.md](../../docs/n8n/LIVE_WORKFLOWS.md)
+**Last reviewed:** 2026-06-12 · **Live workflow IDs:** [docs/n8n/LIVE_WORKFLOWS.md](../../docs/n8n/LIVE_WORKFLOWS.md)
 
 ## Current snapshot
 
 ### n8n (production)
 
 Shared n8n model: CDP uses one n8n Container App, `cdp-n8n-prod`, at
-`https://automacao.tktechnologies.com.br`. Production workflows keep the IDs
-below. Development uses DEV workflow copies inside the same n8n instance; do
-not route CDP work through `cdp-n8n-dev` unless a later approved plan changes
-this. The existing `cdp-n8n-dev` app is left unused for CDP and may be
-decommissioned later with explicit approval.
+`https://automacao.tktechnologies.com.br`. As of the 2026-06-11 cutover,
+production Telegram/email/schedule traffic is handled by the `STOKAI - cdp_*`
+workflow copies below; the original `cdp_router` and `cdp_progress` workflows
+are inactive rollback candidates. Development uses DEV workflow copies inside
+the same n8n instance; do not route CDP work through `cdp-n8n-dev` unless a
+later approved plan changes this. The existing `cdp-n8n-dev` app is left unused
+for CDP and may be decommissioned later with explicit approval.
 
 | Workflow | ID | Webhook / trigger | Last known active version |
 |----------|-----|-------------------|---------------------------|
@@ -27,7 +29,7 @@ decommissioned later with explicit approval.
 
 | Workflow | ID | Webhook / trigger | Notes |
 |----------|----|-------------------|-------|
-| `DEV - cdp_router` | `L8foaUWF2CYhp42n` | DEV Telegram (`dev-cdp-bot` cred `wblrlkXu6SW1M5M1`) | Gmail/schedule disabled; unique webhookIds required on import |
+| `DEV - cdp_router` | `L8foaUWF2CYhp42n` | DEV Telegram (`NoxTKTech_bot` cred `OCT6L7sDZffEbhJ9` in GitHub `development`) | Gmail/schedule disabled; unique webhookIds required on import |
 | `DEV - cdp_scraper` | `mjkPMAB0spid7YvU` | `dev-scraper-result` | Uses `CDP_DEV_CALLBACK_WEBHOOK_SECRET` and DEV sheets |
 | `DEV - cdp_stokapi` | `Kx7ZQLnaOINhX2Uk` | `dev-muvstok-result` | Uses `CDP_DEV_MUVSTOK_CALLBACK_WEBHOOK_SECRET` and DEV sheets |
 | `DEV - cdp_progress` | `DCrWffIqKnpK1wYy` | Schedule | Uses `CDP_DEV_PROGRESS_*` and DEV Telegram credential |
@@ -40,6 +42,41 @@ DEV copies until MCP is enabled in n8n UI/settings for each workflow.
 Last DEV sync (2026-06-10): all five DEV copies updated via `make sync-n8n-dev`
 (REST PUT + reactivate; same CSV/notifier/router fixes as prod).
 
+### n8n (STOKAI workflow copies in shared n8n)
+
+STOKAI uses workflow copies in the same shared n8n instance. Receivers/notifier
+are active, and router/progress were activated for production cutover on
+2026-06-11 after explicit approval.
+
+| Workflow | ID | Webhook / trigger | State |
+|----------|----|-------------------|-------|
+| `STOKAI - cdp_router` | `wjwdSgwc2b017mjG` | Telegram, Gmail, schedule | active |
+| `STOKAI - cdp_scraper` | `MZVx4YwXrQVy5aua` | `stokai-scraper-result` | active |
+| `STOKAI - cdp_stokapi` | `IV1756ZgTBL6x7lL` | `stokai-muvstok-result` | active |
+| `STOKAI - cdp_progress` | `bI2HteRYIvOvGsjN` | Schedule | active |
+| `STOKAI - cdp_notifier` | `6CUB7JFG5Jy5D09z` | `stokai-cdp-notifier` | active |
+
+Last STOKAI import/smoke (2026-06-11): `make import-n8n-stokai` imported
+router/scraper/stokapi/progress; notifier was imported separately after fixing
+`scripts/n8n_import_workflow.py` to omit `description` on `POST /workflows`
+(this n8n API rejects that field on create). Callback smoke passed with
+executions `3531` (`STOKAI - cdp_scraper`), `3532`
+(`STOKAI - cdp_stokapi`), and `3533` (`STOKAI - cdp_notifier`).
+Cutover activation (2026-06-11): `cdp_router` (`6id6dkinK9xTLfsb`) and
+`cdp_progress` (`V9I6o32XDoPIRarz`) deactivated; `STOKAI - cdp_router` and
+`STOKAI - cdp_progress` activated. Trigger check: Telegram credential
+`cdp-bot-assistente` (`UmDqGKD8k0bA10j2`), Gmail credential
+`gmail lucas@tktech` (`rQesNRyarukVs0N4`), Gmail poll every minute with
+`subject:"cdp-enviar-skus"`, and schedule `0 8 * * 1`.
+
+Sheets endpoint rollback (2026-06-12): active STOKAI workflows
+`cdp_router`, `cdp_scraper`, `cdp_stokapi`, and `cdp_notifier` were patched
+directly via n8n REST + REST reactivation fallback to use the approved workbook
+IDs `1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII` (SKUs, tab selected by name) and
+`1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo` (Resultados, report link
+`gid=2127243308`). Verification rerun was idempotent (`0/4` changed), and
+`cdp-n8n-prod` has no `CDP_RESULTADOS_SHEETS_URL` override.
+
 **DEV sync:** `make n8n-dev-workflows` generates local copies under
 `n8n/workflows/dev/` (including `dev_cdp_notifier.json`). First import with
 `make import-n8n-dev` after creating the DEV Telegram credential in shared
@@ -49,24 +86,59 @@ is configured by `scripts/configure-shared-n8n-dev-env.sh`.
 
 **DEV setup — next steps (human / Azure / n8n UI):**
 
-- [x] DEV Telegram credential: **dev-cdp-bot** (`N8N_DEV_TELEGRAM_CREDENTIAL_ID=wblrlkXu6SW1M5M1`) — 2026-06-06
+- [x] DEV Telegram credential configured in GitHub `development`: **NoxTKTech_bot** (`N8N_DEV_TELEGRAM_CREDENTIAL_ID=OCT6L7sDZffEbhJ9`) — 2026-06-12
 - [x] `make import-n8n-dev` — workflow IDs recorded above (2026-06-05)
 - [x] DEV Google Sheet `1kvkfkqwXgUjW894E3OiNi0rvAh41-uz1ZkfQpxkfnKY` (SKUs + resultados in one workbook; report link gid `2069105059`) — 2026-06-05
-- [ ] Confirm DEV Key Vault has `api-key`, `callback-webhook-secret`, Muvstok creds for `cdp-muv-api-dev` / worker
-- [ ] Set GitHub `development` secrets/vars per [docs/ENVIRONMENTS.md](../../docs/ENVIRONMENTS.md) (CD still fails at Azure login)
-- [x] Push to `dev` @ `96422e1` — **CD - Development** still blocked until GitHub secrets configured
+- [ ] Confirm DEV Key Vault has `telegram-dev-bot-token`, `api-key`, `callback-webhook-secret`, Muvstok creds for `cdp-muv-api-dev` / worker (current Azure user lacks DEV KV read RBAC)
+- [ ] Set GitHub `development` variable `TELEGRAM_DEV_ALLOWED_CHAT_IDS`
+- [x] GitHub `development` OIDC secrets configured (`AZURE_*`, `N8N_API_KEY`, `N8N_MCP_AUTH_HEADER`) — 2026-06-12
+- [x] Push to `dev` @ `96422e1` — **CD - Development** Azure login unblocked; runtime config still needs DEV chat IDs/KV confirmation
 - [ ] Smoke: **dev-cdp-bot** `.sku` → DEV sheets + `dev-scraper-result` / `dev-muvstok-result` / `dev-cdp-notifier`
 
-**n8n Container App:** Production n8n is revision `cdp-n8n-prod--0000025`
+**n8n Container App:** Production n8n is revision `cdp-n8n-prod--0000026`
 with `CDP_ENV=shared`, `WEBHOOK_URL=https://automacao.tktechnologies.com.br/`,
 `CDP_SCRAPER_SITES=gm,ml,vw,eu,melibox`, and callback secret env vars backed
 by Key Vault secret ref `callback-webhook-secret` (confirmed 2026-06-09).
+STOKAI env vars are also configured on the same app:
+`CDP_STOKAI_SCRAPER_API_BASE`, `CDP_STOKAI_MUVSTOK_API_BASE`,
+`CDP_STOKAI_*_WEBHOOK_PATH`, `CDP_STOKAI_SCRAPER_SITES=gm,ml,vw,eu,melibox`,
+and STOKAI API/callback secrets via Container App secret refs
+`cdp-stokai-*` (confirmed 2026-06-11).
+
+2026-06-12 repo sync: `make sync-n8n-dev` and `make sync-n8n-stokai`
+published all five DEV workflow copies and all five STOKAI workflow copies
+through n8n REST with REST reactivation fallback. Read-back confirmed DEV and
+STOKAI workflow copies active with expected node counts; original rollback
+`cdp_router` and `cdp_progress` stayed inactive.
 
 **Email command whitelist:** Production n8n has `EMAIL_ALLOWED_SENDERS=dev.lucascruz@gmail.com,peron@sopecasgenuinas.com.br` (confirmed 2026-06-09; inherited by current Container App revision unless intentionally changed). Keep the user whitelist on; add future users as comma-separated emails.
 
 **Email command trigger:** Gmail Trigger filters `subject:"cdp-enviar-skus"`. Put `.analisar` or `.sku ...` at the start of the subject or first body line.
 
-**GitHub:** `tktech/main` and `tktech/dev` @ `96422e1` (v1 handoff, 2026-06-10); CI green on Scraper + Contracts; StokAPI lint fixed in follow-up commit.
+**STOKAI email recovery (2026-06-12):** Gmail `.analisar` execution `3856`
+started Scraper job `2b5bc112-faa1-4fff-a862-656d4deb495b` for batch
+`bg-mqb7jdkx-92hyo0`, but API Diversos dispatch failed with `401 Invalid API
+key`; execution `3853` just before it read 0 CDP_SKUs rows. Root cause was
+`cdp-stokai-muv-api` retaining a stale 32-character `api-keys` Container App
+secret while `cdp-stokai-kv-prod/api-key` and n8n STOKAI secrets were 64
+characters. Refreshed `api-keys` from Key Vault, stripped CR, restarted
+revision `cdp-stokai-muv-api--0000001`, and verified auth accepted via a
+nonexistent-job probe returning `404`. Resumed the missing API Diversos arm as
+job `d1db1a02-cb0b-4151-a939-c37143f46598`; receiver execution `3876` and
+notifier execution `3877` succeeded and sent the final email. The dispatch run
+`e1af86d6-8780-4a64-965c-1f602decace5` is patched to
+`final_notification_status=sent`, `final_channel=email`. Published a
+`STOKAI - cdp_notifier` fix (REST update + REST reactivation fallback; MCP
+still disabled) so `PATCH final-notification` uses
+`CDP_STOKAI_SCRAPER_API_BASE` / `CDP_STOKAI_API_KEY`. Also published a
+`STOKAI - cdp_router` fix for execution `3853`, where `📊 Ler CDP_SKUs`
+returned 0 rows and the workflow ended silently: the sheet read now always
+emits an empty item, DQ counts it as 0 rows, `.analisar` replies with
+`Consulta CDP sem peças pendentes`, and API Diversos error formatting unwraps
+object-shaped errors instead of `[object Object]`. Live read-back confirmed the
+router is active with those fixes.
+
+**GitHub:** `tktech/main` and `tktech/dev` @ `96422e1` (v1 handoff, 2026-06-10); CI green on Scraper + Contracts; StokAPI lint fixed in follow-up commit. GitHub OIDC app registrations created 2026-06-12: DEV client `05123bc9-e960-4fd6-8fb7-2e2471f91c4a` (`environment:development`, scoped to `automation` + ACR + DEV KV); PROD client `cf0b1694-d3fb-486e-b780-a98425e159ae` (`environment:production`, scoped to `automation`, `stokai-tk`, both ACRs, and prod/STOKAI KVs). GitHub `production` environment now has OIDC, n8n, and STOKAI CD secrets/vars; no required-review protection is configured yet.
 
 ### Scraper (`scrapers/`)
 
@@ -88,6 +160,55 @@ by Key Vault secret ref `callback-webhook-secret` (confirmed 2026-06-09).
 | Azure prod | `cdp-muv-api`, `cdp-muv-worker` |
 | Last deploy | 2026-06-10 — `cdpscraperprodacr.azurecr.io/cdp-muv-api:20260610-1448`, `cdpscraperprodacr.azurecr.io/cdp-muv-worker:20260610-1448` (v1 handoff GitHub sync) |
 | Azure dev | `cdp-muv-api-dev`, `cdp-muv-worker-dev` not present as of 2026-06-06 audit; scripts ready, but deployment requires DEV Key Vault access/secrets |
+
+### STOKAI production (`stokai-tk`)
+
+STOKAI is a separate CDP production resource group. `automation` remains the
+backup/rollback environment; n8n is not deployed in `stokai-tk`.
+
+| Item | Value |
+|------|-------|
+| Resource group | `stokai-tk` |
+| ACR | `cdpstokaitkacr` |
+| Key Vault | `cdp-stokai-kv-prod` |
+| Postgres | `cdp-stokai-pg-prod` / DB `cdp_scraper` |
+| Redis | `cdp-stokai-redis-prod` |
+| Container Apps env | `cdp-stokai-prod-env` |
+| Pull identity | `cdp-stokai-prod-pull` |
+| Scraper API | `cdp-stokai-scrapers-api-prod` → `https://cdp-stokai-scrapers-api-prod.bluewater-4bfb07b7.eastus2.azurecontainerapps.io` |
+| Scraper worker | `cdp-stokai-scrapers-worker-prod` |
+| StokAPI API | `cdp-stokai-muv-api` → `https://cdp-stokai-muv-api.bluewater-4bfb07b7.eastus2.azurecontainerapps.io` |
+| StokAPI worker | `cdp-stokai-muv-worker` (no ingress; background Redis worker) |
+| Images | scraper `cdpstokaitkacr.azurecr.io/cdp-scraper:20260610-2244`; StokAPI API `cdpstokaitkacr.azurecr.io/cdp-muv-api:20260612-1406`; StokAPI worker `cdpstokaitkacr.azurecr.io/cdp-muv-worker:20260612-1406` |
+| Validation | 2026-06-11: all four active revisions `Healthy`; health OK; Redis `Succeeded`; Postgres `Ready`; migrations at scraper `3c9a6b4e0d12` and StokAPI `20260608_0005`. IPRoyal/Melibox fixed and verified: `proxy-urls` populated in `cdp-stokai-kv-prod`, scraper API/worker revision `0000002` with `PROXY_ROTATION_ENABLED=true`, outbound IP `135.222.160.56`, Melibox lookup `51766536` returned `FOUND_PRICE` with 16 priced exact rows, best BRL 547.20. Scraper worker job `3de1919c-8d16-4bae-aff3-a3fa61317aba` completed with `FOUND_PRICE`; DB has 16 `part_results` priced exact rows. StokAPI job `91b8405a-83e2-4367-96d8-3194706e40a0` succeeded; DB has one `muvstok_api_data` row with `response_status=FOUND_PRICE`. STOKAI n8n callback smoke passed: scraper job `8cd465d5-3ae7-4c8a-9701-e38e0d7366c7`, StokAPI job `382e78df-84ee-4337-a5b1-39e5beaa49bf`, executions `3531`/`3532`/`3533` all `success`. Fresh GM smoke for prior SKU `22781768` returned `NOT_FOUND`, so use Melibox `51766536` as the current price-positive scraper gate. 2026-06-12 real email `.sku` batch `bg-mqa5vfos-4frs5b` completed: scraper job `40bd188f-1069-417b-9098-b30ddac7b346` processed 2/2 SKUs as `FOUND_PRICE`; StokAPI job `9933317c-85f9-4d80-8e89-ec2ce8b67637` succeeded; n8n pipeline-result callbacks reached the dispatch-run API at `00:02:30Z` and `00:05:59Z`. |
+| Next gate | Enable MCP visibility for STOKAI workflow copies if execution-history inspection is needed through MCP |
+
+Deployment fixes from validation:
+
+- `cdp-stokai-muv-api` had a stale 32-character Container App secret
+  `api-keys` while Key Vault `api-key` was 64 characters; refreshed the
+  Container App secret from Key Vault and restarted the API revision.
+- `cdp-stokai-muv-worker` was marked `Degraded` because it had internal HTTP
+  ingress despite being a background worker; disabled ingress for the live app
+  and set `WORKER_INGRESS_ENABLED=false` in the STOKAI wrapper.
+- `cdp-stokai-scrapers-*` had `PROXY_ROTATION_ENABLED=true` with empty
+  `proxy-urls`; live STOKAI scraper API/worker were set to
+  `PROXY_ROTATION_ENABLED=false`, and deploy scripts now auto-disable rotation
+  when no usable proxy URL is configured.
+- 2026-06-11 follow-up: STOKAI `proxy-urls`/Melibox secrets were applied from
+  the local IPRoyal config into `cdp-stokai-kv-prod` and the STOKAI scraper
+  API/worker; active revisions now have `PROXY_ROTATION_ENABLED=true` and
+  Melibox price smokes pass.
+- `cdp-stokai-muv-worker` emitted repeated Azure scaler errors for missing
+  HTTP metrics (`s0-upstream_rq_total`) even though it is a fixed Redis
+  consumer; live worker was pinned to min/max `1`, and the worker deploy script
+  now defaults to no ingress and one replica.
+- 2026-06-12 cache hardening: STOKAI scraper API/worker active revisions
+  `0000003` set `SCRAPE_CACHE_TTL_NOT_FOUND_SECONDS=86400` and
+  `SCRAPE_CACHE_TTL_BLOCKED_SECONDS=86400` to avoid same-day repeat Playwright
+  requests for the same SKU/site. Redis DB 1 was rehydrated for email batch
+  `bg-mqa5vfos-4frs5b` with 10 per-site keys at 24h TTL; repeat lookup for
+  `5U6959775` returned `cache_hits=5`, `live_scrapes=0`, all `from_cache=true`.
 
 ### Email aggregate delivery (live 2026-06-10)
 
@@ -135,6 +256,9 @@ by Key Vault secret ref `callback-webhook-secret` (confirmed 2026-06-09).
   final notifier message; `appendAttribution: false` enforced on notifier Telegram node.
 - Redis cache (2026-06-09): batch `bg-mq6q5741-gy2xzm` scraper job used `from_cache: true`
   for all site results (`force_refresh: false`); cache working as designed.
+- Redis cache (2026-06-12): scraper cache policy now keeps `success`,
+  `no_price`, `not_found`, and `blocked` site results for 24h; `error` and
+  `timeout` remain uncached.
 - Results sheet (2026-06-09): exec `2371` Detalhado/Histórico/Resumo saves succeeded for
   batch `bg-mq6q5741-gy2xzm`; intake SKUs tab D–F was the separate lineage bug above.
 - Callback handoff smoke (2026-06-09): batch
@@ -152,12 +276,12 @@ by Key Vault secret ref `callback-webhook-secret` (confirmed 2026-06-09).
 
 | Gap | Mitigation |
 |-----|------------|
-| BR ISP proxy KV persist | KV `proxy-urls` / melibox creds still need Secrets Officer for deploy durability |
+| BR ISP proxy KV persist | STOKAI KV/app proxy config is persisted and smoke-tested as of 2026-06-11; confirm whether the older `automation` prod KV persistence gap is still relevant before changing rollback prod |
 | `N8N_API_KEY` in `~/.cursor/mcp.json` | Use `muvstok-api/.env` or export `N8N_API_KEY` before `make sync-n8n` |
 | StokAPI dev Container Apps | `muvstok-api/scripts/deploy_muv_dev.sh` now creates/updates `cdp-muv-api-dev` and `cdp-muv-worker-dev`; requires dev KV DB/Redis/API/callback secrets and Muvstok credentials |
 | Legacy `scrapers/n8n/` removed | Platform n8n docs at `docs/n8n/` |
 | n8n MCP disabled on `cdp_progress`, `cdp_notifier`, and DEV copies | Enable MCP access from each n8n workflow card/settings, then rerun MCP inspection/publish |
-| DEV Key Vault RBAC unavailable for current Azure identity | Grant secret metadata/value access or run DEV CD with configured GitHub environment secrets |
+| DEV Key Vault RBAC unavailable for current Azure identity | GitHub DEV OIDC SP has `Key Vault Secrets User`; current interactive Azure user still lacks DEV KV read RBAC, so confirm DEV secrets through CI or grant temporary read access |
 
 ## Changelog (abbreviated)
 

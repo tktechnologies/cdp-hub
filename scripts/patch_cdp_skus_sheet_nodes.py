@@ -18,11 +18,8 @@ WORKFLOWS = [
 ]
 
 CDP_SKUS_DOC_ID = "1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII"
-CDP_SKUS_GID = 843035952
 CDP_SKUS_TAB = "SKUs"
-CDP_SKUS_SHEET_URL = (
-    f"https://docs.google.com/spreadsheets/d/{CDP_SKUS_DOC_ID}/edit#gid={CDP_SKUS_GID}"
-)
+CDP_SKUS_SHEET_URL = f"https://docs.google.com/spreadsheets/d/{CDP_SKUS_DOC_ID}/edit"
 SHEETS_CREDENTIALS = {
     "googleSheetsOAuth2Api": {
         "id": "ep05fPlF3xggWhWc",
@@ -40,8 +37,8 @@ SHARED_SRC = ROOT / "n8n" / "src"
 def cdp_skus_sheet_ref() -> dict:
     return {
         "__rl": True,
-        "value": CDP_SKUS_GID,
-        "mode": "list",
+        "value": CDP_SKUS_TAB,
+        "mode": "name",
         "cachedResultName": CDP_SKUS_TAB,
         "cachedResultUrl": CDP_SKUS_SHEET_URL,
     }

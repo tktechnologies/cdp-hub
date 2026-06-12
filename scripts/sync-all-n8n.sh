@@ -6,9 +6,9 @@ cd "$ROOT"
 N8N_TARGET="${N8N_TARGET:-prod}"
 
 case "$N8N_TARGET" in
-  prod|dev) ;;
+  prod|dev|stokai) ;;
   *)
-    echo "N8N_TARGET must be prod or dev (got: ${N8N_TARGET})" >&2
+    echo "N8N_TARGET must be prod, dev, or stokai (got: ${N8N_TARGET})" >&2
     exit 1
     ;;
 esac
@@ -48,7 +48,10 @@ fi
 
 if [[ "$N8N_TARGET" == "dev" ]]; then
   echo "==> Generate DEV workflow copies in shared n8n model"
-  python3 scripts/generate_dev_n8n_workflows.py --require-telegram-credential
+  python3 scripts/generate_dev_n8n_workflows.py --target dev --require-telegram-credential
+elif [[ "$N8N_TARGET" == "stokai" ]]; then
+  echo "==> Generate STOKAI workflow copies in shared n8n model"
+  python3 scripts/generate_dev_n8n_workflows.py --target stokai
 fi
 
 mkdir -p n8n/sdk
@@ -90,7 +93,7 @@ if [[ "$N8N_TARGET" == "prod" ]]; then
   NOTIFIER_NAME="cdp_notifier"
   NOTIFIER_SDK="n8n/sdk/cdp_notifier.workflow.ts"
   NOTIFIER_DESC="CDP notifier: single final message after dual pipeline"
-else
+elif [[ "$N8N_TARGET" == "dev" ]]; then
   require_env CDP_DEV_ROUTER_WORKFLOW_ID
   require_env CDP_DEV_SCRAPER_WORKFLOW_ID
   require_env CDP_DEV_STOKAPI_WORKFLOW_ID
@@ -125,6 +128,41 @@ else
   NOTIFIER_NAME="DEV - cdp_notifier"
   NOTIFIER_SDK="n8n/sdk/dev_cdp_notifier.workflow.ts"
   NOTIFIER_DESC="DEV CDP notifier: single final message after dual pipeline"
+else
+  require_env CDP_STOKAI_ROUTER_WORKFLOW_ID
+  require_env CDP_STOKAI_SCRAPER_WORKFLOW_ID
+  require_env CDP_STOKAI_STOKAPI_WORKFLOW_ID
+  require_env CDP_STOKAI_PROGRESS_WORKFLOW_ID
+
+  ROUTER_ID="${CDP_STOKAI_ROUTER_WORKFLOW_ID}"
+  SCRAPER_ID="${CDP_STOKAI_SCRAPER_WORKFLOW_ID}"
+  STOKAPI_ID="${CDP_STOKAI_STOKAPI_WORKFLOW_ID}"
+  PROGRESS_ID="${CDP_STOKAI_PROGRESS_WORKFLOW_ID}"
+
+  ROUTER_JSON="n8n/workflows/stokai/stokai_cdp_router.json"
+  SCRAPER_JSON="n8n/workflows/stokai/stokai_cdp_scraper.json"
+  STOKAPI_JSON="n8n/workflows/stokai/stokai_cdp_stokapi.json"
+  PROGRESS_JSON="n8n/workflows/stokai/stokai_cdp_progress.json"
+
+  ROUTER_NAME="STOKAI - cdp_router"
+  SCRAPER_NAME="STOKAI - cdp_scraper"
+  STOKAPI_NAME="STOKAI - cdp_stokapi"
+  PROGRESS_NAME="STOKAI - cdp_progress"
+
+  ROUTER_SDK="n8n/sdk/stokai_cdp_router.workflow.ts"
+  SCRAPER_SDK="n8n/sdk/stokai_cdp_scraper.workflow.ts"
+  STOKAPI_SDK="n8n/sdk/stokai_cdp_stokapi.workflow.ts"
+  PROGRESS_SDK="n8n/sdk/stokai_cdp_progress.workflow.ts"
+
+  ROUTER_DESC="STOKAI CDP router: production channels -> STOKAI Scraper + STOKAI StokAPI"
+  SCRAPER_DESC="STOKAI CDP scraper receiver: webhook stokai-scraper-result"
+  STOKAPI_DESC="STOKAI CDP StokAPI receiver: webhook stokai-muvstok-result"
+  PROGRESS_DESC="STOKAI CDP progress: proactive Telegram while STOKAI runs active"
+  NOTIFIER_ID="${CDP_STOKAI_NOTIFIER_WORKFLOW_ID:-}"
+  NOTIFIER_JSON="n8n/workflows/stokai/stokai_cdp_notifier.json"
+  NOTIFIER_NAME="STOKAI - cdp_notifier"
+  NOTIFIER_SDK="n8n/sdk/stokai_cdp_notifier.workflow.ts"
+  NOTIFIER_DESC="STOKAI CDP notifier: single final message after dual pipeline"
 fi
 
 gen_sdk "$ROUTER_JSON" "$ROUTER_ID" "$ROUTER_NAME" "$ROUTER_SDK"

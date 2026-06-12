@@ -40,8 +40,12 @@ Examples:
   `sku_result=BLOCKED`, `source_health=BLOCKED`.
 - Sheet receivers write seller metadata as `vendedor`, `uf`, `empresa`, `cnpj`.
   Raw `estado` aliases are accepted only to normalize into `uf`.
-- Rows with `codigoFilial` are enriched from the dealership directory before
-  persistence/callback so `uf` and related filial metadata are available to n8n.
+- Rows are enriched from the dealership directory before persistence/callback so
+  `uf` and related filial metadata are available to n8n. The directory loads
+  from Postgres and may fall back to the configured directory CSV when enabled.
+  The primary match is `codigoFilial`; when the upstream row omits that id, the
+  fallback is an exact normalized branch/seller name that is unique in the
+  directory.
 
 ## Rules
 

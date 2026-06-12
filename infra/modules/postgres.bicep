@@ -1,6 +1,7 @@
 param serverName string
 param databaseName string
 param n8nDatabaseName string
+param deployN8n bool = true
 param adminUser string
 @secure()
 param adminPassword string
@@ -45,7 +46,7 @@ resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-0
   }
 }
 
-resource n8nDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-preview' = {
+resource n8nDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-preview' = if (deployN8n) {
   name: n8nDatabaseName
   parent: server
   properties: {
@@ -65,4 +66,4 @@ resource allowAzureServices 'Microsoft.DBforPostgreSQL/flexibleServers/firewallR
 
 output hostName string = server.properties.fullyQualifiedDomainName
 output databaseName string = database.name
-output n8nDatabaseName string = n8nDatabase.name
+output n8nDatabaseName string = deployN8n ? n8nDatabase!.name : ''

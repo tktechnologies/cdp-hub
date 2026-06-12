@@ -9,6 +9,7 @@ Copy the **Prompt** block from the file that matches your task into a new agent 
 | **n8n** (router, receivers, sync — no publish without approval) | [n8n.md](n8n.md) |
 | **Google Sheets reporting** (dashboards, formulas, pivots, `.xlsx`) | [google-sheets.md](google-sheets.md) |
 | **Infrastructure** (Azure, Bicep, deploy, Key Vault) | [infrastructure.md](infrastructure.md) |
+| **STOKAI audit / price smoke / cutover prep** | [stokai-audit-cutover.md](stokai-audit-cutover.md) |
 | **Agent workspace** (`.agent/`, agent rules, docs alignment) | [agent-workspace.md](agent-workspace.md) |
 | **Platform / full stack** (router + both APIs + contracts) | [platform-fullstack.md](platform-fullstack.md) |
 

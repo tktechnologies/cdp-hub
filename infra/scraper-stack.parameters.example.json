@@ -11,6 +11,12 @@
     "meliboxPass": {
       "value": ""
     },
+    "muvstokUser": {
+      "value": ""
+    },
+    "muvstokPassword": {
+      "value": ""
+    },
     "apiKey": {
       "value": "REPLACE_WITH_API_KEY"
     },
@@ -30,6 +36,9 @@
       "value": 2
     },
     "deployContainerApps": {
+      "value": true
+    },
+    "deployN8n": {
       "value": true
     },
     "deployProxyPool": {

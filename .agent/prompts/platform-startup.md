@@ -22,6 +22,7 @@
 | `n8n/src`, `.analisar`, platform workflow sync | Platform → `n8n-router-sync` skill |
 | Playwright, scrape cache, Celery | Scraper → `scrapers/AGENTS.md` |
 | API Diversos/StokAPI jobs, Redis Streams worker | StokAPI → `muvstok-api/AGENTS.md` |
+| STOKAI `stokai-tk` audit, price smoke, n8n cutover prep | `.agent/prompts/maintenance/stokai-audit-cutover.md` |
 | Only `cdp_scraper.json` flatten logic | Scraper service |
 | Only `cdp_stokapi.json` | StokAPI service |
 

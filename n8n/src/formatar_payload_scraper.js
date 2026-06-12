@@ -36,31 +36,41 @@ function workflowName() {
   } catch (e) {}
   return '';
 }
-function isDevWorkflow() {
-  return /^DEV\s*-/i.test(workflowName());
+function workflowTarget() {
+  const name = workflowName();
+  if (/^DEV\s*-/i.test(name)) return 'dev';
+  if (/^STOKAI\s*-/i.test(name)) return 'stokai';
+  return 'prod';
 }
-function devEnvName(name) {
+function isDevWorkflow() {
+  return workflowTarget() === 'dev';
+}
+function targetEnvName(name, target) {
+  const prefix = target === 'stokai' ? 'CDP_STOKAI' : 'CDP_DEV';
   const map = {
-    CDP_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',
-    MUVSTOK_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',
-    CDP_API_KEY: 'CDP_DEV_API_KEY',
-    MUVSTOK_API_KEY: 'CDP_DEV_API_KEY',
-    API_KEY: 'CDP_DEV_API_KEY',
-    CDP_SCRAPER_BATCH_SIZE: 'CDP_DEV_SCRAPER_BATCH_SIZE',
-    CDP_SCRAPER_SITES: 'CDP_DEV_SCRAPER_SITES',
-    WEBHOOK_URL: 'CDP_DEV_WEBHOOK_URL',
-    CDP_N8N_WEBHOOK_URL: 'CDP_DEV_N8N_WEBHOOK_URL',
-    CDP_N8N_WEBHOOK_PATH: 'CDP_DEV_N8N_WEBHOOK_PATH',
+    CDP_SCRAPER_API_BASE: `${prefix}_SCRAPER_API_BASE`,
+    MUVSTOK_SCRAPER_API_BASE: `${prefix}_SCRAPER_API_BASE`,
+    CDP_API_KEY: `${prefix}_API_KEY`,
+    MUVSTOK_API_KEY: `${prefix}_API_KEY`,
+    API_KEY: `${prefix}_API_KEY`,
+    CDP_SCRAPER_BATCH_SIZE: `${prefix}_SCRAPER_BATCH_SIZE`,
+    CDP_SCRAPER_SITES: `${prefix}_SCRAPER_SITES`,
+    WEBHOOK_URL: `${prefix}_WEBHOOK_URL`,
+    CDP_N8N_WEBHOOK_URL: `${prefix}_N8N_WEBHOOK_URL`,
+    CDP_N8N_WEBHOOK_PATH: `${prefix}_N8N_WEBHOOK_PATH`,
   };
   return map[name] || '';
 }
 function envFor(name) {
-  if (!isDevWorkflow()) return env(name);
-  const mapped = devEnvName(name);
+  const target = workflowTarget();
+  if (target === 'prod') return env(name);
+  const mapped = targetEnvName(name, target);
   const value = mapped ? env(mapped) : '';
   if (value) return value;
   if (name === 'WEBHOOK_URL') return env('WEBHOOK_URL') || DEFAULT_N8N_WEBHOOK_BASE;
-  if (name === 'CDP_N8N_WEBHOOK_PATH') return 'webhook/dev-scraper-result';
+  if (name === 'CDP_N8N_WEBHOOK_PATH') {
+    return target === 'stokai' ? 'webhook/stokai-scraper-result' : 'webhook/dev-scraper-result';
+  }
   return '';
 }
 function envList(name) {
@@ -103,7 +113,7 @@ const commandRoute = String(data.command_route || 'analisar');
 const scraperApiBase = trimTrailingSlashes(
   envFor('CDP_SCRAPER_API_BASE') ||
     envFor('MUVSTOK_SCRAPER_API_BASE') ||
-    (isDevWorkflow() ? '' : DEFAULT_SCRAPER_API_BASE)
+    (workflowTarget() === 'prod' ? DEFAULT_SCRAPER_API_BASE : '')
 );
 const apiKey = envFor('CDP_API_KEY') || envFor('MUVSTOK_API_KEY') || envFor('API_KEY');
 const batchSizeRaw = Number(envFor('CDP_SCRAPER_BATCH_SIZE') || DEFAULT_BATCH_SIZE);
@@ -168,7 +178,7 @@ if (!callbackUrl) {
   const rel = trimSlashes(envFor('CDP_N8N_WEBHOOK_PATH') || 'webhook/scraper-result');
   if (base) callbackUrl = base + '/' + rel;
 }
-if (!callbackUrl && !isDevWorkflow()) {
+if (!callbackUrl && workflowTarget() === 'prod') {
   callbackUrl = 'https://automacao.tktechnologies.com.br/webhook/scraper-result';
 }
 

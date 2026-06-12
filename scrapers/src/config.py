@@ -140,8 +140,8 @@ class Settings(BaseSettings):
     # --- Scrape result cache (Redis, anti-bot) ---
     scrape_cache_enabled: bool = True
     scrape_cache_ttl_seconds: int = 86400
-    scrape_cache_ttl_not_found_seconds: int = 21600
-    scrape_cache_ttl_blocked_seconds: int = 1800
+    scrape_cache_ttl_not_found_seconds: int = 86400
+    scrape_cache_ttl_blocked_seconds: int = 86400
     scrape_cache_pg_fallback: bool = True
     scrape_cache_bypass_statuses: list[str] = ["error", "timeout"]
 

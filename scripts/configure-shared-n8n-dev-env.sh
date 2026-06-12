@@ -5,6 +5,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 RG="${RESOURCE_GROUP:-automation}"
 APP="${N8N_APP_NAME:-cdp-n8n-prod}"
+DEV_RESOURCE_GROUP="${CDP_DEV_RESOURCE_GROUP:-${RESOURCE_GROUP:-automation}}"
+DEV_KEY_VAULT_NAME="${CDP_DEV_KEY_VAULT_NAME:-cdp-scrapers-kv-dev}"
+DEV_SCRAPER_APP_NAME="${CDP_DEV_SCRAPER_APP_NAME:-cdp-scrapers-api-dev}"
+DEV_MUVSTOK_APP_NAME="${CDP_DEV_MUVSTOK_APP_NAME:-cdp-muv-api-dev}"
 
 require_env() {
   local name="$1"
@@ -14,6 +18,36 @@ require_env() {
   fi
 }
 
+containerapp_url() {
+  local app_name="$1"
+  local fqdn
+  fqdn="$(az containerapp show \
+    --resource-group "${DEV_RESOURCE_GROUP}" \
+    --name "${app_name}" \
+    --query properties.configuration.ingress.fqdn \
+    -o tsv 2>/dev/null | tr -d '\r\n' || true)"
+  if [[ -n "${fqdn}" ]]; then
+    printf 'https://%s' "${fqdn}"
+  fi
+}
+
+kv_secret() {
+  local name="$1"
+  az keyvault secret show \
+    --vault-name "${DEV_KEY_VAULT_NAME}" \
+    --name "${name}" \
+    --query value \
+    -o tsv 2>/dev/null | tr -d '\r' || true
+}
+
+CDP_DEV_SCRAPER_API_BASE="${CDP_DEV_SCRAPER_API_BASE:-$(containerapp_url "${DEV_SCRAPER_APP_NAME}")}"
+CDP_DEV_MUVSTOK_API_BASE="${CDP_DEV_MUVSTOK_API_BASE:-$(containerapp_url "${DEV_MUVSTOK_APP_NAME}")}"
+TELEGRAM_DEV_BOT_TOKEN="${TELEGRAM_DEV_BOT_TOKEN:-$(kv_secret telegram-dev-bot-token)}"
+CDP_DEV_API_KEY="${CDP_DEV_API_KEY:-$(kv_secret api-key)}"
+CDP_DEV_MUVSTOK_API_KEY="${CDP_DEV_MUVSTOK_API_KEY:-${CDP_DEV_API_KEY}}"
+CDP_DEV_CALLBACK_WEBHOOK_SECRET="${CDP_DEV_CALLBACK_WEBHOOK_SECRET:-$(kv_secret callback-webhook-secret)}"
+CDP_DEV_MUVSTOK_CALLBACK_WEBHOOK_SECRET="${CDP_DEV_MUVSTOK_CALLBACK_WEBHOOK_SECRET:-${CDP_DEV_CALLBACK_WEBHOOK_SECRET}}"
+
 # Required for DEV Telegram + API routing on shared n8n.
 require_env TELEGRAM_DEV_ALLOWED_CHAT_IDS
 require_env TELEGRAM_DEV_BOT_TOKEN
@@ -21,11 +55,6 @@ require_env CDP_DEV_SCRAPER_API_BASE
 require_env CDP_DEV_SKUS_SHEET_ID
 require_env CDP_DEV_RESULTADOS_SHEET_ID
 
-CDP_DEV_MUVSTOK_API_BASE="${CDP_DEV_MUVSTOK_API_BASE:-}"
-CDP_DEV_API_KEY="${CDP_DEV_API_KEY:-}"
-CDP_DEV_MUVSTOK_API_KEY="${CDP_DEV_MUVSTOK_API_KEY:-}"
-CDP_DEV_CALLBACK_WEBHOOK_SECRET="${CDP_DEV_CALLBACK_WEBHOOK_SECRET:-}"
-CDP_DEV_MUVSTOK_CALLBACK_WEBHOOK_SECRET="${CDP_DEV_MUVSTOK_CALLBACK_WEBHOOK_SECRET:-}"
 CDP_DEV_WEBHOOK_URL="${CDP_DEV_WEBHOOK_URL:-https://automacao.tktechnologies.com.br/}"
 CDP_DEV_N8N_WEBHOOK_PATH="${CDP_DEV_N8N_WEBHOOK_PATH:-webhook/dev-scraper-result}"
 CDP_DEV_MUVSTOK_WEBHOOK_PATH="${CDP_DEV_MUVSTOK_WEBHOOK_PATH:-webhook/dev-muvstok-result}"

@@ -4,6 +4,7 @@
 	lint lint-all format-all check-muvstok \
 	setup clean \
 	inject-n8n sync-n8n-prep sync-n8n n8n-dev-workflows n8n-dev-sdk sync-n8n-dev import-n8n-dev \
+	n8n-stokai-workflows n8n-stokai-sdk sync-n8n-stokai import-n8n-stokai \
 	smoke-cache interview-demo \
 	migrate-scraper migrate-stokapi \
 	bicep-build bicep-what-if bicep-validate \
@@ -107,10 +108,11 @@ n8n-dev-workflows: ## Generate DEV workflow JSON copies for shared n8n
 	python3 $(ROOT)scripts/sync_workflow_code_from_shared.py
 	python3 $(ROOT)scripts/build_cdp_notifier_workflow.py
 	python3 $(ROOT)scripts/patch_cdp_notifier_workflow.py
+	python3 $(ROOT)scripts/patch_cdp_skus_sheet_nodes.py
 	python3 $(ROOT)scripts/patch_receiver_notifier_handoff.py
 	python3 $(ROOT)scrapers/scripts/patch_scraper_receiver_workflow.py
 	python3 $(ROOT)muvstok-api/scripts/patch_muvstok_receiver_workflow.py
-	python3 $(ROOT)scripts/generate_dev_n8n_workflows.py
+	python3 $(ROOT)scripts/generate_dev_n8n_workflows.py --target dev
 	$(MAKE) n8n-dev-sdk
 
 n8n-dev-sdk: ## Generate DEV workflow SDK files from DEV JSON copies
@@ -124,14 +126,37 @@ n8n-dev-sdk: ## Generate DEV workflow SDK files from DEV JSON copies
 sync-n8n-dev: ## Push DEV workflow copies to shared n8n (requires DEV workflow IDs)
 	N8N_TARGET=dev bash $(ROOT)scripts/sync-all-n8n.sh
 
+n8n-stokai-workflows: ## Generate STOKAI workflow JSON copies for shared n8n
+	python3 $(ROOT)scripts/sync_workflow_code_from_shared.py
+	python3 $(ROOT)scripts/build_cdp_notifier_workflow.py
+	python3 $(ROOT)scripts/patch_cdp_notifier_workflow.py
+	python3 $(ROOT)scripts/patch_cdp_skus_sheet_nodes.py
+	python3 $(ROOT)scripts/patch_receiver_notifier_handoff.py
+	python3 $(ROOT)scrapers/scripts/patch_scraper_receiver_workflow.py
+	python3 $(ROOT)muvstok-api/scripts/patch_muvstok_receiver_workflow.py
+	python3 $(ROOT)scripts/generate_dev_n8n_workflows.py --target stokai
+	$(MAKE) n8n-stokai-sdk
+
+n8n-stokai-sdk: ## Generate STOKAI workflow SDK files from STOKAI JSON copies
+	mkdir -p $(ROOT)n8n/sdk
+	node $(ROOT)scrapers/scripts/n8n_workflow_json_to_sdk.mjs $(ROOT)n8n/workflows/stokai/stokai_cdp_router.json --workflow-id=$${CDP_STOKAI_ROUTER_WORKFLOW_ID:-stokai-router-local} --workflow-name="STOKAI - cdp_router" > $(ROOT)n8n/sdk/stokai_cdp_router.workflow.ts
+	node $(ROOT)scrapers/scripts/n8n_workflow_json_to_sdk.mjs $(ROOT)n8n/workflows/stokai/stokai_cdp_scraper.json --workflow-id=$${CDP_STOKAI_SCRAPER_WORKFLOW_ID:-stokai-scraper-local} --workflow-name="STOKAI - cdp_scraper" > $(ROOT)n8n/sdk/stokai_cdp_scraper.workflow.ts
+	node $(ROOT)scrapers/scripts/n8n_workflow_json_to_sdk.mjs $(ROOT)n8n/workflows/stokai/stokai_cdp_stokapi.json --workflow-id=$${CDP_STOKAI_STOKAPI_WORKFLOW_ID:-stokai-stokapi-local} --workflow-name="STOKAI - cdp_stokapi" > $(ROOT)n8n/sdk/stokai_cdp_stokapi.workflow.ts
+	node $(ROOT)scrapers/scripts/n8n_workflow_json_to_sdk.mjs $(ROOT)n8n/workflows/stokai/stokai_cdp_progress.json --workflow-id=$${CDP_STOKAI_PROGRESS_WORKFLOW_ID:-stokai-progress-local} --workflow-name="STOKAI - cdp_progress" > $(ROOT)n8n/sdk/stokai_cdp_progress.workflow.ts
+	node $(ROOT)scrapers/scripts/n8n_workflow_json_to_sdk.mjs $(ROOT)n8n/workflows/stokai/stokai_cdp_notifier.json --workflow-id=$${CDP_STOKAI_NOTIFIER_WORKFLOW_ID:-stokai-notifier-local} --workflow-name="STOKAI - cdp_notifier" > $(ROOT)n8n/sdk/stokai_cdp_notifier.workflow.ts
+
+sync-n8n-stokai: ## Push STOKAI workflow copies to shared n8n (requires STOKAI workflow IDs)
+	N8N_TARGET=stokai bash $(ROOT)scripts/sync-all-n8n.sh
+
 import-n8n-dev: ## First import of DEV workflow copies; prints CDP_DEV_* IDs
 	python3 $(ROOT)scripts/sync_workflow_code_from_shared.py
 	python3 $(ROOT)scripts/build_cdp_notifier_workflow.py
 	python3 $(ROOT)scripts/patch_cdp_notifier_workflow.py
+	python3 $(ROOT)scripts/patch_cdp_skus_sheet_nodes.py
 	python3 $(ROOT)scripts/patch_receiver_notifier_handoff.py
 	python3 $(ROOT)scrapers/scripts/patch_scraper_receiver_workflow.py
 	python3 $(ROOT)muvstok-api/scripts/patch_muvstok_receiver_workflow.py
-	python3 $(ROOT)scripts/generate_dev_n8n_workflows.py --require-telegram-credential
+	python3 $(ROOT)scripts/generate_dev_n8n_workflows.py --target dev --require-telegram-credential
 	$(MAKE) n8n-dev-sdk
 	@echo "CDP_DEV_ROUTER_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_router.json --publish)"
 	@echo "CDP_DEV_SCRAPER_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_scraper.json --publish)"
@@ -139,6 +164,22 @@ import-n8n-dev: ## First import of DEV workflow copies; prints CDP_DEV_* IDs
 	@echo "CDP_DEV_PROGRESS_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_progress.json --publish)"
 	@echo "CDP_DEV_NOTIFIER_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_notifier.json --publish)"
 	@echo "CDP_DEV_NOTIFIER_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/dev/dev_cdp_notifier.json --publish)"
+
+import-n8n-stokai: ## First import of STOKAI workflow copies; router/progress stay inactive
+	python3 $(ROOT)scripts/sync_workflow_code_from_shared.py
+	python3 $(ROOT)scripts/build_cdp_notifier_workflow.py
+	python3 $(ROOT)scripts/patch_cdp_notifier_workflow.py
+	python3 $(ROOT)scripts/patch_cdp_skus_sheet_nodes.py
+	python3 $(ROOT)scripts/patch_receiver_notifier_handoff.py
+	python3 $(ROOT)scrapers/scripts/patch_scraper_receiver_workflow.py
+	python3 $(ROOT)muvstok-api/scripts/patch_muvstok_receiver_workflow.py
+	python3 $(ROOT)scripts/generate_dev_n8n_workflows.py --target stokai
+	$(MAKE) n8n-stokai-sdk
+	@echo "CDP_STOKAI_ROUTER_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/stokai/stokai_cdp_router.json)"
+	@echo "CDP_STOKAI_SCRAPER_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/stokai/stokai_cdp_scraper.json --publish)"
+	@echo "CDP_STOKAI_STOKAPI_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/stokai/stokai_cdp_stokapi.json --publish)"
+	@echo "CDP_STOKAI_PROGRESS_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/stokai/stokai_cdp_progress.json)"
+	@echo "CDP_STOKAI_NOTIFIER_WORKFLOW_ID=$$(python3 $(ROOT)scripts/n8n_import_workflow.py --json $(ROOT)n8n/workflows/stokai/stokai_cdp_notifier.json --publish)"
 
 # ─── Integration smoke / demos ───────────────────────────────────────────────
 smoke-cache: ## Dual-pipeline smoke (production APIs)

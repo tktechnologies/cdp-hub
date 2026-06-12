@@ -1,20 +1,28 @@
 # CDP n8n — Live workflows
 
-Last verified: 2026-06-10.
+Last verified: 2026-06-12.
 
-Production truth lives in this document. DEV workflow copies run in the same
-n8n instance under names prefixed `DEV - ...`; their IDs are tracked in
+Production truth lives in this document. As of the 2026-06-11 STOKAI cutover,
+production Telegram/email/schedule traffic is handled by `STOKAI - cdp_router`
+and `STOKAI - cdp_progress`; the original `cdp_router` / `cdp_progress` are
+inactive rollback workflows. DEV workflow copies run in the same n8n instance
+under names prefixed `DEV - ...`; their IDs are tracked in
 [.agent/memory/implementation-state.md](../../.agent/memory/implementation-state.md).
 Do not use `cdp-n8n-dev` for CDP DEV traffic unless a later approved plan
 changes the operating model.
 
-| Workflow | Live ID | Webhook / trigger | Role |
-|----------|---------|-------------------|------|
-| **cdp_router** | `6id6dkinK9xTLfsb` | Telegram, Gmail, schedule | Orchestrator: `.analisar` / `.sku` → Scraper + StokAPI |
-| **cdp_scraper** | `VfBSV3WU6on8BXm8` | `POST /webhook/scraper-result` | Scraper job callbacks → sheets + notify |
-| **cdp_stokapi** | `t160mzGPYYlJcrjZ` | `POST /webhook/muvstok-result` | Muvstok job callbacks → sheets + notify |
-| **cdp_progress** | `V9I6o32XDoPIRarz` | Schedule (`CDP_PROGRESS_INTERVAL_MIN`, default 10) | Proactive Telegram progress while runs are active |
-| **cdp_notifier** | `ennI9nKin9ruPaLO` | `POST /webhook/cdp-notifier` | Single final Telegram/email after both pipelines finish; email includes job-scoped CSV (`delivery_mode: aggregate`) |
+| Workflow | Live ID | State | Webhook / trigger | Role |
+|----------|---------|-------|-------------------|------|
+| **STOKAI - cdp_router** | `wjwdSgwc2b017mjG` | active | Telegram, Gmail, schedule | Orchestrator: `.analisar` / `.sku` → STOKAI Scraper + StokAPI |
+| **STOKAI - cdp_scraper** | `MZVx4YwXrQVy5aua` | active | `POST /webhook/stokai-scraper-result` | STOKAI Scraper job callbacks → sheets + notify |
+| **STOKAI - cdp_stokapi** | `IV1756ZgTBL6x7lL` | active | `POST /webhook/stokai-muvstok-result` | STOKAI StokAPI callbacks → sheets + notify |
+| **STOKAI - cdp_progress** | `bI2HteRYIvOvGsjN` | active | Schedule (`CDP_STOKAI_PROGRESS_INTERVAL_MIN`, default 10) | Proactive Telegram progress while STOKAI runs are active |
+| **STOKAI - cdp_notifier** | `6CUB7JFG5Jy5D09z` | active | `POST /webhook/stokai-cdp-notifier` | Single final Telegram/email after both STOKAI pipelines finish |
+| `cdp_router` | `6id6dkinK9xTLfsb` | inactive rollback | Telegram, Gmail, schedule | Original automation router |
+| `cdp_progress` | `V9I6o32XDoPIRarz` | inactive rollback | Schedule | Original automation progress |
+| `cdp_scraper` | `VfBSV3WU6on8BXm8` | active rollback receiver | `POST /webhook/scraper-result` | Original Scraper job callbacks |
+| `cdp_stokapi` | `t160mzGPYYlJcrjZ` | active rollback receiver | `POST /webhook/muvstok-result` | Original StokAPI callbacks |
+| `cdp_notifier` | `ennI9nKin9ruPaLO` | active rollback notifier | `POST /webhook/cdp-notifier` | Original aggregate notifier |
 
 Deprecated: `cdp_muvstok-api_starter` (`PXLHDzRbBVgs8Xl2`) — use `cdp_router` for production dispatch.
 
@@ -31,6 +39,60 @@ DEV copies are generated from the same source JSON with
 `scripts/generate_dev_n8n_workflows.py`. They use `dev-scraper-result`,
 `dev-muvstok-result`, and `dev-cdp-notifier` webhook paths, DEV-prefixed n8n env,
 DEV Telegram credential, and DEV Google Sheets IDs.
+
+STOKAI copies are generated from the same source JSON with
+`make n8n-stokai-workflows`. They use `stokai-scraper-result`,
+`stokai-muvstok-result`, and `stokai-cdp-notifier` webhook paths, plus
+`CDP_STOKAI_*` n8n env vars. Import with `make import-n8n-stokai`; after
+direct STOKAI price smokes and receiver callback smokes pass, cut over by
+deactivating original `cdp_router` / `cdp_progress` and activating
+`STOKAI - cdp_router` / `STOKAI - cdp_progress`. Record imported workflow IDs
+in [.agent/memory/implementation-state.md](../../.agent/memory/implementation-state.md).
+
+Latest STOKAI cutover (2026-06-11): original `cdp_router`
+`6id6dkinK9xTLfsb` and `cdp_progress` `V9I6o32XDoPIRarz` deactivated;
+`STOKAI - cdp_router` `wjwdSgwc2b017mjG` and `STOKAI - cdp_progress`
+`bI2HteRYIvOvGsjN` activated. Pre-cutover callback smoke succeeded with
+executions `3531` (`STOKAI - cdp_scraper`), `3532` (`STOKAI - cdp_stokapi`),
+and `3533` (`STOKAI - cdp_notifier`).
+
+Latest STOKAI Sheets endpoint rollback (2026-06-12): active STOKAI router,
+scraper receiver, StokAPI receiver, and notifier were patched directly via n8n
+REST + REST reactivation fallback to use the approved workbook IDs
+`1IGhsIhrwlnMaCduR-W-eIi9O4mMO2pPYjE-tefgIPII` (SKUs; tab selected by name) and
+`1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo` (Resultados; report link
+`gid=2127243308`). Verification rerun was idempotent (`0/4` changed), and
+`cdp-n8n-prod` has no `CDP_RESULTADOS_SHEETS_URL` override.
+
+Latest STOKAI email recovery (2026-06-12): Gmail `.analisar` execution `3856`
+started Scraper job `2b5bc112-faa1-4fff-a862-656d4deb495b` for batch
+`bg-mqb7jdkx-92hyo0`, but API Diversos dispatch returned `401 Invalid API key`
+because `cdp-stokai-muv-api` still had a stale 32-character `api-keys`
+Container App secret while Key Vault/n8n used the current 64-character
+`api-key`. The API app secret was refreshed from `cdp-stokai-kv-prod`, the
+active API revision was restarted, and an authenticated probe returned `404`
+for a nonexistent job (auth accepted). The missing API Diversos arm was resumed
+as job `d1db1a02-cb0b-4151-a939-c37143f46598`; receiver execution `3876` and
+notifier execution `3877` succeeded, and the dispatch run was patched to
+`final_notification_status=sent`, `final_channel=email`. `STOKAI - cdp_notifier`
+was updated by REST + REST reactivation fallback so `PATCH final-notification`
+uses `CDP_STOKAI_SCRAPER_API_BASE` / `CDP_STOKAI_API_KEY` (MCP still disabled
+on the workflow card). The same incident exposed silent execution `3853`, where
+`📊 Ler CDP_SKUs` returned 0 rows and the router ended without replying. The live
+`STOKAI - cdp_router` was updated by REST + REST reactivation fallback so the
+sheet read always emits an empty item, DQ treats that item as 0 rows, the
+confirmation branch replies with `Consulta CDP sem peças pendentes`, and API
+Diversos error formatting unwraps object-shaped errors instead of rendering
+`[object Object]`. Live read-back confirmed the router is active with
+`alwaysOutputData`, DQ blank filtering, empty reply text, and `compactError`.
+
+Latest repo sync (2026-06-12): `make sync-n8n-dev` and
+`make sync-n8n-stokai` published all DEV and STOKAI workflow copies through
+n8n REST, with REST reactivation fallback because MCP is not enabled on those
+workflow cards. Read-back confirmed all five DEV workflows and all five STOKAI
+workflows are active with expected node counts. The original rollback
+`cdp_router` and `cdp_progress` remained inactive; rollback
+`cdp_scraper`, `cdp_stokapi`, and `cdp_notifier` remained active.
 
 For one-off structural patches that are awkward as full JSON replace, use MCP `update_workflow` `operations` + `publish_workflow`.
 

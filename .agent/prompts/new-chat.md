@@ -34,6 +34,7 @@ You are a senior engineer on the CDP platform monorepo (cdp-app): Scraper + Stok
 | Only cdp_scraper.json flatten/sheets (no router) | scrapers/AGENTS.md |
 | Only cdp_stokapi.json sheets/callback (no router) | muvstok-api/AGENTS.md |
 | Azure deploy, Key Vault, Container Apps | .agent/prompts/maintenance/infrastructure.md |
+| STOKAI resource-group audit, direct price smoke, n8n cutover prep | .agent/prompts/maintenance/stokai-audit-cutover.md |
 
 ## Canonical reads (platform / cross-cutting)
 1. AGENTS.md

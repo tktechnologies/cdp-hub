@@ -16,6 +16,7 @@ CSV_NODE = "🗂️ Gerar CSV final"
 EMAIL_NODE = "📧 Email: resultado final"
 FORMATTER_NODE = "📣 Formatar mensagem final"
 CHANNEL_NODE = "❓ Canal Telegram?"
+PATCH_FINAL_NODE = "📋 PATCH final-notification"
 PROD_GMAIL_CREDENTIAL = {"id": "rQesNRyarukVs0N4", "name": "gmail lucas@tktech"}
 
 
@@ -79,7 +80,9 @@ def _ensure_csv_nodes(nodes: list[dict], conns: dict, export_js: str) -> None:
                 "url": (
                     "={{ (String(/^DEV\\s*-/.test($workflow.name) ? "
                     "($env.CDP_DEV_SCRAPER_API_BASE || '') : "
-                    "($env.CDP_SCRAPER_API_BASE || $env.MUVSTOK_SCRAPER_API_BASE || ''))"
+                    "(/^STOKAI\\s*-/.test($workflow.name) ? "
+                    "($env.CDP_STOKAI_SCRAPER_API_BASE || '') : "
+                    "($env.CDP_SCRAPER_API_BASE || $env.MUVSTOK_SCRAPER_API_BASE || '')))"
                     ".trim().replace(/\\/+$/, '')) + '/api/v1/jobs/' + "
                     "encodeURIComponent($('📣 Formatar mensagem final').first().json.scraper_job_id || '') }}"
                 ),
@@ -91,7 +94,9 @@ def _ensure_csv_nodes(nodes: list[dict], conns: dict, export_js: str) -> None:
                             "value": (
                                 "={{ /^DEV\\s*-/.test($workflow.name) ? "
                                 "($env.CDP_DEV_API_KEY || $env.CDP_API_KEY) : "
-                                "($env.CDP_API_KEY || $env.MUVSTOK_API_KEY || $env.API_KEY) }}"
+                                "(/^STOKAI\\s*-/.test($workflow.name) ? "
+                                "($env.CDP_STOKAI_API_KEY || '') : "
+                                "($env.CDP_API_KEY || $env.MUVSTOK_API_KEY || $env.API_KEY)) }}"
                             ),
                         }
                     ]
@@ -109,6 +114,37 @@ def _ensure_csv_nodes(nodes: list[dict], conns: dict, export_js: str) -> None:
             "continueOnFail": True,
         }
         nodes.append(get_job)
+
+    get_job_params = get_job.setdefault("parameters", {})
+    get_job_params["method"] = "GET"
+    get_job_params["url"] = (
+        "={{ (String(/^DEV\\s*-/.test($workflow.name) ? "
+        "($env.CDP_DEV_SCRAPER_API_BASE || '') : "
+        "(/^STOKAI\\s*-/.test($workflow.name) ? "
+        "($env.CDP_STOKAI_SCRAPER_API_BASE || '') : "
+        "($env.CDP_SCRAPER_API_BASE || $env.MUVSTOK_SCRAPER_API_BASE || '')))"
+        ".trim().replace(/\\/+$/, '')) + '/api/v1/jobs/' + "
+        "encodeURIComponent($('📣 Formatar mensagem final').first().json.scraper_job_id || '') }}"
+    )
+    get_job_params["sendHeaders"] = True
+    get_job_params["headerParameters"] = {
+        "parameters": [
+            {
+                "name": "X-API-Key",
+                "value": (
+                    "={{ /^DEV\\s*-/.test($workflow.name) ? "
+                    "($env.CDP_DEV_API_KEY || $env.CDP_API_KEY) : "
+                    "(/^STOKAI\\s*-/.test($workflow.name) ? "
+                    "($env.CDP_STOKAI_API_KEY || '') : "
+                    "($env.CDP_API_KEY || $env.MUVSTOK_API_KEY || $env.API_KEY)) }}"
+                ),
+            }
+        ]
+    }
+    get_job_params["options"] = {
+        "response": {"response": {"responseFormat": "json"}},
+        "timeout": 30000,
+    }
 
     csv_node = _find_node(nodes, CSV_NODE)
     if csv_node is None:
@@ -149,6 +185,47 @@ def _patch_email_node(nodes: list[dict]) -> None:
     email.pop("continueOnFail", None)
 
 
+def _patch_final_notification_node(nodes: list[dict]) -> None:
+    patch = _find_node(nodes, PATCH_FINAL_NODE)
+    if not patch:
+        return
+
+    params = patch.setdefault("parameters", {})
+    params["method"] = "PATCH"
+    params["url"] = (
+        "={{ (String(/^DEV\\s*-/.test($workflow.name) ? "
+        "($env.CDP_DEV_SCRAPER_API_BASE || '') : "
+        "(/^STOKAI\\s*-/.test($workflow.name) ? "
+        "($env.CDP_STOKAI_SCRAPER_API_BASE || '') : "
+        "($env.CDP_SCRAPER_API_BASE || $env.MUVSTOK_SCRAPER_API_BASE || '')))"
+        ".trim().replace(/\\/+$/, '')) + '/api/v1/dispatch-runs/' + "
+        "$('📣 Formatar mensagem final').first().json.run_id + '/final-notification' }}"
+    )
+    params["sendHeaders"] = True
+    params["headerParameters"] = {
+        "parameters": [
+            {"name": "Content-Type", "value": "application/json"},
+            {
+                "name": "X-API-Key",
+                "value": (
+                    "={{ /^DEV\\s*-/.test($workflow.name) ? "
+                    "($env.CDP_DEV_API_KEY || $env.CDP_API_KEY) : "
+                    "(/^STOKAI\\s*-/.test($workflow.name) ? "
+                    "($env.CDP_STOKAI_API_KEY || '') : "
+                    "($env.CDP_API_KEY || $env.MUVSTOK_API_KEY || $env.API_KEY)) }}"
+                ),
+            },
+        ]
+    }
+    params["sendBody"] = True
+    params["specifyBody"] = "json"
+    params["jsonBody"] = (
+        "={{ JSON.stringify({ status: $('📣 Formatar mensagem final').first().json.skipped_no_target "
+        "? 'skipped_no_target' : 'sent', final_channel: $('📣 Formatar mensagem final').first().json.reply_channel }) }}"
+    )
+    params["options"] = {"timeout": 15000}
+
+
 def main() -> int:
     if not NOTIFIER_JSON.is_file():
         print(f"Missing {NOTIFIER_JSON}", file=__import__("sys").stderr)
@@ -161,6 +238,7 @@ def main() -> int:
     _ensure_send_guard(nodes, conns)
     _ensure_csv_nodes(nodes, conns, export_js)
     _patch_email_node(nodes)
+    _patch_final_notification_node(nodes)
 
     NOTIFIER_JSON.write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Patched {NOTIFIER_JSON.relative_to(REPO_ROOT)}")

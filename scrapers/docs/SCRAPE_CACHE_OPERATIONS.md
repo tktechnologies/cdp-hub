@@ -108,7 +108,7 @@ Expected on **second** lookup: `from_cache=true`, `cache_hits >= 1`, `live_scrap
 | Always `live_scrapes` = all sites | `SCRAPE_CACHE_ENABLED=false` or Redis down (logs: "Redis unavailable"); on Azure use DB 1 (`rediss://...:6380/1`) and let the app configure TLS |
 | `Invalid API key` from smoke script | Trim CR/LF from Key Vault / `az` output (`tr -d '\r\n'`) before curl |
 | Cache never hits after first call | Wrong Redis DB (must be `/1`), or API/worker using different URLs |
-| Stale blocked status cached 24h | Should only cache `blocked` for 30m; verify `SCRAPE_CACHE_TTL_BLOCKED_SECONDS` |
+| Stale blocked or not_found status cached 24h | Expected anti-bot behavior; use `force_refresh=true` only for an intentional manual recheck |
 | `/jobs` not cached | Worker must have same `SCRAPE_CACHE_*` env as API |
 
 ## Agent prompt

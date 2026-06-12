@@ -135,6 +135,16 @@ def patch_router_processado_node(node: dict) -> None:
     )
 
 
+def patch_router_sheet_read_node(node: dict) -> None:
+    if node.get("name") != "📊 Ler CDP_SKUs":
+        return
+    node["alwaysOutputData"] = True
+    node["notes"] = (
+        "Always emits one item when the sheet read is empty, so DQ can send a "
+        "clear no-pending-SKUs reply instead of ending the command silently."
+    )
+
+
 def new_id() -> str:
     return str(uuid.uuid4())
 
@@ -357,6 +367,7 @@ def patch_workflow(path: pathlib.Path) -> None:
         if not src:
             apply_parameter_patches(node)
             patch_router_processado_node(node)
+            patch_router_sheet_read_node(node)
             continue
         code = (SHARED / src).read_text(encoding="utf-8")
         if node.get("type", "").endswith("code"):
@@ -370,6 +381,7 @@ def patch_workflow(path: pathlib.Path) -> None:
                 )
         apply_parameter_patches(node)
         patch_router_processado_node(node)
+        patch_router_sheet_read_node(node)
 
     stale: list[str] = []
     for node in wf.get("nodes", []):

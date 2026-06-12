@@ -142,11 +142,11 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'SCRAPE_CACHE_TTL_NOT_FOUND_SECONDS'
-              value: '21600'
+              value: '86400'
             }
             {
               name: 'SCRAPE_CACHE_TTL_BLOCKED_SECONDS'
-              value: '1800'
+              value: '86400'
             }
             {
               name: 'SCRAPE_CACHE_PG_FALLBACK'

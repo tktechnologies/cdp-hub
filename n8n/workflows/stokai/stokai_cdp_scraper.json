@@ -3,7 +3,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "scraper-result",
+        "path": "stokai-scraper-result",
         "options": {
           "rawBody": true
         }
@@ -16,7 +16,7 @@
         -848,
         464
       ],
-      "webhookId": "scraper-result"
+      "webhookId": "stokai-scraper-result"
     },
     {
       "parameters": {
@@ -24,8 +24,8 @@
           "conditions": [
             {
               "id": "verify-secret",
-              "leftValue": "={{ ((/^DEV\\s*-/i.test($workflow.name || '') ? ($env.CDP_DEV_CALLBACK_WEBHOOK_SECRET || $env.CDP_CALLBACK_WEBHOOK_SECRET || $env.CALLBACK_WEBHOOK_SECRET || $env.N8N_WEBHOOK_SECRET || '') : ($env.CDP_CALLBACK_WEBHOOK_SECRET || $env.CALLBACK_WEBHOOK_SECRET || $env.N8N_WEBHOOK_SECRET || '')).trim()) ? (($json.headers['x-webhook-secret'] || $json.headers['X-Webhook-Secret'] || '').trim()) : '__missing_webhook_secret__' }}",
-              "rightValue": "={{ (/^DEV\\s*-/i.test($workflow.name || '') ? ($env.CDP_DEV_CALLBACK_WEBHOOK_SECRET || $env.CDP_CALLBACK_WEBHOOK_SECRET || $env.CALLBACK_WEBHOOK_SECRET || $env.N8N_WEBHOOK_SECRET || '') : ($env.CDP_CALLBACK_WEBHOOK_SECRET || $env.CALLBACK_WEBHOOK_SECRET || $env.N8N_WEBHOOK_SECRET || '')).trim() }}",
+              "leftValue": "={{ (((/^DEV\\s*-/i.test($workflow.name || '') ? ($env.CDP_DEV_CALLBACK_WEBHOOK_SECRET || $env.CDP_CALLBACK_WEBHOOK_SECRET || $env.CALLBACK_WEBHOOK_SECRET || $env.N8N_WEBHOOK_SECRET || '') : (/^STOKAI\\s*-/i.test($workflow.name || '') ? ($env.CDP_STOKAI_CALLBACK_WEBHOOK_SECRET || $env.CDP_CALLBACK_WEBHOOK_SECRET || $env.CALLBACK_WEBHOOK_SECRET || $env.N8N_WEBHOOK_SECRET || '') : ($env.CDP_CALLBACK_WEBHOOK_SECRET || $env.CALLBACK_WEBHOOK_SECRET || $env.N8N_WEBHOOK_SECRET || '')))).trim()) ? (($json.headers['x-webhook-secret'] || $json.headers['X-Webhook-Secret'] || '').trim()) : '__missing_webhook_secret__' }}",
+              "rightValue": "={{ ((/^DEV\\s*-/i.test($workflow.name || '') ? ($env.CDP_DEV_CALLBACK_WEBHOOK_SECRET || $env.CDP_CALLBACK_WEBHOOK_SECRET || $env.CALLBACK_WEBHOOK_SECRET || $env.N8N_WEBHOOK_SECRET || '') : (/^STOKAI\\s*-/i.test($workflow.name || '') ? ($env.CDP_STOKAI_CALLBACK_WEBHOOK_SECRET || $env.CDP_CALLBACK_WEBHOOK_SECRET || $env.CALLBACK_WEBHOOK_SECRET || $env.N8N_WEBHOOK_SECRET || '') : ($env.CDP_CALLBACK_WEBHOOK_SECRET || $env.CALLBACK_WEBHOOK_SECRET || $env.N8N_WEBHOOK_SECRET || '')))).trim() }}",
               "operator": {
                 "type": "string",
                 "operation": "equals"
@@ -608,7 +608,7 @@
       "credentials": {
         "telegramApi": {
           "id": "UmDqGKD8k0bA10j2",
-          "name": "Telegram account"
+          "name": "cdp-bot-assistente"
         }
       },
       "continueOnFail": true,
@@ -1203,7 +1203,7 @@
       "credentials": {
         "telegramApi": {
           "id": "UmDqGKD8k0bA10j2",
-          "name": "Telegram account"
+          "name": "cdp-bot-assistente"
         }
       },
       "continueOnFail": true,
@@ -1978,10 +1978,5 @@
       ]
     }
   },
-  "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "de7dfde7182ba46a60ed6b250bd1db3a7076885f7c50487eea26aeedab86a5e3"
-  },
-  "name": "cdp_scraper"
+  "name": "STOKAI - cdp_scraper"
 }

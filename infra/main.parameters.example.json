@@ -11,6 +11,9 @@
     "environmentName": {
       "value": "production"
     },
+    "pullIdentityName": {
+      "value": "cdp-scrapers-prod-pull"
+    },
     "postgresAdminPassword": {
       "value": "REPLACE_WITH_STRONG_PASSWORD"
     },
@@ -23,6 +26,12 @@
     "proxyUrls": {
       "value": "[]"
     },
+    "muvstokUser": {
+      "value": ""
+    },
+    "muvstokPassword": {
+      "value": ""
+    },
     "n8nEncryptionKey": {
       "value": "REPLACE_WITH_N8N_ENCRYPTION_KEY"
     },
@@ -30,6 +39,9 @@
       "value": "REPLACE_WITH_N8N_BASIC_AUTH_PASSWORD"
     },
     "deployContainerApps": {
+      "value": true
+    },
+    "deployN8n": {
       "value": true
     },
     "deployProxyPool": {

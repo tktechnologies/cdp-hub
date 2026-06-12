@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 SPREADSHEET_ID = "1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo"
+PAINEL_GID = 2127243308
+RESUMO_GID = 815371065
 DETALHADO_GID = 1185876304
+HISTORICO_GID = 79112561
 
 # v2 Detalhado — aligned with receiver output after 2026-06 audit.
 CANONICAL_DETALHADO_HEADERS: list[str] = [

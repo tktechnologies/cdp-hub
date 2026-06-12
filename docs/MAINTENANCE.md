@@ -1,6 +1,6 @@
 # CDP maintenance guide
 
-**Updated:** 2026-06-01. Design: [ARCHITECTURE.md](ARCHITECTURE.md). API/Azure reference: [PLATFORM_OVERVIEW.md](PLATFORM_OVERVIEW.md). Agent tiers: [architecture/AGENT_ARCHITECTURE.md](architecture/AGENT_ARCHITECTURE.md).
+**Updated:** 2026-06-11. Design: [ARCHITECTURE.md](ARCHITECTURE.md). API/Azure reference: [PLATFORM_OVERVIEW.md](PLATFORM_OVERVIEW.md). Agent tiers: [architecture/AGENT_ARCHITECTURE.md](architecture/AGENT_ARCHITECTURE.md).
 
 ## Maintenance starter prompts (copy into an agent chat)
 
@@ -10,6 +10,7 @@
 | StokAPI / API | [.agent/prompts/maintenance/stokapi.md](../.agent/prompts/maintenance/stokapi.md) |
 | n8n workflows | [.agent/prompts/maintenance/n8n.md](../.agent/prompts/maintenance/n8n.md) |
 | Infrastructure | [.agent/prompts/maintenance/infrastructure.md](../.agent/prompts/maintenance/infrastructure.md) |
+| STOKAI audit / price smoke / cutover prep | [.agent/prompts/maintenance/stokai-audit-cutover.md](../.agent/prompts/maintenance/stokai-audit-cutover.md) |
 | `.agent` / docs / agent rules | [.agent/prompts/maintenance/agent-workspace.md](../.agent/prompts/maintenance/agent-workspace.md) |
 | Full stack / platform | [.agent/prompts/maintenance/platform-fullstack.md](../.agent/prompts/maintenance/platform-fullstack.md) |
 
@@ -23,9 +24,9 @@ Configured on **scraper API + worker** (not n8n):
 
 ```bash
 SCRAPE_CACHE_ENABLED=true
-SCRAPE_CACHE_TTL_SECONDS=86400        # 24h for success / no_price
-SCRAPE_CACHE_TTL_NOT_FOUND_SECONDS=21600
-SCRAPE_CACHE_TTL_BLOCKED_SECONDS=1800
+SCRAPE_CACHE_TTL_SECONDS=86400
+SCRAPE_CACHE_TTL_NOT_FOUND_SECONDS=86400
+SCRAPE_CACHE_TTL_BLOCKED_SECONDS=86400
 SCRAPE_CACHE_PG_FALLBACK=true
 ```
 
@@ -81,3 +82,13 @@ make smoke-cache
 - Key Vault: `cdp-scrapers-kv-prod`
 - n8n: `https://automacao.tktechnologies.com.br` (custom hostname bound to `cdp-n8n-prod`)
 - Scraper deploy falls back to remote `az acr build --no-logs` when the local Docker daemon is unavailable.
+
+## Azure (STOKAI production target)
+
+- Resource group: `stokai-tk`
+- Key Vault: `cdp-stokai-kv-prod`
+- ACR: `cdpstokaitkacr`
+- Scraper: `cdp-stokai-scrapers-api-prod`, `cdp-stokai-scrapers-worker-prod`
+- StokAPI: `cdp-stokai-muv-api`, `cdp-stokai-muv-worker`
+- n8n: none in `stokai-tk`; shared n8n uses `STOKAI - cdp_*` workflow copies after cutover.
+- Runbook: [runbooks/deploy-stokai.md](runbooks/deploy-stokai.md)

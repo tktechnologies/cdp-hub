@@ -25,6 +25,14 @@ Production reference (verify in Azure before claiming versions):
 - StokAPI: cdp-muv-api, cdp-muv-worker
 - n8n: https://automacao.tktechnologies.com.br
 
+STOKAI production target (separate RG; verify before claiming versions):
+- Resource group: stokai-tk
+- ACR: cdpstokaitkacr
+- Key Vault: cdp-stokai-kv-prod
+- Scraper: cdp-stokai-scrapers-api-prod, cdp-stokai-scrapers-worker-prod
+- StokAPI: cdp-stokai-muv-api, cdp-stokai-muv-worker
+- n8n: none in stokai-tk; shared n8n stays in automation
+
 Classify my task:
 - Platform Bicep (shared) → infra/main.bicep — validate: make bicep-validate / make bicep-what-if (no apply without approval)
 - Scraper deploy → scripts/deploy-scraper-azure.sh, infra/scraper-stack.bicep

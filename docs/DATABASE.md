@@ -85,7 +85,7 @@ StokAPI does not use DB 1 today.
 
 | Prefix / key | Service | TTL | Notes |
 |--------------|---------|-----|-------|
-| `scrape:v1:{site}:{brand_key}:{sku_key}` | Scraper | 24h success/no_price; 6h not_found; 30m blocked | JSON `SiteResult` payload; see `scrapers/src/redis_keys.py` |
+| `scrape:v1:{site}:{brand_key}:{sku_key}` | Scraper | 24h for success/no_price/not_found/blocked | JSON `SiteResult` payload; see `scrapers/src/redis_keys.py` |
 | `dispatch:run:{run_id}` | Scraper | *reserved* | Constants only; `dispatch_runs` table is authoritative |
 | `progress:{chat_id}` or `progress:{run_id}` | Platform | *reserved* | Ephemeral n8n/Telegram poll state; not written in production yet |
 | `muvstok:jobs` | StokAPI | Stream (no key TTL) | `XADD` job payloads; consumer group `muvstok-workers` |
@@ -98,8 +98,8 @@ Celery also creates broker keys on DB 0 (`celery-task-meta-*`, etc.) — do not 
 | Site status | Cached | Default TTL (`SCRAPE_CACHE_*`) |
 |-------------|--------|--------------------------------|
 | `success`, `no_price` | Yes | `SCRAPE_CACHE_TTL_SECONDS` (86400) |
-| `not_found` | Yes | `SCRAPE_CACHE_TTL_NOT_FOUND_SECONDS` (21600) |
-| `blocked` | Yes | `SCRAPE_CACHE_TTL_BLOCKED_SECONDS` (1800) |
+| `not_found` | Yes | `SCRAPE_CACHE_TTL_NOT_FOUND_SECONDS` (86400) |
+| `blocked` | Yes | `SCRAPE_CACHE_TTL_BLOCKED_SECONDS` (86400) |
 | `error`, `timeout` | No | Listed in `SCRAPE_CACHE_BYPASS_STATUSES` |
 
 On Redis miss, optional PostgreSQL warm path (`SCRAPE_CACHE_PG_FALLBACK`) repopulates Redis from recent `scrape_items` / `part_results` within the success TTL window.

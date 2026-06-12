@@ -1,10 +1,10 @@
 {
-  "name": "cdp_notifier",
+  "name": "STOKAI - cdp_notifier",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "cdp-notifier",
+        "path": "stokai-cdp-notifier",
         "responseMode": "onReceived",
         "options": {}
       },

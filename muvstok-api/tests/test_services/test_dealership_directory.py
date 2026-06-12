@@ -116,3 +116,79 @@ async def test_enrich_row_loads_from_company_location_repository() -> None:
     assert row["cnpj"] == "68743038000864"
     assert row["empresa"] == "AZZURRA JEEP BOTAFOGO"
     assert row["nomeFilial"] == "JEEP BOTAFOGO"
+
+
+@pytest.mark.asyncio
+async def test_enrich_row_falls_back_to_unique_branch_name() -> None:
+    class Repo:
+        async def list_all(self):
+            return [
+                SimpleNamespace(
+                    id_empresa="3823",
+                    id_grupoempresa="",
+                    projeto="",
+                    montadora="VW",
+                    nm_corporacao="",
+                    grupo_empresa="IMPORTADORA VW",
+                    cnpj="12275988000180",
+                    nome_fantasia="IMPORTADORA VW MACEIO",
+                    apelido="IMPORTADORA VW MACEIO",
+                    cep="",
+                    endereco="",
+                    numero="",
+                    uf="AL",
+                    cidade="Maceió",
+                    bairro="Pinheiro",
+                )
+            ]
+
+    settings = Settings(
+        muvstok_dealership_directory_enabled=True,
+        muvstok_dealership_directory_url_fallback_enabled=False,
+    )
+    directory = DealershipDirectory(settings, company_locations=Repo())
+
+    row = await directory.enrich_row({"nomeFilial": "IMPORTADORA VW MACEIO", "valorPrecoVenda": 10})
+
+    assert row["id_empresa"] == "3823"
+    assert row["uf"] == "AL"
+    assert row["cnpj"] == "12275988000180"
+
+
+@pytest.mark.asyncio
+async def test_enrich_row_strips_status_prefix_before_name_lookup() -> None:
+    class Repo:
+        async def list_all(self):
+            return [
+                SimpleNamespace(
+                    id_empresa="441",
+                    id_grupoempresa="",
+                    projeto="",
+                    montadora="VW",
+                    nm_corporacao="",
+                    grupo_empresa="GRUPO FARIA VOLKSWAGEN",
+                    cnpj="01869253000169",
+                    nome_fantasia="FARIA SÃO PAULO",
+                    apelido="SÃO PAULO",
+                    cep="",
+                    endereco="",
+                    numero="",
+                    uf="SP",
+                    cidade="São Paulo",
+                    bairro="Campos Elíseos",
+                )
+            ]
+
+    settings = Settings(
+        muvstok_dealership_directory_enabled=True,
+        muvstok_dealership_directory_url_fallback_enabled=False,
+    )
+    directory = DealershipDirectory(settings, company_locations=Repo())
+
+    row = await directory.enrich_row(
+        {"nomeFilial": "Solicitou cancelamento - FARIA SÃO PAULO", "valorPrecoVenda": 10}
+    )
+
+    assert row["id_empresa"] == "441"
+    assert row["uf"] == "SP"
+    assert row["cnpj"] == "01869253000169"

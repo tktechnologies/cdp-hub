@@ -89,8 +89,8 @@ class TestScrapeCacheService:
     def test_ttl_for_status(self):
         service = ScrapeCacheService()
         assert service._ttl_for_status("success") == 86400
-        assert service._ttl_for_status("not_found") == 21600
-        assert service._ttl_for_status("blocked") == 1800
+        assert service._ttl_for_status("not_found") == 86400
+        assert service._ttl_for_status("blocked") == 86400
         assert service._ttl_for_status("error") is None
 
     @pytest.mark.asyncio

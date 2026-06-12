@@ -40,8 +40,6 @@ def main() -> int:
         "connections": local["connections"],
         "settings": _sanitized_settings(local),
     }
-    if local.get("description"):
-        payload["description"] = local["description"]
 
     created = n8n_api_request("POST", "/workflows", payload)
     wf_id = created["id"]

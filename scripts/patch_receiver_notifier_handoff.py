@@ -49,19 +49,41 @@ function workflowName() {
   return '';
 }
 
+function workflowTarget() {
+  const name = workflowName();
+  if (/^DEV\s*-/i.test(name)) return 'dev';
+  if (/^STOKAI\s*-/i.test(name)) return 'stokai';
+  return 'prod';
+}
+
 function isDevWorkflow() {
-  return /^DEV\s*-/i.test(workflowName());
+  return workflowTarget() === 'dev';
 }
 
 function envFor(name) {
-  if (!isDevWorkflow()) return env(name);
+  const target = workflowTarget();
+  if (target === 'prod') return env(name);
+  const prefix = target === 'stokai' ? 'CDP_STOKAI' : 'CDP_DEV';
   const map = {
-    CDP_NOTIFIER_WEBHOOK_URL: 'CDP_DEV_NOTIFIER_WEBHOOK_URL',
-    WEBHOOK_URL: 'CDP_DEV_WEBHOOK_URL',
-    CDP_NOTIFIER_WEBHOOK_PATH: 'CDP_DEV_NOTIFIER_WEBHOOK_PATH',
+    CDP_NOTIFIER_WEBHOOK_URL: `${prefix}_NOTIFIER_WEBHOOK_URL`,
+    WEBHOOK_URL: `${prefix}_WEBHOOK_URL`,
+    CDP_NOTIFIER_WEBHOOK_PATH: `${prefix}_NOTIFIER_WEBHOOK_PATH`,
   };
   const mapped = map[name] || '';
-  return mapped ? env(mapped) : env(name);
+  if (!mapped) return env(name);
+  const value = env(mapped);
+  if (value) return value;
+  if (name === 'CDP_NOTIFIER_WEBHOOK_PATH') {
+    return target === 'stokai' ? 'webhook/stokai-cdp-notifier' : 'webhook/dev-cdp-notifier';
+  }
+  return '';
+}
+
+function defaultNotifierWebhookPath() {
+  const target = workflowTarget();
+  if (target === 'stokai') return 'webhook/stokai-cdp-notifier';
+  if (target === 'dev') return 'webhook/dev-cdp-notifier';
+  return 'webhook/cdp-notifier';
 }
 
 function trimTrailingSlashes(value) {
@@ -168,7 +190,7 @@ const pipelineStatus = jobStatus === 'failed' ? 'failed' : 'completed';
 let notifierUrl = envFor('CDP_NOTIFIER_WEBHOOK_URL');
 if (!notifierUrl) {
   const base = trimTrailingSlashes(envFor('WEBHOOK_URL') || 'https://automacao.tktechnologies.com.br');
-  const rel = trimSlashes(envFor('CDP_NOTIFIER_WEBHOOK_PATH') || 'webhook/cdp-notifier');
+  const rel = trimSlashes(envFor('CDP_NOTIFIER_WEBHOOK_PATH') || defaultNotifierWebhookPath());
   notifierUrl = base + '/' + rel;
 }
 
@@ -217,19 +239,41 @@ function workflowName() {
   return '';
 }
 
+function workflowTarget() {
+  const name = workflowName();
+  if (/^DEV\s*-/i.test(name)) return 'dev';
+  if (/^STOKAI\s*-/i.test(name)) return 'stokai';
+  return 'prod';
+}
+
 function isDevWorkflow() {
-  return /^DEV\s*-/i.test(workflowName());
+  return workflowTarget() === 'dev';
 }
 
 function envFor(name) {
-  if (!isDevWorkflow()) return env(name);
+  const target = workflowTarget();
+  if (target === 'prod') return env(name);
+  const prefix = target === 'stokai' ? 'CDP_STOKAI' : 'CDP_DEV';
   const map = {
-    CDP_NOTIFIER_WEBHOOK_URL: 'CDP_DEV_NOTIFIER_WEBHOOK_URL',
-    WEBHOOK_URL: 'CDP_DEV_WEBHOOK_URL',
-    CDP_NOTIFIER_WEBHOOK_PATH: 'CDP_DEV_NOTIFIER_WEBHOOK_PATH',
+    CDP_NOTIFIER_WEBHOOK_URL: `${prefix}_NOTIFIER_WEBHOOK_URL`,
+    WEBHOOK_URL: `${prefix}_WEBHOOK_URL`,
+    CDP_NOTIFIER_WEBHOOK_PATH: `${prefix}_NOTIFIER_WEBHOOK_PATH`,
   };
   const mapped = map[name] || '';
-  return mapped ? env(mapped) : env(name);
+  if (!mapped) return env(name);
+  const value = env(mapped);
+  if (value) return value;
+  if (name === 'CDP_NOTIFIER_WEBHOOK_PATH') {
+    return target === 'stokai' ? 'webhook/stokai-cdp-notifier' : 'webhook/dev-cdp-notifier';
+  }
+  return '';
+}
+
+function defaultNotifierWebhookPath() {
+  const target = workflowTarget();
+  if (target === 'stokai') return 'webhook/stokai-cdp-notifier';
+  if (target === 'dev') return 'webhook/dev-cdp-notifier';
+  return 'webhook/cdp-notifier';
 }
 
 function trimTrailingSlashes(value) {
@@ -314,7 +358,7 @@ const fallback = countPayloadSummary(payload);
 let notifierUrl = envFor('CDP_NOTIFIER_WEBHOOK_URL');
 if (!notifierUrl) {
   const base = trimTrailingSlashes(envFor('WEBHOOK_URL') || 'https://automacao.tktechnologies.com.br');
-  const rel = trimSlashes(envFor('CDP_NOTIFIER_WEBHOOK_PATH') || 'webhook/cdp-notifier');
+  const rel = trimSlashes(envFor('CDP_NOTIFIER_WEBHOOK_PATH') || defaultNotifierWebhookPath());
   notifierUrl = base + '/' + rel;
 }
 

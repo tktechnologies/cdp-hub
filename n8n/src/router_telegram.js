@@ -28,10 +28,26 @@ function workflowName() {
   } catch (e) {}
   return '';
 }
-function isDevWorkflow() {
-  return /^DEV\s*-/i.test(workflowName());
+function workflowTarget() {
+  const name = workflowName();
+  if (/^DEV\s*-/i.test(name)) return 'dev';
+  if (/^STOKAI\s*-/i.test(name)) return 'stokai';
+  return 'prod';
 }
-function devEnvName(name) {
+function isDevWorkflow() {
+  return workflowTarget() === 'dev';
+}
+function targetEnvName(name, target) {
+  if (target === 'stokai') {
+    return {
+      CDP_SCRAPER_API_BASE: 'CDP_STOKAI_SCRAPER_API_BASE',
+      MUVSTOK_SCRAPER_API_BASE: 'CDP_STOKAI_SCRAPER_API_BASE',
+      CDP_API_KEY: 'CDP_STOKAI_API_KEY',
+      MUVSTOK_API_KEY: 'CDP_STOKAI_API_KEY',
+      API_KEY: 'CDP_STOKAI_API_KEY',
+      CDP_STATUS_COMMANDS: 'CDP_STOKAI_STATUS_COMMANDS',
+    }[name] || '';
+  }
   const map = {
     CDP_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',
     MUVSTOK_SCRAPER_API_BASE: 'CDP_DEV_SCRAPER_API_BASE',
@@ -47,10 +63,12 @@ function devEnvName(name) {
   return map[name] || '';
 }
 function envFor(name) {
-  if (!isDevWorkflow()) return envValue(name);
-  const mapped = devEnvName(name);
+  const target = workflowTarget();
+  if (target === 'prod') return envValue(name);
+  const mapped = targetEnvName(name, target);
   const value = mapped ? envValue(mapped) : '';
   if (value) return value;
+  if (target === 'stokai') return envValue(name);
   if (name === 'CDP_STATUS_COMMANDS') return envValue(name);
   return '';
 }
@@ -74,9 +92,9 @@ function trimTrailingSlashes(value) {
 
 function scraperApiBase() {
   return trimTrailingSlashes(
-    envFor('CDP_SCRAPER_API_BASE') ||
+      envFor('CDP_SCRAPER_API_BASE') ||
       envFor('MUVSTOK_SCRAPER_API_BASE') ||
-      (isDevWorkflow() ? '' : DEFAULT_SCRAPER_API_BASE)
+      (workflowTarget() === 'prod' ? DEFAULT_SCRAPER_API_BASE : '')
   );
 }
 

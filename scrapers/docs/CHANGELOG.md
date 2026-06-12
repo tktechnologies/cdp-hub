@@ -2,6 +2,12 @@
 
 > Agent workspace moved from `.claude/` to `.agent/` (2026-05-27). Historical entries below may still mention `.claude/` paths.
 
+## 2026-06-12
+- Hardened scrape-cache anti-bot policy: `not_found` and `blocked` site results
+  now use the same 24h TTL as `success` / `no_price`, preventing same-day
+  repeat Playwright requests for the same SKU + site unless `force_refresh=true`
+  is used intentionally.
+
 ## 2026-06-02
 - IPRoyal setup runbook: `docs/runbooks/iproyal-isp-proxy-setup.md` (purchase → local → Azure).
 - Proxy rollout workflow: `.agent/workflows/proxy-rollout.md`, `scripts/proxy_site_smoke.py`.
@@ -59,9 +65,9 @@
 - Wired Azure Container Apps env vars for `SCRAPE_CACHE_*` in
   `infra/modules/container-app.bicep` and `infra/scraper-stack.bicep` (Redis DB 1).
 - Added Redis-backed scrape result cache (`src/services/scrape_cache.py`):
-  per-site SKU snapshots with 24h default TTL, shorter TTL for `not_found` and
-  `blocked`, PostgreSQL warm fallback, and graceful degradation when Redis is
-  down.
+  per-site SKU snapshots, PostgreSQL warm fallback, and graceful degradation
+  when Redis is down. Initial launch used shorter TTLs for `not_found` and
+  `blocked`; current policy is documented in the 2026-06-12 entry above.
 - Wired cache into orchestrator and `/api/v1/lookup` / `/jobs` via
   `force_refresh`, `SiteResult.from_cache`, and `SKUResult.cache_hits` /
   `live_scrapes`. Live scrapes for cache misses run sequentially by default

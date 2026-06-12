@@ -45,7 +45,7 @@ const configuredReportUrl = envFor('CDP_RESULTADOS_SHEETS_URL');
 const reportUrl =
   configuredReportUrl || (isDevWorkflow()
     ? ''
-    : 'https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=1185876304');
+    : 'https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=2127243308');
 
 if (String(j.delivery_mode || '').trim().toLowerCase() === 'aggregate') {
   return [{ json: { skip: true, reason: 'aggregate_delivery' } }];

@@ -8,6 +8,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 NOTIFIER_JSON = REPO_ROOT / "n8n" / "workflows" / "cdp_notifier.json"
+PREPARE_NODE = "\U0001f4e5 Preparar pipeline-result"
 FORMATTER_NODE = "\U0001f4e3 Formatar mensagem final"
 PROD_TELEGRAM_CREDENTIAL = {"id": "UmDqGKD8k0bA10j2", "name": "cdp-bot-assistente"}
 DEV_TELEGRAM_CREDENTIAL = {"id": "wblrlkXu6SW1M5M1", "name": "dev-cdp-bot"}
@@ -18,6 +19,108 @@ DEV_WORKFLOW_REPLACEMENTS = {
         "return /^DEV\\s*-/i.test(workflowName());"
     ),
 }
+
+PREPARE_PIPELINE_RESULT_JS = r"""// cdp_notifier - parse receiver handoff webhook and prepare pipeline-result API call.
+
+function env(name) {
+  try {
+    if (typeof $env !== 'undefined' && $env && $env[name]) {
+      return String($env[name]).trim();
+    }
+  } catch (e) {}
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env[name]) {
+      return String(process.env[name]).trim();
+    }
+  } catch (e) {}
+  return '';
+}
+
+function workflowName() {
+  try {
+    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {
+      return String($workflow.name).trim();
+    }
+  } catch (e) {}
+  return '';
+}
+
+function workflowTarget() {
+  const name = workflowName();
+  if (/^DEV\s*-/i.test(name)) return 'dev';
+  if (/^STOKAI\s*-/i.test(name)) return 'stokai';
+  return 'prod';
+}
+
+function targetEnvName(name, target) {
+  const prefix = target === 'stokai' ? 'CDP_STOKAI' : 'CDP_DEV';
+  return {
+    CDP_SCRAPER_API_BASE: `${prefix}_SCRAPER_API_BASE`,
+    MUVSTOK_SCRAPER_API_BASE: `${prefix}_SCRAPER_API_BASE`,
+    CDP_API_KEY: `${prefix}_API_KEY`,
+    MUVSTOK_API_KEY: `${prefix}_API_KEY`,
+    API_KEY: `${prefix}_API_KEY`,
+  }[name] || '';
+}
+
+function envFor(name) {
+  const target = workflowTarget();
+  if (target === 'prod') return env(name);
+  const mapped = targetEnvName(name, target);
+  return mapped ? env(mapped) : env(name);
+}
+
+function trimTrailingSlashes(value) {
+  let out = String(value || '').trim();
+  while (out.endsWith('/')) out = out.slice(0, -1);
+  return out;
+}
+
+function parseBody(raw) {
+  let p = raw;
+  if (typeof p === 'string') {
+    try {
+      p = JSON.parse(p);
+    } catch (e) {
+      p = {};
+    }
+  }
+  return p && typeof p === 'object' ? p : {};
+}
+
+const wh = $('🔔 Webhook cdp-notifier').first().json;
+const body = parseBody(wh.body);
+const batchGroupId = String(body.batch_group_id || '').trim();
+const source = String(body.source || '').trim().toLowerCase();
+const status = String(body.status || 'completed').trim().toLowerCase();
+const summary = body.summary && typeof body.summary === 'object' ? body.summary : {};
+
+if (!batchGroupId || (source !== 'scraper' && source !== 'stokapi')) {
+  return [{ json: { skip: true, reason: 'invalid_handoff' } }];
+}
+
+const apiBase = trimTrailingSlashes(
+  envFor('CDP_SCRAPER_API_BASE') || envFor('MUVSTOK_SCRAPER_API_BASE') || ''
+);
+const apiKey = envFor('CDP_API_KEY') || envFor('MUVSTOK_API_KEY') || envFor('API_KEY');
+
+return [
+  {
+    json: {
+      skip: false,
+      pipeline_result_url:
+        apiBase + '/api/v1/dispatch-runs/by-batch/' + encodeURIComponent(batchGroupId) + '/pipeline-result',
+      pipeline_result_api_key: apiKey,
+      pipeline_result_body: {
+        source,
+        status,
+        summary,
+      },
+      handoff: body,
+    },
+  },
+];
+"""
 
 FINAL_FORMATTER_JS = r"""// cdp_notifier - format one final Telegram/email from the aggregate pipeline claim.
 
@@ -61,7 +164,7 @@ function envFor(name) {
 function reportUrl() {
   const configured = envFor('CDP_RESULTADOS_SHEETS_URL');
   if (configured || isDevWorkflow()) return configured;
-  return 'https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=1185876304';
+  return 'https://docs.google.com/spreadsheets/d/1ZBU2d3XVsngOYQH12yU7Mg9DcIzVet2dDmhMtZqHSOo/edit#gid=2127243308';
 }
 
 function escapeHtml(value) {
@@ -262,6 +365,9 @@ def main() -> int:
                         code = code.replace(old, new)
                         changed = True
                 params["jsCode"] = code
+            if node.get("name") == PREPARE_NODE:
+                params["jsCode"] = PREPARE_PIPELINE_RESULT_JS
+                changed = True
             if node.get("name") == FORMATTER_NODE:
                 params["jsCode"] = FINAL_FORMATTER_JS
                 changed = True

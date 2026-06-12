@@ -1,5 +1,5 @@
 {
-  "name": "DEV - cdp_progress",
+  "name": "STOKAI - cdp_progress",
   "nodes": [
     {
       "parameters": {
@@ -7,7 +7,7 @@
           "interval": [
             {
               "field": "minutes",
-              "minutesInterval": "={{ Number($env.CDP_DEV_PROGRESS_INTERVAL_MIN || $env.CDP_PROGRESS_INTERVAL_MIN || 10) }}"
+              "minutesInterval": "={{ Number($env.CDP_STOKAI_PROGRESS_INTERVAL_MIN || $env.CDP_PROGRESS_INTERVAL_MIN || 10) }}"
             }
           ]
         }
@@ -224,8 +224,8 @@
       ],
       "credentials": {
         "telegramApi": {
-          "id": "OCT6L7sDZffEbhJ9",
-          "name": "NoxTKTech_bot"
+          "id": "UmDqGKD8k0bA10j2",
+          "name": "cdp-bot-assistente"
         }
       }
     },

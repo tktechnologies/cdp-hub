@@ -1,13 +1,13 @@
 # Scraper implementation state
 
-**Last reviewed:** 2026-06-09 · **Handoff:** `docs/MAINTENANCE_CHECKPOINT.md`
+**Last reviewed:** 2026-06-12 · **Handoff:** `docs/MAINTENANCE_CHECKPOINT.md`
 
 > **Live n8n workflow IDs, deploy tags, and cross-service facts:** root [`.agent/memory/implementation-state.md`](../../../.agent/memory/implementation-state.md) and [`docs/n8n/LIVE_WORKFLOWS.md`](../../../docs/n8n/LIVE_WORKFLOWS.md). Do not duplicate IDs in this file.
 
 ## Stack
 
 - FastAPI + Celery + Playwright + PostgreSQL
-- Redis DB 0: Celery broker; DB 1: scrape cache (24h TTL)
+- Redis DB 0: Celery broker; DB 1: scrape cache (24h TTL for success, no_price, not_found, blocked)
 - Production: `cdp-scrapers-api-prod`, `cdp-scrapers-worker-prod`
 
 ## n8n (this service)
@@ -50,6 +50,15 @@
 ## Dual pipeline
 
 Router dispatches Scraper + StokAPI in parallel. Scraper arm uses `force_refresh: false`. Platform: [`docs/architecture/DUAL_PIPELINE.md`](../../../docs/architecture/DUAL_PIPELINE.md).
+
+## Cache policy (2026-06-12)
+
+To reduce anti-bot pressure, cacheable per-site statuses now all hold for 24h:
+`success`, `no_price`, `not_found`, and `blocked`. `error` and `timeout`
+remain uncached. STOKAI live API/worker revisions `0000003` were updated with
+`SCRAPE_CACHE_TTL_NOT_FOUND_SECONDS=86400` and
+`SCRAPE_CACHE_TTL_BLOCKED_SECONDS=86400`; repeat lookup for email SKU
+`5U6959775` returned `cache_hits=5`, `live_scrapes=0`.
 
 ## Reporting (callback fields)
 

@@ -12,6 +12,9 @@ param deployStokapi bool = false
 @description('Pass-through: scraper environment tag.')
 param environmentName string = 'production'
 
+@description('Pass-through: scraper pull identity name.')
+param pullIdentityName string = 'cdp-scrapers-prod-pull'
+
 @description('Scraper Postgres admin password.')
 @secure()
 param postgresAdminPassword string
@@ -44,15 +47,21 @@ param meliboxUser string = ''
 @secure()
 param meliboxPass string = ''
 @secure()
+param muvstokUser string = ''
+@secure()
+param muvstokPassword string = ''
+@secure()
 param proxyAdminPassword string = ''
 
 param deployContainerApps bool = true
+param deployN8n bool = true
 param deployProxyPool bool = false
 
 module scraper 'scraper-stack.bicep' = if (deployScraper) {
   name: 'scraper-stack'
   params: {
     environmentName: environmentName
+    pullIdentityName: pullIdentityName
     postgresAdminPassword: postgresAdminPassword
     apiKey: apiKey
     callbackWebhookSecret: callbackWebhookSecret
@@ -62,8 +71,11 @@ module scraper 'scraper-stack.bicep' = if (deployScraper) {
     n8nBasicAuthPassword: n8nBasicAuthPassword
     meliboxUser: meliboxUser
     meliboxPass: meliboxPass
+    muvstokUser: muvstokUser
+    muvstokPassword: muvstokPassword
     proxyAdminPassword: proxyAdminPassword
     deployContainerApps: deployContainerApps
+    deployN8n: deployN8n
     deployProxyPool: deployProxyPool
   }
 }
@@ -73,7 +85,7 @@ module stokapiApps 'modules/stokapi-apps.bicep' = if (deployStokapi) {
   params: {
     environmentId: ''
     identityId: ''
-    acrLoginServer: deployScraper ? scraper.outputs.acrLoginServer : 'cdpscraperprodacr.azurecr.io'
+    acrLoginServer: deployScraper ? scraper!.outputs.acrLoginServer : 'cdpscraperprodacr.azurecr.io'
     tags: {
       app: 'cdp-stokapi'
       environment: environmentName
@@ -82,9 +94,9 @@ module stokapiApps 'modules/stokapi-apps.bicep' = if (deployStokapi) {
   }
 }
 
-output scraperAcrLoginServer string = deployScraper ? scraper.outputs.acrLoginServer : ''
-output scraperApiFqdn string = deployScraper ? scraper.outputs.apiContainerAppFqdn : ''
-output scraperPostgresHost string = deployScraper ? scraper.outputs.postgresHost : ''
-output scraperRedisHost string = deployScraper ? scraper.outputs.redisHost : ''
-output scraperKeyVaultName string = deployScraper ? scraper.outputs.keyVaultName : ''
-output stokapiNote string = deployStokapi ? stokapiApps.outputs.note : 'StokAPI module skipped (deployStokapi=false)'
+output scraperAcrLoginServer string = deployScraper ? scraper!.outputs.acrLoginServer : ''
+output scraperApiFqdn string = deployScraper ? scraper!.outputs.apiContainerAppFqdn : ''
+output scraperPostgresHost string = deployScraper ? scraper!.outputs.postgresHost : ''
+output scraperRedisHost string = deployScraper ? scraper!.outputs.redisHost : ''
+output scraperKeyVaultName string = deployScraper ? scraper!.outputs.keyVaultName : ''
+output stokapiNote string = deployStokapi ? stokapiApps!.outputs.note : 'StokAPI module skipped (deployStokapi=false)'

@@ -42,6 +42,44 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
+function compactError(value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (typeof value === 'string') return value;
+  if (typeof value !== 'object') return String(value);
+  const nested =
+    value.message ||
+    value.detail ||
+    value.error ||
+    value.description ||
+    value.body?.detail ||
+    value.body?.message ||
+    value.body?.error ||
+    value.response?.body?.detail ||
+    value.response?.body?.message ||
+    value.response?.body?.error ||
+    value.response?.data?.detail ||
+    value.response?.data?.message ||
+    value.response?.data?.error;
+  if (nested && nested !== value) {
+    const compact = compactError(nested);
+    if (compact) return compact;
+  }
+  try {
+    return JSON.stringify(value);
+  } catch (e) {
+    return String(value);
+  }
+}
+
+function firstStatusCode(...values) {
+  for (const value of values) {
+    if (value === null || value === undefined || value === '') continue;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : value;
+  }
+  return 'N/A';
+}
+
 const resp = $input.first().json;
 let prep = {};
 try {
@@ -51,8 +89,15 @@ try {
 let chatId = String(prep.chat_id || '').trim();
 let replyEmail = String(prep.reply_email || prep.email_from || '').trim();
 let replyChannel = String(prep.reply_channel || prep.command_origin || '').trim().toLowerCase();
-let statusCode = resp.statusCode ?? resp.status_code ?? 'N/A';
-let errorText = resp.error || resp.message || resp.detail || '';
+let statusCode = firstStatusCode(
+  resp.statusCode,
+  resp.status_code,
+  resp.error?.statusCode,
+  resp.error?.status,
+  resp.response?.statusCode,
+  resp.response?.status
+);
+let errorText = compactError(resp.error || resp.message || resp.detail || resp.body || resp);
 
 if (resp.parallel_dispatch) {
   const stokapi = resp.stokapi_response || {};
@@ -62,8 +107,17 @@ if (resp.parallel_dispatch) {
   replyChannel = String(resp.reply_channel || prep.reply_channel || prep.command_origin || replyChannel)
     .trim()
     .toLowerCase();
-  statusCode = stokapi.statusCode ?? 'N/A';
-  errorText = stokapi.error || stokapi.body?.detail || stokapi.body?.message || 'dispatch_not_accepted';
+  statusCode = firstStatusCode(
+    stokapi.statusCode,
+    stokapi.status_code,
+    stokapi.error?.statusCode,
+    stokapi.error?.status,
+    stokapi.response?.statusCode,
+    stokapi.response?.status
+  );
+  errorText =
+    compactError(stokapi.error || stokapi.body || stokapi.response || stokapi) ||
+    'dispatch_not_accepted';
 }
 
 if (prep.skip_stokapi || prep.skip_muvstok) return [];
@@ -82,7 +136,7 @@ if (!chatId && !replyEmail) return [];
 
 const detail =
   statusCode !== 'N/A' || errorText
-    ? 'Erro: HTTP ' + statusCode + ' — ' + String(errorText).slice(0, 160)
+    ? 'Erro: HTTP ' + statusCode + ' — ' + compactError(errorText).slice(0, 160)
     : '';
 
 const msg = [

@@ -10,6 +10,7 @@ param appLocation string = 'eastus2'
 param environmentName string = 'production'
 
 param acrName string = 'cdpscraperprodacr'
+param pullIdentityName string = 'cdp-scrapers-prod-pull'
 param containerAppEnvironmentName string = 'cdp-scrapers-prod-env'
 param apiContainerAppName string = 'cdp-scrapers-api-prod'
 param workerContainerAppName string = 'cdp-scrapers-worker-prod'
@@ -43,6 +44,7 @@ param proxyRotationEnabled bool = true
 param maxConcurrentScrapers int = 3
 param workerMaxConcurrentScrapers int = 2
 param deployContainerApps bool = true
+param deployN8n bool = true
 param deployProxyPool bool = false
 param proxyAdminUsername string = 'proxyadmin'
 @secure()
@@ -52,6 +54,10 @@ param n8nEncryptionKey string
 param n8nBasicAuthUser string = 'admin'
 @secure()
 param n8nBasicAuthPassword string
+@secure()
+param muvstokUser string = ''
+@secure()
+param muvstokPassword string = ''
 
 var tags = {
   app: 'cdp-scraper'
@@ -60,12 +66,14 @@ var tags = {
 
 var meliboxUserSecretValue = empty(meliboxUser) ? 'not-configured' : meliboxUser
 var meliboxPassSecretValue = empty(meliboxPass) ? 'not-configured' : meliboxPass
+var muvstokUserSecretValue = empty(muvstokUser) ? 'not-configured' : muvstokUser
+var muvstokPasswordSecretValue = empty(muvstokPassword) ? 'not-configured' : muvstokPassword
 var databaseUrl = 'postgresql+asyncpg://${postgresAdminUser}:${postgresAdminPassword}@${postgres.outputs.hostName}/${postgresDatabaseName}?ssl=require'
 var databaseUrlSync = 'postgresql://${postgresAdminUser}:${postgresAdminPassword}@${postgres.outputs.hostName}/${postgresDatabaseName}?sslmode=require'
 var redisUrl = 'rediss://:${redis.outputs.primaryKey}@${redis.outputs.hostName}:6380/0'
 var scrapeCacheRedisUrl = 'rediss://:${redis.outputs.primaryKey}@${redis.outputs.hostName}:6380/1'
 var celeryRedisUrl = '${redisUrl}?ssl_cert_reqs=CERT_NONE'
-var n8nDatabaseUrl = 'postgresql://${postgresAdminUser}:${postgresAdminPassword}@${postgres.outputs.hostName}/${n8nDatabaseName}?sslmode=require'
+var n8nDatabaseUrl = deployN8n ? 'postgresql://${postgresAdminUser}:${postgresAdminPassword}@${postgres.outputs.hostName}/${n8nDatabaseName}?sslmode=require' : ''
 
 module acr 'modules/acr.bicep' = {
   name: 'acr'
@@ -79,14 +87,14 @@ module acr 'modules/acr.bicep' = {
 module identity 'modules/identity.bicep' = {
   name: 'container-app-pull-identity'
   params: {
-    name: 'cdp-scrapers-prod-pull'
+    name: pullIdentityName
     location: appLocation
     tags: tags
   }
 }
 
 resource acrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(resourceGroup().id, acrName, 'cdp-scrapers-prod-pull', 'AcrPull')
+  name: guid(resourceGroup().id, acrName, pullIdentityName, 'AcrPull')
   scope: resourceGroup()
   properties: {
     roleDefinitionId: subscriptionResourceId(
@@ -104,6 +112,7 @@ module postgres 'modules/postgres.bicep' = {
     serverName: postgresServerName
     databaseName: postgresDatabaseName
     n8nDatabaseName: n8nDatabaseName
+    deployN8n: deployN8n
     adminUser: postgresAdminUser
     adminPassword: postgresAdminPassword
     location: postgresLocation
@@ -125,6 +134,7 @@ module keyVault 'modules/key-vault.bicep' = {
   params: {
     name: keyVaultName
     location: appLocation
+    deployN8n: deployN8n
     apiKey: apiKey
     callbackWebhookSecret: callbackWebhookSecret
     databaseUrl: databaseUrl
@@ -134,6 +144,8 @@ module keyVault 'modules/key-vault.bicep' = {
     celeryResultBackend: celeryRedisUrl
     meliboxUser: meliboxUserSecretValue
     meliboxPass: meliboxPassSecretValue
+    muvstokUser: muvstokUserSecretValue
+    muvstokPassword: muvstokPasswordSecretValue
     proxyUrls: proxyUrls
     n8nDatabaseUrl: n8nDatabaseUrl
     n8nEncryptionKey: n8nEncryptionKey
@@ -233,7 +245,7 @@ module workerContainerApp 'modules/container-app.bicep' = if (deployContainerApp
   ]
 }
 
-module n8nContainerApp 'modules/n8n-container-app.bicep' = if (deployContainerApps) {
+module n8nContainerApp 'modules/n8n-container-app.bicep' = if (deployContainerApps && deployN8n) {
   name: 'n8n-container-app'
   params: {
     name: n8nContainerAppName
@@ -274,7 +286,7 @@ module proxyPool 'modules/proxy-pool.bicep' = if (deployProxyPool) {
 output acrLoginServer string = acr.outputs.loginServer
 output apiContainerAppFqdn string = deployContainerApps ? apiContainerApp!.outputs.fqdn : ''
 output workerContainerAppName string = deployContainerApps ? workerContainerApp!.outputs.name : ''
-output n8nContainerAppFqdn string = deployContainerApps ? n8nContainerApp!.outputs.fqdn : ''
+output n8nContainerAppFqdn string = deployContainerApps && deployN8n ? n8nContainerApp!.outputs.fqdn : ''
 output postgresHost string = postgres.outputs.hostName
 output redisHost string = redis.outputs.hostName
 output keyVaultName string = keyVault.outputs.name

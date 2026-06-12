@@ -13,29 +13,35 @@ RESOURCE_GROUP="${RESOURCE_GROUP:-automation}"
 APP_LOCATION="${APP_LOCATION:-eastus2}"
 POSTGRES_LOCATION="${POSTGRES_LOCATION:-brazilsouth}"
 ACR_NAME="${ACR_NAME:-cdpscraperprodacr}"
+PULL_IDENTITY_NAME="${PULL_IDENTITY_NAME:-cdp-scrapers-prod-pull}"
 IMAGE_NAME="${IMAGE_NAME:-cdp-scraper}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 IMAGE_REF="${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}"
 POSTGRES_SERVER_NAME="${POSTGRES_SERVER_NAME:-cdp-scrapers-pg-prod}"
 POSTGRES_DATABASE_NAME="${POSTGRES_DATABASE_NAME:-cdp_scraper}"
 POSTGRES_ADMIN_USER="${POSTGRES_ADMIN_USER:-cdp}"
+REDIS_NAME="${REDIS_NAME:-cdp-scrapers-redis-prod}"
 KEY_VAULT_NAME="${KEY_VAULT_NAME:-cdp-scrapers-kv-prod}"
 API_APP_NAME="${API_APP_NAME:-cdp-scrapers-api-prod}"
 WORKER_APP_NAME="${WORKER_APP_NAME:-cdp-scrapers-worker-prod}"
 N8N_APP_NAME="${N8N_APP_NAME:-cdp-n8n-prod}"
+CONTAINER_APP_ENV="${CONTAINER_APP_ENV:-cdp-scrapers-prod-env}"
 
 POSTGRES_ADMIN_PASSWORD="${POSTGRES_ADMIN_PASSWORD:-}"
 API_KEY="${API_KEY:-}"
 CALLBACK_WEBHOOK_SECRET="${CALLBACK_WEBHOOK_SECRET:-}"
 MELIBOX_USER="${MELIBOX_USER:-}"
 MELIBOX_PASS="${MELIBOX_PASS:-}"
-PROXY_URLS="${PROXY_URLS:-[]}"
+PROXY_URLS="${PROXY_URLS:-}"
 PROXY_ROTATION_ENABLED="${PROXY_ROTATION_ENABLED:-true}"
+DEPLOY_N8N="${DEPLOY_N8N:-true}"
 DEPLOY_PROXY_POOL="${DEPLOY_PROXY_POOL:-false}"
 PROXY_ADMIN_PASSWORD="${PROXY_ADMIN_PASSWORD:-}"
 N8N_ENCRYPTION_KEY="${N8N_ENCRYPTION_KEY:-}"
 N8N_BASIC_AUTH_USER="${N8N_BASIC_AUTH_USER:-admin}"
 N8N_BASIC_AUTH_PASSWORD="${N8N_BASIC_AUTH_PASSWORD:-}"
+MUVSTOK_USER="${MUVSTOK_USER:-}"
+MUVSTOK_PASSWORD="${MUVSTOK_PASSWORD:-}"
 
 if az keyvault show --name "${KEY_VAULT_NAME}" --resource-group "${RESOURCE_GROUP}" --output none 2>/dev/null; then
   EXISTING_DATABASE_URL="$(az keyvault secret show --vault-name "${KEY_VAULT_NAME}" --name database-url --query value -o tsv 2>/dev/null || true)"
@@ -47,6 +53,8 @@ if az keyvault show --name "${KEY_VAULT_NAME}" --resource-group "${RESOURCE_GROU
   MELIBOX_USER="${MELIBOX_USER:-$(az keyvault secret show --vault-name "${KEY_VAULT_NAME}" --name melibox-user --query value -o tsv 2>/dev/null || true)}"
   MELIBOX_PASS="${MELIBOX_PASS:-$(az keyvault secret show --vault-name "${KEY_VAULT_NAME}" --name melibox-pass --query value -o tsv 2>/dev/null || true)}"
   PROXY_URLS="${PROXY_URLS:-$(az keyvault secret show --vault-name "${KEY_VAULT_NAME}" --name proxy-urls --query value -o tsv 2>/dev/null || true)}"
+  MUVSTOK_USER="${MUVSTOK_USER:-$(az keyvault secret show --vault-name "${KEY_VAULT_NAME}" --name muvstok-user --query value -o tsv 2>/dev/null || true)}"
+  MUVSTOK_PASSWORD="${MUVSTOK_PASSWORD:-$(az keyvault secret show --vault-name "${KEY_VAULT_NAME}" --name muvstok-password --query value -o tsv 2>/dev/null || true)}"
   N8N_ENCRYPTION_KEY="${N8N_ENCRYPTION_KEY:-$(az keyvault secret show --vault-name "${KEY_VAULT_NAME}" --name n8n-encryption-key --query value -o tsv 2>/dev/null || true)}"
   N8N_BASIC_AUTH_USER="${N8N_BASIC_AUTH_USER:-$(az keyvault secret show --vault-name "${KEY_VAULT_NAME}" --name n8n-basic-auth-user --query value -o tsv 2>/dev/null || true)}"
   N8N_BASIC_AUTH_PASSWORD="${N8N_BASIC_AUTH_PASSWORD:-$(az keyvault secret show --vault-name "${KEY_VAULT_NAME}" --name n8n-basic-auth-password --query value -o tsv 2>/dev/null || true)}"
@@ -55,6 +63,14 @@ fi
 POSTGRES_ADMIN_PASSWORD="${POSTGRES_ADMIN_PASSWORD:-$(openssl rand -hex 24)}"
 API_KEY="${API_KEY:-$(openssl rand -hex 32)}"
 CALLBACK_WEBHOOK_SECRET="${CALLBACK_WEBHOOK_SECRET:-$(openssl rand -hex 32)}"
+PROXY_URLS="${PROXY_URLS:-[]}"
+if [[ "${PROXY_ROTATION_ENABLED}" == "true" ]]; then
+  case "${PROXY_URLS}" in
+    ""|"[]"|"not-configured")
+      PROXY_ROTATION_ENABLED=false
+      ;;
+  esac
+fi
 N8N_ENCRYPTION_KEY="${N8N_ENCRYPTION_KEY:-$(openssl rand -hex 32)}"
 N8N_BASIC_AUTH_USER="${N8N_BASIC_AUTH_USER:-admin}"
 N8N_BASIC_AUTH_PASSWORD="${N8N_BASIC_AUTH_PASSWORD:-$(openssl rand -hex 24)}"
@@ -64,6 +80,7 @@ echo "Resource group: ${RESOURCE_GROUP}"
 echo "PostgreSQL location: ${POSTGRES_LOCATION}"
 echo "App resources location: ${APP_LOCATION}"
 echo "Image: ${IMAGE_REF}"
+echo "Deploy n8n: ${DEPLOY_N8N}"
 
 cleanup_deploy_firewall() {
   if [[ -n "${DEPLOY_FIREWALL_RULE_CREATED:-}" ]]; then
@@ -86,11 +103,14 @@ COMMON_PARAMETERS=(
   appLocation="${APP_LOCATION}"
   postgresLocation="${POSTGRES_LOCATION}"
   acrName="${ACR_NAME}"
+  pullIdentityName="${PULL_IDENTITY_NAME}"
+  containerAppEnvironmentName="${CONTAINER_APP_ENV}"
   imageName="${IMAGE_REF}"
   postgresServerName="${POSTGRES_SERVER_NAME}"
   postgresDatabaseName="${POSTGRES_DATABASE_NAME}"
   postgresAdminUser="${POSTGRES_ADMIN_USER}"
   postgresAdminPassword="${POSTGRES_ADMIN_PASSWORD}"
+  redisName="${REDIS_NAME}"
   keyVaultName="${KEY_VAULT_NAME}"
   apiContainerAppName="${API_APP_NAME}"
   workerContainerAppName="${WORKER_APP_NAME}"
@@ -99,8 +119,11 @@ COMMON_PARAMETERS=(
   callbackWebhookSecret="${CALLBACK_WEBHOOK_SECRET}"
   meliboxUser="${MELIBOX_USER}"
   meliboxPass="${MELIBOX_PASS}"
+  muvstokUser="${MUVSTOK_USER}"
+  muvstokPassword="${MUVSTOK_PASSWORD}"
   proxyUrls="${PROXY_URLS}"
   proxyRotationEnabled="${PROXY_ROTATION_ENABLED}"
+  deployN8n="${DEPLOY_N8N}"
   deployProxyPool="${DEPLOY_PROXY_POOL}"
   proxyAdminPassword="${PROXY_ADMIN_PASSWORD}"
   n8nEncryptionKey="${N8N_ENCRYPTION_KEY}"
@@ -118,8 +141,8 @@ az deployment group create \
   --output none
 
 echo "Building and pushing scraper image..."
-az acr login --name "${ACR_NAME}" --output none
 if docker info >/dev/null 2>&1; then
+  az acr login --name "${ACR_NAME}" --output none
   docker build -t "${IMAGE_REF}" "${SCRAPERS_DIR}"
   docker push "${IMAGE_REF}"
 else
@@ -166,7 +189,11 @@ DATABASE_URL_SYNC="${DATABASE_URL_SYNC}" \
 uv run alembic upgrade head
 
 FULL_DEPLOYMENT_NAME="cdp-prod-apps-$(date +%Y%m%d%H%M%S)"
-echo "Deploying API, worker, and N8N Container Apps..."
+if [[ "${DEPLOY_N8N}" == "true" ]]; then
+  echo "Deploying API, worker, and N8N Container Apps..."
+else
+  echo "Deploying API and worker Container Apps..."
+fi
 az deployment group create \
   --name "${FULL_DEPLOYMENT_NAME}" \
   --resource-group "${RESOURCE_GROUP}" \
@@ -179,11 +206,14 @@ API_FQDN="$(az containerapp show \
   --resource-group "${RESOURCE_GROUP}" \
   --query properties.configuration.ingress.fqdn \
   -o tsv | tr -d '\r')"
-N8N_FQDN="$(az containerapp show \
-  --name "${N8N_APP_NAME}" \
-  --resource-group "${RESOURCE_GROUP}" \
-  --query properties.configuration.ingress.fqdn \
-  -o tsv | tr -d '\r')"
+N8N_FQDN=""
+if [[ "${DEPLOY_N8N}" == "true" ]]; then
+  N8N_FQDN="$(az containerapp show \
+    --name "${N8N_APP_NAME}" \
+    --resource-group "${RESOURCE_GROUP}" \
+    --query properties.configuration.ingress.fqdn \
+    -o tsv | tr -d '\r')"
+fi
 
 echo "Checking API health..."
 curl -fsS "https://${API_FQDN}/api/v1/health"
@@ -197,9 +227,13 @@ az containerapp logs show \
 
 if [[ "${RUN_PRODUCTION_SMOKE:-false}" == "true" ]]; then
   echo "Running production scraper curl smoke tests..."
+  SMOKE_N8N_BASE_URL="${N8N_PUBLIC_BASE_URL:-https://automacao.tktechnologies.com.br}"
+  if [[ -n "${N8N_FQDN}" ]]; then
+    SMOKE_N8N_BASE_URL="https://${N8N_FQDN}"
+  fi
   API_BASE_URL="https://${API_FQDN}" \
   API_KEY="${API_KEY}" \
-  N8N_BASE_URL="https://${N8N_FQDN}" \
+  N8N_BASE_URL="${SMOKE_N8N_BASE_URL}" \
   UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}" \
   uv run python scripts/production_scraper_curl_smoke.py \
     --manifest docs/validation/production_scraper_curl_cases.example.json \
@@ -208,5 +242,9 @@ fi
 
 echo "=== Deployment complete ==="
 echo "API URL: https://${API_FQDN}"
-echo "N8N URL: https://${N8N_FQDN}"
+if [[ -n "${N8N_FQDN}" ]]; then
+  echo "N8N URL: https://${N8N_FQDN}"
+else
+  echo "N8N URL: skipped (DEPLOY_N8N=${DEPLOY_N8N})"
+fi
 echo "Key Vault: ${KEY_VAULT_NAME}"

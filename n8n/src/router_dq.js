@@ -1,11 +1,20 @@
 // cdp_router — validate sheet rows, dedupe dispatch SKUs, preserve sheet rows.
 
-const raw = $input.all();
+const rawItems = $input.all();
 const seen = new Set();
 const uniqueBySku = new Map();
 const sheetRows = [];
 const dqIssues = [];
 let skippedProcessado = 0;
+
+function hasMeaningfulValue(row) {
+  if (!row || typeof row !== 'object') return false;
+  return Object.entries(row).some(([key, value]) => {
+    if (key === 'row_number') return false;
+    if (value === null || value === undefined) return false;
+    return String(value).trim() !== '';
+  });
+}
 
 function normalizeStatus(value) {
   return String(value || '')
@@ -33,6 +42,8 @@ function pickSheetField(row, base) {
   }
   return row[base] ?? row[robot] ?? '';
 }
+
+const raw = rawItems.filter((item) => hasMeaningfulValue(item.json));
 
 for (const item of raw) {
   const row = item.json;

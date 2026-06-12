@@ -1,10 +1,10 @@
 {
-  "name": "cdp_stokapi",
+  "name": "STOKAI - cdp_stokapi",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "muvstok-result",
+        "path": "stokai-muvstok-result",
         "options": {
           "rawBody": true
         }
@@ -21,7 +21,7 @@
     },
     {
       "parameters": {
-        "jsCode": "function readEnv(name) {\n  try {\n    const fromN8n = typeof $env !== 'undefined' ? $env[name] : undefined;\n    if (fromN8n !== undefined && fromN8n !== null && String(fromN8n).trim()) {\n      return String(fromN8n).trim();\n    }\n  } catch (e) {}\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\nfunction isDevWorkflow() {\n  return /^DEV\\s*-/i.test(workflowName());\n}\nconst wh = $input.first().json;\nconst got = String(\n  wh.headers?.['x-webhook-secret'] || wh.headers?.['X-Webhook-Secret'] || ''\n).trim();\nconst want = isDevWorkflow()\n  ? readEnv('CDP_DEV_MUVSTOK_CALLBACK_WEBHOOK_SECRET') ||\n    readEnv('CDP_MUVSTOK_CALLBACK_WEBHOOK_SECRET') ||\n    readEnv('CALLBACK_WEBHOOK_SECRET') ||\n    readEnv('CDP_CALLBACK_WEBHOOK_SECRET') ||\n    readEnv('N8N_WEBHOOK_SECRET') ||\n    ''\n  : readEnv('CDP_MUVSTOK_CALLBACK_WEBHOOK_SECRET') ||\n    readEnv('CALLBACK_WEBHOOK_SECRET') ||\n    readEnv('CDP_CALLBACK_WEBHOOK_SECRET') ||\n    readEnv('N8N_WEBHOOK_SECRET') ||\n    '';\nreturn [{ json: { ...wh, authorized: !!want && got === want, secret_configured: !!want, secret_received: !!got } }];"
+        "jsCode": "function readEnv(name) {\n  try {\n    const fromN8n = typeof $env !== 'undefined' ? $env[name] : undefined;\n    if (fromN8n !== undefined && fromN8n !== null && String(fromN8n).trim()) {\n      return String(fromN8n).trim();\n    }\n  } catch (e) {}\n  try {\n    if (typeof process !== 'undefined' && process.env && process.env[name]) {\n      return String(process.env[name]).trim();\n    }\n  } catch (e) {}\n  return '';\n}\nfunction workflowName() {\n  try {\n    if (typeof $workflow !== 'undefined' && $workflow && $workflow.name) {\n      return String($workflow.name).trim();\n    }\n  } catch (e) {}\n  return '';\n}\nfunction workflowTarget() {\n  const name = workflowName();\n  if (/^DEV\\s*-/i.test(name)) return 'dev';\n  if (/^STOKAI\\s*-/i.test(name)) return 'stokai';\n  return 'prod';\n}\nconst wh = $input.first().json;\nconst got = String(\n  wh.headers?.['x-webhook-secret'] || wh.headers?.['X-Webhook-Secret'] || ''\n).trim();\nconst target = workflowTarget();\nconst want = target === 'dev'\n  ? readEnv('CDP_DEV_MUVSTOK_CALLBACK_WEBHOOK_SECRET') ||\n    readEnv('CDP_MUVSTOK_CALLBACK_WEBHOOK_SECRET') ||\n    readEnv('CALLBACK_WEBHOOK_SECRET') ||\n    readEnv('CDP_CALLBACK_WEBHOOK_SECRET') ||\n    readEnv('N8N_WEBHOOK_SECRET') ||\n    ''\n  : target === 'stokai'\n    ? readEnv('CDP_STOKAI_MUVSTOK_CALLBACK_WEBHOOK_SECRET') ||\n      readEnv('CDP_MUVSTOK_CALLBACK_WEBHOOK_SECRET') ||\n      readEnv('CALLBACK_WEBHOOK_SECRET') ||\n      readEnv('CDP_CALLBACK_WEBHOOK_SECRET') ||\n      readEnv('N8N_WEBHOOK_SECRET') ||\n      ''\n    : readEnv('CDP_MUVSTOK_CALLBACK_WEBHOOK_SECRET') ||\n      readEnv('CALLBACK_WEBHOOK_SECRET') ||\n      readEnv('CDP_CALLBACK_WEBHOOK_SECRET') ||\n      readEnv('N8N_WEBHOOK_SECRET') ||\n      '';\nreturn [{ json: { ...wh, authorized: !!want && got === want, secret_configured: !!want, secret_received: !!got } }];\n"
       },
       "id": "2ab9a09a-cfaf-451e-838a-77b68b7f89f7",
       "name": "🔐 Verificar Webhook Secret",
@@ -302,7 +302,7 @@
       "credentials": {
         "telegramApi": {
           "id": "UmDqGKD8k0bA10j2",
-          "name": "CDP-Bot"
+          "name": "cdp-bot-assistente"
         }
       },
       "retryOnFail": true,
@@ -812,9 +812,5 @@
     "executionOrder": "v1",
     "binaryMode": "separate",
     "availableInMCP": true
-  },
-  "meta": {
-    "aiBuilderAssisted": true,
-    "builderVariant": "mcp"
   }
 }

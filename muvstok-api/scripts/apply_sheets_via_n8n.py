@@ -19,9 +19,13 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from google_sheets_audit_schema import (  # noqa: E402
     CANONICAL_DETALHADO_HEADERS,
+    DETALHADO_GID,
+    HISTORICO_GID,
     PAINEL_CLEAR_RANGE,
+    PAINEL_GID,
     PAINEL_TAB,
     PAINEL_UPDATES,
+    RESUMO_GID,
     SPREADSHEET_ID,
     remap_row_to_headers,
 )
@@ -34,7 +38,6 @@ from n8n_publish import (  # noqa: E402
 )
 
 SHEET_ID = SPREADSHEET_ID
-DETALHADO_GID = 1185876304
 WEBHOOK_PATH = "cdp-sheets-audit-apply"
 SHEETS_CRED = {
     "googleSheetsOAuth2Api": {"id": "ep05fPlF3xggWhWc", "name": "gcp sheets lucas@tktech"}
@@ -307,10 +310,13 @@ def main() -> int:
     print(f"Prepared {len(values) - 1} data rows + header")
 
     historico_headers = extend_headers(
-        "Historico", 79112561, ["skus_not_found", "skus_blocked", "skus_error"], after="skus_falhos"
+        "Historico",
+        HISTORICO_GID,
+        ["skus_not_found", "skus_blocked", "skus_error"],
+        after="skus_falhos",
     )
     resumo_headers = None
-    for gid in (79112561, 1185876304, *range(1, 30)):
+    for gid in (RESUMO_GID, DETALHADO_GID, HISTORICO_GID, PAINEL_GID, *range(1, 30)):
         try:
             h = fetch_header_row(gid)
         except Exception:

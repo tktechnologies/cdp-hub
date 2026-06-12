@@ -2,14 +2,15 @@
 # Apply IPRoyal ISP BR proxy settings to CDP scraper Container Apps (prod + dev).
 #
 # Prerequisites:
-#   - az login with Contributor on RG automation
+#   - az login with Contributor on the target RG
 #   - scrapers/.env with CREDENTIAL_MELIBOX_* and proxy URLs (or export PROXY_URLS JSON)
 #
 # Key Vault (cdp-scrapers-kv-prod): requires Secrets Officer — run manually if this script
 # cannot write KV (see scrapers/docs/runbooks/iproyal-isp-proxy-setup.md §4).
 #
-# After running: whitelist Azure outbound IP in IPRoyal dashboard (ISP → Whitelisted IPs).
-#   Prod worker egress: az containerapp show -g automation -n cdp-scrapers-worker-prod \
+# Before running: whitelist Azure outbound IP in IPRoyal dashboard
+# (ISP → Whitelisted IPs). Check with:
+#   az containerapp show -g "$RESOURCE_GROUP" -n "$WORKER_APP_NAME" \
 #     --query 'properties.outboundIpAddresses[0]' -o tsv
 
 set -euo pipefail
@@ -17,9 +18,22 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="${ENV_FILE:-${ROOT}/scrapers/.env}"
 RG="${RESOURCE_GROUP:-automation}"
-KV="${KEY_VAULT_NAME:-cdp-scrapers-kv-prod}"
+if [[ -z "${KEY_VAULT_NAME:-}" && "${RG}" == "stokai-tk" ]]; then
+  KV="cdp-stokai-kv-prod"
+else
+  KV="${KEY_VAULT_NAME:-cdp-scrapers-kv-prod}"
+fi
 N8N_APP="${N8N_APP_NAME:-cdp-n8n-prod}"
 SCRAPER_SITES="${CDP_SCRAPER_SITES:-gm,ml,vw,eu,melibox}"
+
+if [[ -z "${SCRAPER_APPS:-}" ]]; then
+  if [[ "${RG}" == "stokai-tk" ]]; then
+    SCRAPER_APPS="cdp-stokai-scrapers-worker-prod cdp-stokai-scrapers-api-prod"
+  else
+    SCRAPER_APPS="cdp-scrapers-worker-prod cdp-scrapers-api-prod cdp-scrapers-worker-dev cdp-scrapers-api-dev"
+  fi
+fi
+WORKER_APP_NAME="${WORKER_APP_NAME:-${SCRAPER_APPS%% *}}"
 
 if [[ ! -f "${ENV_FILE}" ]]; then
   echo "Missing ${ENV_FILE}" >&2
@@ -81,18 +95,22 @@ else
   echo "    Skipped Key Vault (no write access). Container App secrets were still applied."
 fi
 
-for app in cdp-scrapers-worker-prod cdp-scrapers-api-prod cdp-scrapers-worker-dev cdp-scrapers-api-dev; do
+for app in ${SCRAPER_APPS}; do
   if az containerapp show -g "${RG}" -n "${app}" --output none 2>/dev/null; then
     patch_scraper_app "${app}"
   fi
 done
 
-echo "==> n8n ${N8N_APP}: CDP_SCRAPER_SITES=${SCRAPER_SITES}"
-az containerapp update -g "${RG}" -n "${N8N_APP}" --set-env-vars \
-  "CDP_SCRAPER_SITES=${SCRAPER_SITES}" \
-  --output none
+if az containerapp show -g "${RG}" -n "${N8N_APP}" --output none 2>/dev/null; then
+  echo "==> n8n ${N8N_APP}: CDP_SCRAPER_SITES=${SCRAPER_SITES}"
+  az containerapp update -g "${RG}" -n "${N8N_APP}" --set-env-vars \
+    "CDP_SCRAPER_SITES=${SCRAPER_SITES}" \
+    --output none
+else
+  echo "==> n8n ${N8N_APP}: skipped (not in ${RG})"
+fi
 
-OUT_IP="$(az containerapp show -g "${RG}" -n cdp-scrapers-worker-prod \
+OUT_IP="$(az containerapp show -g "${RG}" -n "${WORKER_APP_NAME}" \
   --query 'properties.outboundIpAddresses[0]' -o tsv 2>/dev/null || true)"
 echo ""
 echo "Done. Whitelist this IP in IPRoyal (ISP → Whitelisted IPs): ${OUT_IP:-unknown}"

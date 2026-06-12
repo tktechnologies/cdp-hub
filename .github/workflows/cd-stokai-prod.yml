@@ -1,0 +1,120 @@
+name: CD - STOKAI Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_scraper:
+        description: Deploy STOKAI scraper API + worker images
+        type: boolean
+        default: false
+      deploy_stokapi_api:
+        description: Deploy STOKAI StokAPI API image
+        type: boolean
+        default: false
+      deploy_stokapi_worker:
+        description: Deploy STOKAI StokAPI worker image
+        type: boolean
+        default: false
+      configure_n8n_env:
+        description: Configure CDP_STOKAI_* on shared n8n
+        type: boolean
+        default: false
+      sync_n8n_stokai:
+        description: Publish STOKAI n8n workflows
+        type: boolean
+        default: false
+
+concurrency:
+  group: cd-stokai-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  RESOURCE_GROUP: stokai-tk
+  ACR_NAME: cdpstokaitkacr
+  KEY_VAULT_NAME: cdp-stokai-kv-prod
+  IMAGE_TAG: ${{ github.sha }}
+  API_APP_NAME: cdp-stokai-scrapers-api-prod
+  WORKER_APP_NAME: cdp-stokai-scrapers-worker-prod
+  STOKAPI_API_APP: cdp-stokai-muv-api
+  STOKAPI_WORKER_APP: cdp-stokai-muv-worker
+  CONTAINER_APP_ENV: cdp-stokai-prod-env
+  PULL_IDENTITY_NAME: cdp-stokai-prod-pull
+
+jobs:
+  deploy:
+    name: Deploy STOKAI production
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      CDP_STOKAI_ROUTER_WORKFLOW_ID: ${{ vars.CDP_STOKAI_ROUTER_WORKFLOW_ID }}
+      CDP_STOKAI_SCRAPER_WORKFLOW_ID: ${{ vars.CDP_STOKAI_SCRAPER_WORKFLOW_ID }}
+      CDP_STOKAI_STOKAPI_WORKFLOW_ID: ${{ vars.CDP_STOKAI_STOKAPI_WORKFLOW_ID }}
+      CDP_STOKAI_PROGRESS_WORKFLOW_ID: ${{ vars.CDP_STOKAI_PROGRESS_WORKFLOW_ID }}
+      CDP_STOKAI_NOTIFIER_WORKFLOW_ID: ${{ vars.CDP_STOKAI_NOTIFIER_WORKFLOW_ID }}
+      CDP_STOKAI_SCRAPER_API_BASE: ${{ vars.CDP_STOKAI_SCRAPER_API_BASE }}
+      CDP_STOKAI_MUVSTOK_API_BASE: ${{ vars.CDP_STOKAI_MUVSTOK_API_BASE }}
+      CDP_STOKAI_SCRAPER_SITES: ${{ vars.CDP_STOKAI_SCRAPER_SITES }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy STOKAI scraper API and worker
+        if: inputs.deploy_scraper
+        run: bash scripts/deploy-scraper-image.sh
+
+      - name: Deploy STOKAI StokAPI API
+        if: inputs.deploy_stokapi_api
+        env:
+          RG: ${{ env.RESOURCE_GROUP }}
+          ACR: ${{ env.ACR_NAME }}
+          KV: ${{ env.KEY_VAULT_NAME }}
+          API_APP: ${{ env.STOKAPI_API_APP }}
+          ENV_NAME: ${{ env.CONTAINER_APP_ENV }}
+          MI_NAME: ${{ env.PULL_IDENTITY_NAME }}
+          TAG: ${{ env.IMAGE_TAG }}
+          AZURE_KEY_VAULT_URL: https://cdp-stokai-kv-prod.vault.azure.net/
+          ENVIRONMENT: azure-prod
+        run: bash muvstok-api/scripts/deploy_muv_api.sh
+
+      - name: Deploy STOKAI StokAPI worker
+        if: inputs.deploy_stokapi_worker
+        env:
+          RG: ${{ env.RESOURCE_GROUP }}
+          ACR: ${{ env.ACR_NAME }}
+          KV: ${{ env.KEY_VAULT_NAME }}
+          API_APP: ${{ env.STOKAPI_API_APP }}
+          WORKER_APP: ${{ env.STOKAPI_WORKER_APP }}
+          ENV_NAME: ${{ env.CONTAINER_APP_ENV }}
+          MI_NAME: ${{ env.PULL_IDENTITY_NAME }}
+          TAG: ${{ env.IMAGE_TAG }}
+          AZURE_KEY_VAULT_URL: https://cdp-stokai-kv-prod.vault.azure.net/
+          ENVIRONMENT: azure-prod
+        run: bash muvstok-api/scripts/deploy_muv_worker.sh
+
+      - name: Configure shared n8n STOKAI env
+        if: inputs.configure_n8n_env || inputs.sync_n8n_stokai
+        env:
+          CDP_STOKAI_API_KEY: ${{ secrets.CDP_STOKAI_API_KEY }}
+          CDP_STOKAI_MUVSTOK_API_KEY: ${{ secrets.CDP_STOKAI_MUVSTOK_API_KEY }}
+          CDP_STOKAI_CALLBACK_WEBHOOK_SECRET: ${{ secrets.CDP_STOKAI_CALLBACK_WEBHOOK_SECRET }}
+          CDP_STOKAI_MUVSTOK_CALLBACK_WEBHOOK_SECRET: ${{ secrets.CDP_STOKAI_MUVSTOK_CALLBACK_WEBHOOK_SECRET }}
+        run: bash scripts/configure-shared-n8n-stokai-env.sh
+
+      - name: Sync STOKAI n8n workflows
+        if: inputs.sync_n8n_stokai
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          N8N_MCP_AUTH_HEADER: ${{ secrets.N8N_MCP_AUTH_HEADER }}
+        run: make sync-n8n-stokai

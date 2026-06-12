@@ -1,5 +1,6 @@
 param name string
 param location string
+param deployN8n bool = true
 @secure()
 param apiKey string
 @secure()
@@ -18,6 +19,10 @@ param celeryResultBackend string
 param meliboxUser string
 @secure()
 param meliboxPass string
+@secure()
+param muvstokUser string = ''
+@secure()
+param muvstokPassword string = ''
 @secure()
 param proxyUrls string
 @secure()
@@ -129,7 +134,23 @@ resource proxyUrlsSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
-resource n8nDatabaseUrlSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+resource muvstokUserSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  name: 'muvstok-user'
+  parent: keyVault
+  properties: {
+    value: muvstokUser
+  }
+}
+
+resource muvstokPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  name: 'muvstok-password'
+  parent: keyVault
+  properties: {
+    value: muvstokPassword
+  }
+}
+
+resource n8nDatabaseUrlSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (deployN8n) {
   name: 'n8n-database-url'
   parent: keyVault
   properties: {
@@ -137,7 +158,7 @@ resource n8nDatabaseUrlSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
-resource n8nEncryptionKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+resource n8nEncryptionKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (deployN8n) {
   name: 'n8n-encryption-key'
   parent: keyVault
   properties: {
@@ -145,7 +166,7 @@ resource n8nEncryptionKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' =
   }
 }
 
-resource n8nBasicAuthUserSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+resource n8nBasicAuthUserSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (deployN8n) {
   name: 'n8n-basic-auth-user'
   parent: keyVault
   properties: {
@@ -153,7 +174,7 @@ resource n8nBasicAuthUserSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' =
   }
 }
 
-resource n8nBasicAuthPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+resource n8nBasicAuthPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (deployN8n) {
   name: 'n8n-basic-auth-password'
   parent: keyVault
   properties: {

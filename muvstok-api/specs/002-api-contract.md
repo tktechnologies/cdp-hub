@@ -62,9 +62,12 @@ Receiver sheet output derives seller metadata from raw row aliases:
 `vendedor` from branch, `uf` from `uf`/`estado`/state-name/location aliases,
 `empresa` from company/legal-name aliases with branch fallback, and `cnpj` as
 normalized 14-digit digits. `estado` is not a canonical output field.
-When upstream rows include `codigoFilial`, the worker enriches missing
-`uf`/`empresa`/`cnpj` data from the dealership directory by matching
-`codigoFilial` to `Lista empresas.id_empresa`.
+The worker enriches missing `uf`/`empresa`/`cnpj` data from the dealership
+directory before persistence and callback. It loads `company_locations` from
+Postgres first and may fall back to the configured directory CSV when enabled.
+It first matches `codigoFilial` to `Lista empresas.id_empresa`; if the upstream
+row omits that id, it falls back to exact normalized branch/seller names that
+are unique in the directory.
 
 ### `GET /api/v1/muvstok/health`
 

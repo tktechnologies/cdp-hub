@@ -23,29 +23,39 @@ function workflowName() {
   } catch (e) {}
   return '';
 }
-function isDevWorkflow() {
-  return /^DEV\s*-/i.test(workflowName());
+function workflowTarget() {
+  const name = workflowName();
+  if (/^DEV\s*-/i.test(name)) return 'dev';
+  if (/^STOKAI\s*-/i.test(name)) return 'stokai';
+  return 'prod';
 }
-function devEnvName(name) {
+function isDevWorkflow() {
+  return workflowTarget() === 'dev';
+}
+function targetEnvName(name, target) {
+  const prefix = target === 'stokai' ? 'CDP_STOKAI' : 'CDP_DEV';
   const map = {
-    CDP_MUVSTOK_API_BASE: 'CDP_DEV_MUVSTOK_API_BASE',
-    CDP_MUVSTOK_API_KEY: 'CDP_DEV_MUVSTOK_API_KEY',
-    CDP_API_KEY: 'CDP_DEV_API_KEY',
-    MUVSTOK_API_KEY: 'CDP_DEV_MUVSTOK_API_KEY',
-    API_KEY: 'CDP_DEV_API_KEY',
-    WEBHOOK_URL: 'CDP_DEV_WEBHOOK_URL',
-    CDP_MUVSTOK_N8N_WEBHOOK_URL: 'CDP_DEV_MUVSTOK_N8N_WEBHOOK_URL',
-    CDP_MUVSTOK_WEBHOOK_PATH: 'CDP_DEV_MUVSTOK_WEBHOOK_PATH',
+    CDP_MUVSTOK_API_BASE: `${prefix}_MUVSTOK_API_BASE`,
+    CDP_MUVSTOK_API_KEY: `${prefix}_MUVSTOK_API_KEY`,
+    CDP_API_KEY: `${prefix}_API_KEY`,
+    MUVSTOK_API_KEY: `${prefix}_MUVSTOK_API_KEY`,
+    API_KEY: `${prefix}_API_KEY`,
+    WEBHOOK_URL: `${prefix}_WEBHOOK_URL`,
+    CDP_MUVSTOK_N8N_WEBHOOK_URL: `${prefix}_MUVSTOK_N8N_WEBHOOK_URL`,
+    CDP_MUVSTOK_WEBHOOK_PATH: `${prefix}_MUVSTOK_WEBHOOK_PATH`,
   };
   return map[name] || '';
 }
 function envFor(name) {
-  if (!isDevWorkflow()) return readEnv(name);
-  const mapped = devEnvName(name);
+  const target = workflowTarget();
+  if (target === 'prod') return readEnv(name);
+  const mapped = targetEnvName(name, target);
   const value = mapped ? readEnv(mapped) : '';
   if (value) return value;
   if (name === 'WEBHOOK_URL') return readEnv('WEBHOOK_URL') || DEFAULT_N8N_WEBHOOK_BASE;
-  if (name === 'CDP_MUVSTOK_WEBHOOK_PATH') return 'webhook/dev-muvstok-result';
+  if (name === 'CDP_MUVSTOK_WEBHOOK_PATH') {
+    return target === 'stokai' ? 'webhook/stokai-muvstok-result' : 'webhook/dev-muvstok-result';
+  }
   return '';
 }
 function trimTrailingSlashes(value) {
@@ -176,7 +186,7 @@ if (!callbackUrl) {
   const rel = trimSlashes(envFor('CDP_MUVSTOK_WEBHOOK_PATH') || 'webhook/muvstok-result');
   if (base) callbackUrl = base + '/' + rel;
 }
-if (!callbackUrl && !isDevWorkflow()) {
+if (!callbackUrl && workflowTarget() === 'prod') {
   callbackUrl = 'https://automacao.tktechnologies.com.br/webhook/muvstok-result';
 }
 
@@ -196,7 +206,7 @@ callbackUrl += (callbackUrl.includes('?') ? '&' : '?') + queryParts.join('&');
 
 const apiBase = trimTrailingSlashes(
   envFor('CDP_MUVSTOK_API_BASE') ||
-    (isDevWorkflow() ? '' : 'https://cdp-muv-api.bravecoast-b14d791e.eastus2.azurecontainerapps.io')
+    (workflowTarget() === 'prod' ? 'https://cdp-muv-api.bravecoast-b14d791e.eastus2.azurecontainerapps.io' : '')
 );
 const apiKey =
   envFor('CDP_MUVSTOK_API_KEY') ||

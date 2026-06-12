@@ -45,11 +45,11 @@
         -240,
         1920
       ],
-      "webhookId": "telegram-sku-trigger",
+      "webhookId": "cac66bc5-6e4d-4d07-b289-375f7a1136da",
       "credentials": {
         "telegramApi": {
           "id": "UmDqGKD8k0bA10j2",
-          "name": "Telegram account"
+          "name": "cdp-bot-assistente"
         }
       },
       "notes": "v0.6.0: Recebe SKUs via Telegram (texto ou arquivo .xlsx/.csv). Necessita configurar credenciais do bot (@BotFather)."
@@ -1244,7 +1244,7 @@
         656,
         2832
       ],
-      "webhookId": "84bde2a6-210d-44cf-bcc7-ad804b5abf91",
+      "webhookId": "155a55bc-815b-4374-b551-3ce22f5fae09",
       "credentials": {
         "gmailOAuth2": {
           "id": "rQesNRyarukVs0N4",
@@ -1301,11 +1301,11 @@
         432,
         2352
       ],
-      "webhookId": "3e9cca0a-34e6-4da1-8665-cc4a717b55ce",
+      "webhookId": "faf8740b-ef25-4464-a841-ae7b898c93e5",
       "credentials": {
         "telegramApi": {
           "id": "UmDqGKD8k0bA10j2",
-          "name": "Telegram account"
+          "name": "cdp-bot-assistente"
         }
       },
       "notes": "v3: replies when .sku is sent without codes or file"
@@ -1326,7 +1326,7 @@
         656,
         3024
       ],
-      "webhookId": "60f5edac-0153-47b3-b7a7-40e59b3ced9a",
+      "webhookId": "6e3084c9-38e2-4850-b35c-99e9ca77861b",
       "credentials": {
         "gmailOAuth2": {
           "id": "rQesNRyarukVs0N4",
@@ -1466,11 +1466,11 @@
         2224,
         1952
       ],
-      "webhookId": "5da9c4ae-0cc4-4ac5-bf28-463a00499d83",
+      "webhookId": "3e3ebdd4-98b4-4832-92a6-6551599b3d19",
       "credentials": {
         "telegramApi": {
           "id": "UmDqGKD8k0bA10j2",
-          "name": "Telegram account"
+          "name": "cdp-bot-assistente"
         }
       }
     },
@@ -1492,7 +1492,7 @@
         2224,
         2144
       ],
-      "webhookId": "1cd89914-d4f3-4adb-8cce-71a7d7f5d196",
+      "webhookId": "6f055aae-64f2-493a-8a60-4fba54be6cea",
       "credentials": {
         "gmailOAuth2": {
           "id": "rQesNRyarukVs0N4",
@@ -1516,7 +1516,7 @@
         2448,
         2528
       ],
-      "webhookId": "1cd89914-d4f3-4adb-8cce-71a7d7f5d196",
+      "webhookId": "2539ac92-b6c2-453f-b3e1-6e33663f60d2",
       "credentials": {
         "gmailOAuth2": {
           "id": "rQesNRyarukVs0N4",
@@ -1680,7 +1680,7 @@
       "credentials": {
         "telegramApi": {
           "id": "UmDqGKD8k0bA10j2",
-          "name": "Telegram account"
+          "name": "cdp-bot-assistente"
         }
       },
       "continueOnFail": true
@@ -1859,11 +1859,11 @@
         1552,
         1440
       ],
-      "webhookId": "6b511123-84d4-4c91-a1fe-d3a170776705",
+      "webhookId": "302e53f2-626b-4b67-aecc-1f8949ca7ccf",
       "credentials": {
         "telegramApi": {
           "id": "UmDqGKD8k0bA10j2",
-          "name": "Telegram account"
+          "name": "cdp-bot-assistente"
         }
       },
       "continueOnFail": true,
@@ -2600,10 +2600,5 @@
       ]
     }
   },
-  "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "de7dfde7182ba46a60ed6b250bd1db3a7076885f7c50487eea26aeedab86a5e3"
-  },
-  "name": "cdp_router"
+  "name": "STOKAI - cdp_router"
 }
